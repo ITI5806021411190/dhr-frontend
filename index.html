@@ -28,7 +28,7 @@
             <div class="flex items-center gap-2 cursor-pointer w-full md:w-auto overflow-hidden" onclick="goToHome()">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 <div class="flex flex-col overflow-hidden w-full">
-                    <span class="font-bold text-base md:text-lg leading-tight truncate">ระบบประเมินความพร้อมพนักงานขับรถ</span>
+                    <span class="font-bold text-base md:text-lg leading-tight truncate">ระบบประเมินความพร้อมผู้ขับขี่รถยนต์ราชการ</span>
                     <span class="text-[10px] md:text-[11px] text-blue-200 truncate">ภายในสังกัดสำนักงานสาธารณสุขจังหวัดนครนายก</span>
                 </div>
             </div>
@@ -81,11 +81,11 @@
             <div class="flex flex-col md:flex-row gap-6 mb-8">
                 <div class="w-full md:w-1/4 bg-gray-50 border border-gray-200 rounded-lg p-4 flex flex-col items-center justify-center min-h-[220px]"><canvas id="dashChart"></canvas></div>
                 <div class="w-full md:w-3/4 grid grid-cols-2 md:grid-cols-5 gap-4">
-                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center flex flex-col justify-center shadow-sm"><p class="text-blue-800 font-medium text-xs md:text-sm">พนักงานขับรถทั้งหมด</p><h2 class="text-3xl md:text-4xl font-bold text-blue-600 mt-2" id="statTotal">-</h2></div>
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center flex flex-col justify-center shadow-sm"><p class="text-blue-800 font-medium text-[11px] md:text-[12px]">พนักงานขับรถ+จนท.(ที่ประเมิน)</p><h2 class="text-3xl md:text-4xl font-bold text-blue-600 mt-2" id="statTotal">-</h2></div>
                     <div class="bg-green-50 border border-green-200 rounded-lg p-4 text-center flex flex-col justify-center shadow-sm"><p class="text-green-800 font-medium text-xs md:text-sm">พร้อม (GREEN)</p><h2 class="text-3xl md:text-4xl font-bold text-green-600 mt-2" id="statGreen">-</h2></div>
                     <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center flex flex-col justify-center shadow-sm"><p class="text-yellow-800 font-medium text-xs md:text-sm">เฝ้าระวัง (AMBER)</p><h2 class="text-3xl md:text-4xl font-bold text-yellow-600 mt-2" id="statAmber">-</h2></div>
                     <div class="bg-red-50 border border-red-200 rounded-lg p-4 text-center flex flex-col justify-center shadow-sm"><p class="text-red-800 font-medium text-xs md:text-sm">งดปฏิบัติงาน (RED)</p><h2 class="text-3xl md:text-4xl font-bold text-red-600 mt-2" id="statRed">-</h2></div>
-                    <div class="bg-gray-100 border border-gray-200 rounded-lg p-4 text-center flex flex-col justify-center shadow-sm"><p class="text-gray-600 font-medium text-xs md:text-sm">ยังไม่ประเมิน</p><h2 class="text-3xl md:text-4xl font-bold text-gray-700 mt-2" id="statNoData">-</h2></div>
+                    <div class="bg-gray-100 border border-gray-200 rounded-lg p-4 text-center flex flex-col justify-center shadow-sm"><p class="text-gray-600 font-medium text-[11px] md:text-[12px]">ยังไม่ประเมิน (เฉพาะ พขร.)</p><h2 class="text-3xl md:text-4xl font-bold text-gray-700 mt-2" id="statNoData">-</h2></div>
                 </div>
             </div>
             <div class="mb-8 p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
@@ -93,21 +93,21 @@
                 <div class="h-[300px]"><canvas id="orgBarChart"></canvas></div>
             </div>
             <div>
-                <h4 class="font-bold text-gray-800 mb-4 flex items-center gap-2"><span id="labelActionReq">รายชื่อพนักงานที่ต้องเฝ้าระวัง / งดขับ</span></h4>
+                <h4 class="font-bold text-gray-800 mb-4 flex items-center gap-2"><span id="labelActionReq">รายชื่อผู้ที่ต้องเฝ้าระวัง / งดขับ</span></h4>
                 <div class="overflow-x-auto border rounded-lg shadow-sm">
-                    <table class="w-full text-sm text-left"><thead class="bg-red-600 text-white border-b-2 border-red-700"><tr><th class="px-4 py-3 w-16 text-center">ลำดับที่</th><th class="px-4 py-3">วัน/เวลาที่ประเมิน</th><th class="px-4 py-3">ชื่อพนักงาน</th><th class="px-4 py-3">เบอร์ติดต่อ</th><th class="px-4 py-3">สถานะ</th><th class="px-4 py-3">สาเหตุหลัก</th></tr></thead><tbody id="adminActionList" class="divide-y"></tbody></table>
+                    <table class="w-full text-sm text-left"><thead class="bg-red-600 text-white border-b-2 border-red-700"><tr><th class="px-4 py-3 w-16 text-center">ลำดับที่</th><th class="px-4 py-3">วัน/เวลาที่ประเมิน</th><th class="px-4 py-3">ชื่อพนักงาน / เจ้าหน้าที่</th><th class="px-4 py-3">เบอร์ติดต่อ</th><th class="px-4 py-3">สถานะ</th><th class="px-4 py-3">สาเหตุหลัก</th></tr></thead><tbody id="adminActionList" class="divide-y"></tbody></table>
                 </div>
             </div>
             <div class="mt-8" id="divGreenList">
-                <h4 class="font-bold text-green-700 mb-4 flex items-center gap-2">✅ รายชื่อพนักงานที่ผ่านเกณฑ์ประเมิน (สีเขียว)</h4>
+                <h4 class="font-bold text-green-700 mb-4 flex items-center gap-2">✅ รายชื่อผู้ที่ผ่านเกณฑ์ประเมิน (สีเขียว)</h4>
                 <div class="overflow-x-auto border rounded-lg shadow-sm">
-                    <table class="w-full text-sm text-left"><thead class="bg-green-600 text-white border-b-2 border-green-700"><tr><th class="px-4 py-3 w-16 text-center">ลำดับที่</th><th class="px-4 py-3">ชื่อพนักงาน</th><th class="px-4 py-3 text-center">อุณหภูมิ (°C)</th><th class="px-4 py-3 text-center">ความดัน (BP)</th><th class="px-4 py-3 text-center">ชีพจร</th><th class="px-4 py-3 text-center">เวลาประเมิน</th></tr></thead><tbody id="adminGreenList" class="divide-y"></tbody></table>
+                    <table class="w-full text-sm text-left"><thead class="bg-green-600 text-white border-b-2 border-green-700"><tr><th class="px-4 py-3 w-16 text-center">ลำดับที่</th><th class="px-4 py-3">ชื่อพนักงาน / เจ้าหน้าที่</th><th class="px-4 py-3 text-center">อุณหภูมิ (°C)</th><th class="px-4 py-3 text-center">ความดัน (BP)</th><th class="px-4 py-3 text-center">ชีพจร</th><th class="px-4 py-3 text-center">เวลาประเมิน</th></tr></thead><tbody id="adminGreenList" class="divide-y"></tbody></table>
                 </div>
             </div>
             <div class="mt-8" id="divNoDataList">
-                <h4 class="font-bold text-gray-800 mb-4 flex items-center gap-2">รายชื่อพนักงานที่ยังไม่ได้ทำแบบประเมิน</h4>
+                <h4 class="font-bold text-gray-800 mb-4 flex items-center gap-2">รายชื่อพนักงานขับรถประจำที่ยังไม่ได้ทำแบบประเมิน (ไม่รวมเจ้าหน้าที่)</h4>
                 <div class="overflow-x-auto border rounded-lg shadow-sm">
-                    <table class="w-full text-sm text-left"><thead class="bg-gray-600 text-white border-b-2 border-gray-700"><tr><th class="px-4 py-3 w-16 text-center">ลำดับที่</th><th class="px-4 py-3">ชื่อพนักงาน</th><th class="px-4 py-3 text-center">เบอร์ติดต่อ</th><th class="px-4 py-3 text-center">สถานะ</th></tr></thead><tbody id="adminNoDataList" class="divide-y"></tbody></table>
+                    <table class="w-full text-sm text-left"><thead class="bg-gray-600 text-white border-b-2 border-gray-700"><tr><th class="px-4 py-3 w-16 text-center">ลำดับที่</th><th class="px-4 py-3">ชื่อพนักงานขับรถ</th><th class="px-4 py-3 text-center">เบอร์ติดต่อ</th><th class="px-4 py-3 text-center">สถานะ</th></tr></thead><tbody id="adminNoDataList" class="divide-y"></tbody></table>
                 </div>
             </div>
         </div>
@@ -119,18 +119,42 @@
                 <div><label class="block text-sm font-medium text-gray-700 mb-1">รหัส PIN (6 หลัก)</label><input type="password" id="inputPin" maxlength="6" class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500" required></div>
                 <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg transition shadow-md">เข้าสู่ระบบ</button>
             </form>
-            <div class="mt-6 text-center border-t pt-4"><p class="text-sm text-gray-500">พนักงานขับรถใหม่? <button type="button" onclick="switchView('viewRegister')" class="text-blue-600 font-medium hover:underline">ลงทะเบียนที่นี่</button></p></div>
+            <div class="mt-6 text-center border-t pt-4"><p class="text-sm text-gray-500">ผู้ขับขี่ใหม่? <button type="button" onclick="switchView('viewRegister')" class="text-blue-600 font-medium hover:underline">ลงทะเบียนที่นี่</button></p></div>
         </div>
 
         <div id="viewRegister" class="hidden w-full max-w-lg bg-white rounded-xl shadow-lg p-6 mt-4">
-            <div class="flex justify-between items-center border-b pb-3 mb-4"><h3 class="text-xl font-bold text-gray-800">ลงทะเบียนพนักงานใหม่</h3><button type="button" onclick="switchView('viewLogin')" class="text-gray-400 hover:text-gray-600">ปิด</button></div>
+            <div class="flex justify-between items-center border-b pb-3 mb-4"><h3 class="text-xl font-bold text-gray-800">ลงทะเบียนผู้ขับขี่ใหม่</h3><button type="button" onclick="switchView('viewLogin')" class="text-gray-400 hover:text-gray-600">ปิด</button></div>
             <form id="registerForm" class="space-y-4">
-                <div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-gray-700 mb-1">ชื่อจริง</label><input type="text" id="regFirstName" class="w-full px-3 py-2 border rounded-lg" required></div><div><label class="block text-sm font-medium text-gray-700 mb-1">นามสกุล</label><input type="text" id="regLastName" class="w-full px-3 py-2 border rounded-lg" required></div></div>
-                <div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-gray-700 mb-1">เบอร์โทรศัพท์</label><input type="tel" id="regPhone" maxlength="10" class="w-full px-3 py-2 border rounded-lg" required></div><div><label class="block text-sm font-medium text-gray-700 mb-1">อีเมล <span class="text-[10px] text-gray-400 font-normal">(ไม่บังคับ)</span></label><input type="email" id="regEmail" class="w-full px-3 py-2 border rounded-lg"></div></div>
-                <div><label class="block text-sm font-medium text-gray-700 mb-1">วัน/เดือน/ปีเกิด</label><input type="date" id="regDob" class="w-full px-3 py-2 border rounded-lg" required></div>
-                <div><label class="block text-sm font-medium text-gray-700 mb-1">หน่วยงานต้นสังกัด</label><select id="regOrg" class="w-full px-3 py-2 border rounded-lg" required><option value="">เลือกหน่วยงาน...</option><option value="สำนักงานสาธารณสุขจังหวัดนครนายก (สสจ.)">สำนักงานสาธารณสุขจังหวัดนครนายก (สสจ.)</option><option value="โรงพยาบาลนครนายก">โรงพยาบาลนครนายก</option><option value="โรงพยาบาลปากพลี">โรงพยาบาลปากพลี</option><option value="โรงพยาบาลบ้านนา">โรงพยาบาลบ้านนา</option><option value="โรงพยาบาลองครักษ์">โรงพยาบาลองครักษ์</option></select></div>
+                <div class="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
+                    <label class="block text-sm font-bold text-indigo-800 mb-2">สมัครในฐานะ <span class="text-red-500">*</span></label>
+                    <select id="regRole" class="w-full px-3 py-2 border rounded-lg font-bold text-blue-700 focus:ring-indigo-500" required onchange="toggleRegFields()">
+                        <option value="driver">พนักงานขับรถยนต์ประจำ (ประเมินทุกวัน)</option>
+                        <option value="staff">เจ้าหน้าที่ ขับรถยามจำเป็น (มีคำสั่งราชการ)</option>
+                    </select>
+                </div>
+
+                <div id="staffExtraFields" class="hidden p-4 bg-gray-50 border border-gray-200 rounded-lg space-y-4">
+                    <p class="text-sm font-bold text-gray-800 border-b pb-2">ข้อมูลเฉพาะตำแหน่งเจ้าหน้าที่</p>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div><label class="block text-sm font-medium text-gray-700 mb-1">ตำแหน่ง</label><input type="text" id="regPosition" class="w-full px-3 py-2 border rounded-lg" placeholder="เช่น นักวิชาการสาธารณสุข"></div>
+                        <div><label class="block text-sm font-medium text-gray-700 mb-1">กลุ่มงาน</label><input type="text" id="regDepartment" class="w-full px-3 py-2 border rounded-lg" placeholder="เช่น กลุ่มงานบริหารทั่วไป"></div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">อัปโหลดไฟล์คำสั่งผู้มีสิทธิ์ขับรถ (PDF) <span class="text-red-500">*</span></label>
+                        <input type="file" id="regAuthFile" accept=".pdf,application/pdf" class="w-full px-3 py-2 border rounded-lg bg-white text-sm">
+                        <p class="text-[10px] text-gray-500 mt-1">บังคับอัปโหลดเฉพาะไฟล์ .pdf ขนาดไม่เกิน 5MB</p>
+                        <input type="hidden" id="regAuthFileBase64">
+                        <input type="hidden" id="regAuthFileName">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mt-2"><div><label class="block text-sm font-medium text-gray-700 mb-1">ชื่อจริง <span class="text-red-500">*</span></label><input type="text" id="regFirstName" class="w-full px-3 py-2 border rounded-lg" required></div><div><label class="block text-sm font-medium text-gray-700 mb-1">นามสกุล <span class="text-red-500">*</span></label><input type="text" id="regLastName" class="w-full px-3 py-2 border rounded-lg" required></div></div>
+                <div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-gray-700 mb-1">เบอร์โทรศัพท์ <span class="text-red-500">*</span></label><input type="tel" id="regPhone" maxlength="10" class="w-full px-3 py-2 border rounded-lg" required></div><div><label class="block text-sm font-medium text-gray-700 mb-1">อีเมล <span class="text-[10px] text-gray-400 font-normal">(ไม่บังคับ)</span></label><input type="email" id="regEmail" class="w-full px-3 py-2 border rounded-lg"></div></div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-1">วัน/เดือน/ปีเกิด <span class="text-red-500">*</span></label><input type="date" id="regDob" class="w-full px-3 py-2 border rounded-lg" required></div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-1">หน่วยงานต้นสังกัด <span class="text-red-500">*</span></label><select id="regOrg" class="w-full px-3 py-2 border rounded-lg" required><option value="">เลือกหน่วยงาน...</option><option value="สำนักงานสาธารณสุขจังหวัดนครนายก (สสจ.)">สำนักงานสาธารณสุขจังหวัดนครนายก (สสจ.)</option><option value="โรงพยาบาลนครนายก">โรงพยาบาลนครนายก</option><option value="โรงพยาบาลปากพลี">โรงพยาบาลปากพลี</option><option value="โรงพยาบาลบ้านนา">โรงพยาบาลบ้านนา</option><option value="โรงพยาบาลองครักษ์">โรงพยาบาลองครักษ์</option></select></div>
                 <div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-gray-700 mb-1">โรคประจำตัว (ถ้ามี)</label><input type="text" id="regChronic" class="w-full px-3 py-2 border rounded-lg" placeholder="ถ้าไม่มีให้ใส่ -"></div><div><label class="block text-sm font-medium text-gray-700 mb-1">ยาที่ใช้ประจำ (ถ้ามี)</label><input type="text" id="regMeds" class="w-full px-3 py-2 border rounded-lg" placeholder="ถ้าไม่มีให้ใส่ -"></div></div>
-                <div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-gray-700 mb-1">การสูบบุหรี่</label><select id="regSmoking" class="w-full px-3 py-2 border rounded-lg" required><option value="ไม่สูบ">ไม่สูบ</option><option value="สูบเป็นครั้งคราว">สูบเป็นครั้งคราว</option><option value="สูบเป็นประจำ">สูบเป็นประจำ</option></select></div><div><label class="block text-sm font-medium text-gray-700 mb-1">การดื่มแอลกอฮอล์</label><select id="regAlcohol" class="w-full px-3 py-2 border rounded-lg" required><option value="ไม่ดื่ม">ไม่ดื่ม</option><option value="ดื่มสังสรรค์">ดื่มสังสรรค์บ้าง</option><option value="ดื่มเป็นประจำ">ดื่มเป็นประจำ</option></select></div></div>
+                <div class="grid grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-gray-700 mb-1">การสูบบุหรี่ <span class="text-red-500">*</span></label><select id="regSmoking" class="w-full px-3 py-2 border rounded-lg" required><option value="ไม่สูบ">ไม่สูบ</option><option value="สูบเป็นครั้งคราว">สูบเป็นครั้งคราว</option><option value="สูบเป็นประจำ">สูบเป็นประจำ</option></select></div><div><label class="block text-sm font-medium text-gray-700 mb-1">การดื่มแอลกอฮอล์ <span class="text-red-500">*</span></label><select id="regAlcohol" class="w-full px-3 py-2 border rounded-lg" required><option value="ไม่ดื่ม">ไม่ดื่ม</option><option value="ดื่มสังสรรค์">ดื่มสังสรรค์บ้าง</option><option value="ดื่มเป็นประจำ">ดื่มเป็นประจำ</option></select></div></div>
+                
                 <div class="bg-blue-50 p-4 rounded-lg border border-blue-100 text-sm mt-4"><label class="flex items-start cursor-pointer"><input type="checkbox" id="regPdpa" class="mt-1 w-4 h-4 text-blue-600 rounded flex-shrink-0" required><span class="ml-2 text-gray-700">ข้าพเจ้ายินยอมให้สำนักงานสาธารณสุขจังหวัดนครนายกและหน่วยงานต้นสังกัด เก็บรวบรวม ใช้ และประมวลผลข้อมูลส่วนบุคคล รวมถึงข้อมูลสุขภาพของข้าพเจ้า เพื่อวัตถุประสงค์ในการประเมินความพร้อมและเฝ้าระวังความปลอดภัยในการปฏิบัติงาน ตาม พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล (PDPA)</span></label></div>
                 <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg transition shadow-md mt-4">ยืนยันการลงทะเบียน</button>
              </form>
@@ -143,6 +167,7 @@
             </div>
             <div class="bg-blue-50 rounded-lg p-4 mb-6 border border-blue-100 relative">
                 <h4 class="font-semibold text-blue-800 mb-2">แบบประเมินความพร้อมก่อนปฏิบัติงาน</h4>
+                <p id="staffExemptNotice" class="text-xs text-blue-600 hidden mb-2 font-medium">✨ คุณเข้าสู่ระบบด้วยสิทธิ์ "เจ้าหน้าที่" กรุณาทำแบบประเมินเฉพาะวันที่ได้รับคำสั่งให้ปฏิบัติหน้าที่ขับรถยนต์ราชการเท่านั้น</p>
                 <button id="btnOpenForm" class="w-full bg-green-500 hover:bg-green-600 text-white font-medium py-2 rounded-lg shadow mt-2">เริ่มทำแบบประเมินวันนี้</button>
             </div>
             <div class="flex justify-between items-center mb-3">
@@ -156,7 +181,7 @@
         <div id="viewHealthForm" class="hidden w-full max-w-lg bg-white rounded-xl shadow-lg p-6 mt-4 flex-grow">
             <div class="flex justify-between items-center border-b pb-3 mb-4"><h3 class="text-xl font-bold text-gray-800">แบบประเมินความพร้อม</h3><button type="button" onclick="switchView('viewDriver')" class="text-gray-400 hover:text-gray-600">ปิด</button></div>
             <div id="adminTargetDriverContainer" class="hidden mb-4 bg-indigo-50 p-3 rounded-lg border border-indigo-200">
-                <label class="block text-sm font-bold text-indigo-800 mb-1">เลือกพนักงานที่ต้องการประเมินแทน</label>
+                <label class="block text-sm font-bold text-indigo-800 mb-1">เลือกผู้ที่ต้องการประเมินแทน</label>
                 <select id="adminTargetDriver" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-indigo-500"></select>
             </div>
             <form id="healthForm" class="space-y-4">
@@ -250,7 +275,8 @@
                     <option value="hospital_director">ผอ.รพ.</option>
                     <option value="exec_ppho">ผู้บริหาร สสจ.</option>
                     <option value="super_admin">Super Admin</option>
-                    <option value="driver">พนักงานขับรถ</option>
+                    <option value="driver">พนักงานขับรถประจำ</option>
+                    <option value="staff">เจ้าหน้าที่ (ขับรถจำเป็น)</option>
                 </select>
                 <select id="filterUserStatus" class="border rounded-lg px-3 py-2 text-sm w-full md:w-1/4 focus:ring-blue-500" onchange="applyUserFilter()"><option value="ALL">ทุกสถานะ</option><option value="PENDING">รออนุมัติ (PENDING)</option><option value="APPROVED">อนุมัติแล้ว (APPROVED)</option><option value="REJECTED">ไม่อนุมัติ (REJECTED)</option><option value="SUSPENDED">ระงับใช้งาน (SUSPENDED)</option></select>
             </div>
@@ -302,7 +328,7 @@
                 <div class="bg-indigo-50 p-4 rounded-lg border border-indigo-100">
                     <h4 class="font-bold text-indigo-800 mb-4 border-b border-indigo-200 pb-2">ตั้งค่าลิงก์คู่มือการใช้งาน (Manual URLs)</h4>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div><label class="block text-sm font-medium mb-1">พนักงานขับรถ (Driver)</label><input type="url" id="set_url_driver" class="w-full border rounded px-3 py-2 text-sm" placeholder="https://..."></div>
+                        <div><label class="block text-sm font-medium mb-1">พนักงานขับรถ / เจ้าหน้าที่</label><input type="url" id="set_url_driver" class="w-full border rounded px-3 py-2 text-sm" placeholder="https://..."></div>
                         <div><label class="block text-sm font-medium mb-1">Admin รพ. / สสจ.</label><input type="url" id="set_url_hospital_admin" class="w-full border rounded px-3 py-2 text-sm" placeholder="https://..."></div>
                         <div><label class="block text-sm font-medium mb-1">ผอ. โรงพยาบาล</label><input type="url" id="set_url_hospital_director" class="w-full border rounded px-3 py-2 text-sm" placeholder="https://..."></div>
                         <div><label class="block text-sm font-medium mb-1">ผู้บริหาร สสจ.</label><input type="url" id="set_url_exec_ppho" class="w-full border rounded px-3 py-2 text-sm" placeholder="https://..."></div>
@@ -376,11 +402,12 @@
                         <option value="super_admin" id="optAddSuper">Super Admin</option>
                         <option value="hospital_director" id="optAddDir">ผอ.รพ.</option>
                         <option value="hospital_admin" id="optAddAdmin">Admin รพ. / สสจ.</option>
-                        <option value="driver" id="optAddDriver">พนักงานขับรถ</option>
+                        <option value="driver" id="optAddDriver">พนักงานขับรถประจำ</option>
+                        <option value="staff" id="optAddStaff">เจ้าหน้าที่ (ขับรถยามจำเป็น)</option>
                     </select>
                 </div>
                 <div id="addDriverExtraFields" class="hidden space-y-3 border-t pt-3 mt-2 border-gray-200">
-                    <div><label class="block text-sm mb-1 text-blue-800 font-bold">ข้อมูลสุขภาพ (สำหรับพนักงานขับรถ)</label></div>
+                    <div><label class="block text-sm mb-1 text-blue-800 font-bold">ข้อมูลสุขภาพ (สำหรับผู้ขับขี่)</label></div>
                     <div><label class="block text-sm mb-1">วัน/เดือน/ปีเกิด</label><input type="date" id="addDob" class="w-full px-3 py-2 border rounded"></div>
                     <div class="grid grid-cols-2 gap-3"><div><label class="block text-sm mb-1">โรคประจำตัว</label><input type="text" id="addChronic" class="w-full border px-3 py-2 rounded" placeholder="-"></div><div><label class="block text-sm mb-1">ยาที่ใช้ประจำ</label><input type="text" id="addMeds" class="w-full border px-3 py-2 rounded" placeholder="-"></div></div>
                     <div class="grid grid-cols-2 gap-3">
@@ -418,7 +445,8 @@
                         <option value="exec_ppho" id="optEditExec">ผู้บริหาร สสจ.</option>
                         <option value="hospital_director" id="optEditDir">ผอ.รพ.</option>
                         <option value="hospital_admin" id="optEditAdmin">Admin รพ. / สสจ.</option>
-                        <option value="driver" id="optEditDriver">พนักงานขับรถ</option>
+                        <option value="driver" id="optEditDriver">พนักงานขับรถประจำ</option>
+                        <option value="staff" id="optEditStaff">เจ้าหน้าที่ (ขับรถจำเป็น)</option>
                         <option value="super_admin" id="optEditSuper">Super Admin</option>
                     </select>
                 </div>
@@ -438,7 +466,7 @@
         </div>
     </div>
     <script>
-        // 🚀 เอาลิงก์ /exec ที่ได้จาก Google Apps Script มาวางในเครื่องหมายคำพูดด้านล่างนี้ครับ!
+        // 🚀 ลิงก์ API เชื่อมต่อกับระบบหลังบ้านของคุณเอิร์ท
         const API_URL = "https://script.google.com/macros/s/AKfycbzPsmOjoCyzsa459DgNpC6oupSyExXi3jV4y5F7Iochg53uN2qwPTzU1kwpZ82KCeqd/exec"; 
 
         // ฟังก์ชันหัวใจหลัก สำหรับยิงข้อมูลไปหา Google Apps Script หลังบ้าน
@@ -455,7 +483,7 @@
                 })
                 .catch(err => {
                     console.error("API Error:", err);
-                    throw new Error("ไม่สามารถเชื่อมต่อฐานข้อมูลได้ (โปรดเช็คสิทธิ์ Deploy ของ Google Apps Script ว่าตั้ง Execute as: Me หรือไม่)");
+                    throw new Error("ไม่สามารถเชื่อมต่อฐานข้อมูลได้ (โปรดตรวจสอบการตั้งค่าสิทธิ์ใน Apps Script)");
                 });
             }
         };
@@ -468,7 +496,7 @@
         let cachedUsers = []; let cachedReqs = []; let cachedLogs = []; let cachedMyRole = ''; let cachedHistory = []; 
         
         const ACTION_TH = { 'LOGIN_SUCCESS': 'เข้าสู่ระบบสำเร็จ', 'REGISTER_USER': 'สมัครสมาชิกใหม่', 'SUBMIT_HEALTH_CHECK': 'ส่งแบบประเมินสุขภาพ', 'UPDATE_USER_STATUS': 'ปรับเปลี่ยนสถานะ', 'ADD_USER': 'เพิ่มผู้ใช้งานระบบ', 'EDIT_USER': 'แก้ไขข้อมูลผู้ใช้', 'UPDATE_SETTINGS': 'แก้ไขตั้งค่าระบบ', 'GENERATE_TEST_DATA': 'สร้างข้อมูลทดสอบ', 'CLEAR_DATABASE': 'ล้างฐานข้อมูลระบบ', 'SEED_ADMINS': 'นำเข้าผู้ดูแลระบบเริ่มต้น', 'APPROVE_EDIT_REQUEST': 'อนุมัติแก้ไขข้อมูลส่วนตัว', 'REJECT_EDIT_REQUEST': 'ไม่อนุมัติคำขอแก้ไข', 'CANCEL_EDIT_REQUEST': 'ยกเลิกคำขอแก้ไข', 'VIEW_PERSONAL_DATA': 'เปิดดูข้อมูลส่วนบุคคล', 'DELETE_USER': 'ลบผู้ใช้งาน' };
-        const ROLE_TH_MAP = { 'driver':'พนักงานขับรถ', 'hospital_admin':'Admin รพ.', 'hospital_director':'ผอ.รพ.', 'exec_ppho':'ผู้บริหาร สสจ.', 'provincial_admin':'Admin จังหวัด', 'provincial_audit':'Audit จังหวัด', 'super_admin':'Super Admin', 'guest':'ผู้เยี่ยมชม' };
+        const ROLE_TH_MAP = { 'driver':'พนักงานขับรถประจำ', 'staff':'เจ้าหน้าที่ (ขับรถจำเป็น)', 'hospital_admin':'Admin รพ.', 'hospital_director':'ผอ.รพ.', 'exec_ppho':'ผู้บริหาร สสจ.', 'provincial_admin':'Admin จังหวัด', 'provincial_audit':'Audit จังหวัด', 'super_admin':'Super Admin', 'guest':'ผู้เยี่ยมชม' };
 
         function getRoleTh(role, org) {
             if (role === 'hospital_admin' && org === 'สำนักงานสาธารณสุขจังหวัดนครนายก (สสจ.)') return 'Admin สสจ.';
@@ -504,7 +532,7 @@
         function goToHome() {
             const token = localStorage.getItem('dhr_session');
             if (token && appUser) { 
-                if(appUser.role === 'driver') switchView('viewDriver'); 
+                if(appUser.role === 'driver' || appUser.role === 'staff') switchView('viewDriver'); 
                 else { switchView('viewAdmin'); loadAdminDashboard(); }
             } else { switchView('viewAdmin'); loadAdminDashboard(); }
         }
@@ -512,14 +540,12 @@
         function openManual() {
             if(!appUser || !globalSettings.manualUrls) return;
             let userRoleKey = appUser.role === 'provincial_audit' ? 'provincial_admin' : appUser.role;
+            if (userRoleKey === 'staff') userRoleKey = 'driver'; // ใช้คู่มือเดียวกัน
             const url = globalSettings.manualUrls[userRoleKey];
             if(url && url.trim() !== "") window.open(url, '_blank'); else Swal.fire('แจ้งเตือน', `ยังไม่ได้ตั้งค่าลิงก์คู่มือสำหรับสิทธิ์ของท่าน`, 'info'); 
         }
 
         window.onload = function() {
-            if(API_URL.includes("ใส่_URL")) {
-                return Swal.fire('ตั้งค่าไม่สมบูรณ์', 'กรุณานำลิงก์ /exec มาใส่ในตัวแปร API_URL ที่บรรทัดแรกของ Javascript ด้วยครับ', 'error');
-            }
             switchView('viewAdmin');
             const token = localStorage.getItem('dhr_session');
             
@@ -611,16 +637,81 @@
             };
         }
 
+        // ฟังชั่นซ่อน/โชว์ และแปลงไฟล์ PDF สำหรับเจ้าหน้าที่
+        function toggleRegFields() {
+            const role = document.getElementById('regRole').value;
+            const staffFields = document.getElementById('staffExtraFields');
+            const authFile = document.getElementById('regAuthFile');
+            if (role === 'staff') {
+                staffFields.classList.remove('hidden');
+                authFile.required = true;
+            } else {
+                staffFields.classList.add('hidden');
+                authFile.required = false;
+            }
+        }
+
+        let regAuthFileEl = document.getElementById('regAuthFile');
+        if(regAuthFileEl) {
+            regAuthFileEl.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                if (file.type !== "application/pdf") {
+                    Swal.fire('ประเภทไฟล์ไม่ถูกต้อง', 'กรุณาอัปโหลดไฟล์ในรูปแบบ PDF เท่านั้น', 'warning');
+                    this.value = '';
+                    return;
+                }
+                if (file.size > 5 * 1024 * 1024) {
+                    Swal.fire('ขนาดไฟล์เกิน', 'กรุณาอัปโหลดไฟล์ขนาดไม่เกิน 5MB', 'warning');
+                    this.value = '';
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const base64String = event.target.result.split(',')[1];
+                    document.getElementById('regAuthFileBase64').value = base64String;
+                    document.getElementById('regAuthFileName').value = file.name;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
         let regFormEl = document.getElementById('registerForm');
         if(regFormEl) {
             regFormEl.onsubmit = function(e) {
                 e.preventDefault();
-                const payload = { phone: document.getElementById('regPhone').value, firstName: document.getElementById('regFirstName').value, lastName: document.getElementById('regLastName').value, org: document.getElementById('regOrg').value, dob: document.getElementById('regDob').value, chronicDisease: document.getElementById('regChronic').value, regularMeds: document.getElementById('regMeds').value, smoking: document.getElementById('regSmoking').value, alcohol: document.getElementById('regAlcohol').value, email: document.getElementById('regEmail').value, pdpaConsent: document.getElementById('regPdpa').checked };
-                showLoader("กำลังบันทึกการลงทะเบียน...");
+                const payload = { 
+                    phone: document.getElementById('regPhone').value, 
+                    firstName: document.getElementById('regFirstName').value, 
+                    lastName: document.getElementById('regLastName').value, 
+                    org: document.getElementById('regOrg').value, 
+                    dob: document.getElementById('regDob').value, 
+                    chronicDisease: document.getElementById('regChronic').value, 
+                    regularMeds: document.getElementById('regMeds').value, 
+                    smoking: document.getElementById('regSmoking').value, 
+                    alcohol: document.getElementById('regAlcohol').value, 
+                    email: document.getElementById('regEmail').value, 
+                    pdpaConsent: document.getElementById('regPdpa').checked,
+                    regRole: document.getElementById('regRole').value,
+                    position: document.getElementById('regPosition').value,
+                    department: document.getElementById('regDepartment').value,
+                    authFileBase64: document.getElementById('regAuthFileBase64').value,
+                    authFileName: document.getElementById('regAuthFileName').value
+                };
+                
+                showLoader("กำลังอัปโหลดไฟล์และลงทะเบียน...");
                 api.run('registerUser', payload).then(res => {
                     hideLoader();
-                    if (res.ok) { Swal.fire({ title: 'ลงทะเบียนสำเร็จ!', html: `<b>รหัส PIN ของคุณคือ: <span style="color:red; font-size:24px">${res.generatedPin}</span></b><br><br>กรุณาจดจำรหัสนี้ไว้ และรอ Admin รพ. อนุมัติสิทธิ์`, icon: 'success' }).then(() => { document.getElementById('registerForm').reset(); switchView('viewLogin'); }); } 
-                    else { Swal.fire('ข้อมูลผิดพลาด', res.error, 'error'); }
+                    if (res.ok) { 
+                        Swal.fire({ title: 'ลงทะเบียนสำเร็จ!', html: `<b>รหัส PIN ของคุณคือ: <span style="color:red; font-size:24px">${res.generatedPin}</span></b><br><br>กรุณาจดจำรหัสนี้ไว้ และรอ Admin รพ. อนุมัติสิทธิ์`, icon: 'success' }).then(() => { 
+                            document.getElementById('registerForm').reset(); 
+                            document.getElementById('regAuthFileBase64').value = ""; 
+                            document.getElementById('regAuthFileName').value = "";
+                            switchView('viewLogin'); 
+                        }); 
+                    } else { Swal.fire('ข้อมูลผิดพลาด', res.error, 'error'); }
                 }).catch(err => { hideLoader(); Swal.fire('เกิดข้อผิดพลาด', err.message, 'error'); });
                 return false;
             };
@@ -637,10 +728,16 @@
             
             const token = localStorage.getItem('dhr_session');
             
-            if(user.role === 'driver') {
+            if(user.role === 'driver' || user.role === 'staff') {
                 let dName = document.getElementById('driverName'); if(dName) dName.innerText = user.displayName;
                 let dOrg = document.getElementById('driverOrg'); if(dOrg) dOrg.innerText = user.org + (user.profile?.age ? ` (อายุ ${user.profile.age} ปี)` : '');
                 
+                let notice = document.getElementById('staffExemptNotice');
+                if(notice) {
+                    if (user.role === 'staff') notice.classList.remove('hidden');
+                    else notice.classList.add('hidden');
+                }
+
                 const actionArea = document.getElementById('driverActionArea');
                 if(actionArea) {
                     if(user.pendingEditReq) {
@@ -689,16 +786,16 @@
 
         // ================= DRIVER & ADMIN SUBMIT =================
         function openAdminSubmitCheck() {
-            showLoader("กำลังดึงรายชื่อพนักงาน...");
+            showLoader("กำลังดึงรายชื่อผู้ขับขี่...");
             api.run('getDriversForAdmin').then(res => {
                 hideLoader();
                 if(res.ok && res.drivers.length > 0) {
                     let targetSelect = document.getElementById('adminTargetDriver');
-                    if(targetSelect) targetSelect.innerHTML = '<option value="" data-name="" data-org="">-- กรุณาเลือกพนักงาน --</option>' + res.drivers.map(d => `<option value="${d.userId}" data-name="${d.name}" data-org="${d.org}">${d.name} (${d.org})</option>`).join('');
+                    if(targetSelect) targetSelect.innerHTML = '<option value="" data-name="" data-org="">-- กรุณาเลือกผู้ขับขี่ --</option>' + res.drivers.map(d => `<option value="${d.userId}" data-name="${d.name}" data-org="${d.org}">${d.name} (${d.org})</option>`).join('');
                     let tContainer = document.getElementById('adminTargetDriverContainer'); if(tContainer) tContainer.classList.remove('hidden'); 
                     let iDate = document.getElementById('inputDate'); if(iDate) iDate.value = new Date().toISOString().split('T')[0]; 
                     switchView('viewHealthForm');
-                } else { Swal.fire('แจ้งเตือน', 'ไม่พบรายชื่อพนักงานขับรถในหน่วยงานที่สามารถประเมินได้', 'info'); }
+                } else { Swal.fire('แจ้งเตือน', 'ไม่พบรายชื่อผู้ขับขี่รถยนต์ราชการในหน่วยงาน', 'info'); }
             }).catch(err => { hideLoader(); Swal.fire('ข้อผิดพลาด', err.message, 'error'); });
         }
 
@@ -721,7 +818,7 @@
                 let tContainer = document.getElementById('adminTargetDriverContainer');
                 if(tContainer && !tContainer.classList.contains('hidden')) {
                     let selectEl = document.getElementById('adminTargetDriver'); targetUserId = selectEl.value;
-                    if(!targetUserId) return Swal.fire('แจ้งเตือน', 'กรุณาเลือกพนักงานที่ต้องการประเมินแทน', 'warning');
+                    if(!targetUserId) return Swal.fire('แจ้งเตือน', 'กรุณาเลือกผู้ที่ต้องการประเมินแทน', 'warning');
                     let selectedOption = selectEl.options[selectEl.selectedIndex]; tName = selectedOption.getAttribute('data-name'); tOrg = selectedOption.getAttribute('data-org');
                 }
                 
@@ -745,7 +842,7 @@
                     if(res.ok) { 
                         document.getElementById('healthForm').reset(); 
                         let fVal = document.getElementById('fatigueVal'); if(fVal) fVal.innerText='0'; 
-                        if(appUser.role === 'driver') loadDriverHistory();
+                        if(appUser.role === 'driver' || appUser.role === 'staff') loadDriverHistory();
 
                         tempCurrentSubmission = {
                             date: payload.date, timeSlot: payload.timeSlot, sleepHours: payload.sleepHours, fatigue: payload.fatigue, temperature: payload.temperature,
@@ -771,7 +868,7 @@
 
         function generatePrintView(data) {
             let printDiv = document.getElementById('printArea'); let dateTh = formatThaiDate(data.date); if(!printDiv) return;
-            printDiv.innerHTML = `<div style="font-family: 'Noto Sans Thai', sans-serif; color: #1f2937;"><h2 style="text-align: center; color: #1e3a8a; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px;">รายงานผลการประเมินความพร้อมก่อนปฏิบัติงาน (Driver Health Readiness)</h2><br><table style="width: 100%; border-collapse: collapse; font-size: 16px;"><tr><td style="padding: 8px 0; width: 30%;"><b>ชื่อพนักงาน:</b></td><td>${data.targetName}</td></tr><tr><td style="padding: 8px 0;"><b>หน่วยงาน:</b></td><td>${data.targetOrg}</td></tr><tr><td style="padding: 8px 0;"><b>วันที่ประเมิน:</b></td><td>${dateTh}</td></tr><tr><td style="padding: 8px 0;"><b>ช่วงเวลา:</b></td><td>${data.timeSlot}</td></tr></table><h3 style="margin-top: 20px; background-color: #f3f4f6; padding: 10px;">ข้อมูลสุขภาพเบื้องต้น</h3><table style="width: 100%; border-collapse: collapse; border: 1px solid #d1d5db; font-size: 14px;"><tr><th style="border: 1px solid #d1d5db; padding: 10px; background-color: #f9fafb; text-align: left;">รายการ</th><th style="border: 1px solid #d1d5db; padding: 10px; background-color: #f9fafb; text-align: left;">ผลการตรวจ</th></tr><tr><td style="border: 1px solid #d1d5db; padding: 10px;">ชั่วโมงการนอน</td><td style="border: 1px solid #d1d5db; padding: 10px;">${data.sleepHours} ชั่วโมง</td></tr><tr><td style="border: 1px solid #d1d5db; padding: 10px;">ระดับความอ่อนล้า</td><td style="border: 1px solid #d1d5db; padding: 10px;">${data.fatigue} / 10</td></tr><tr><td style="border: 1px solid #d1d5db; padding: 10px;">อุณหภูมิร่างกาย</td><td style="border: 1px solid #d1d5db; padding: 10px;">${data.temperature} °C</td></tr><tr><td style="border: 1px solid #d1d5db; padding: 10px;">ความดันโลหิต (Sys/Dia)</td><td style="border: 1px solid #d1d5db; padding: 10px;">${data.systolic} / ${data.diastolic} mmHg</td></tr><tr><td style="border: 1px solid #d1d5db; padding: 10px;">ชีพจร</td><td style="border: 1px solid #d1d5db; padding: 10px;">${data.pulse} ครั้ง/นาที</td></tr></table><h3 style="margin-top: 20px; background-color: #f3f4f6; padding: 10px;">สรุปผลการประเมิน</h3><p style="font-size: 18px;">ระดับความพร้อม: <b style="color: ${data.band === 'RED' ? '#dc2626' : (data.band === 'AMBER' ? '#d97706' : '#16a34a')}">${data.band === 'RED' ? 'งดปฏิบัติงาน (RED)' : (data.band === 'AMBER' ? 'เฝ้าระวัง (AMBER)' : 'พร้อมปฏิบัติงาน (GREEN)')}</b></p><p><b>ความเสี่ยง/สาเหตุที่พบ:</b> ${data.reasons.length > 0 ? data.reasons.join(', ') : 'ปกติ ไม่มีอาการผิดปกติ'}</p><br><br><br><br><div style="display: flex; justify-content: space-between; text-align: center; margin-top: 50px;"><div style="width: 45%;"><p>ลงชื่อ.......................................................</p><p>(${data.targetName})</p><p>ผู้รับการประเมิน</p></div></div></div>`;
+            printDiv.innerHTML = `<div style="font-family: 'Noto Sans Thai', sans-serif; color: #1f2937;"><h2 style="text-align: center; color: #1e3a8a; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px;">รายงานผลการประเมินความพร้อมก่อนปฏิบัติงาน</h2><br><table style="width: 100%; border-collapse: collapse; font-size: 16px;"><tr><td style="padding: 8px 0; width: 30%;"><b>ชื่อ-สกุล:</b></td><td>${data.targetName}</td></tr><tr><td style="padding: 8px 0;"><b>หน่วยงาน:</b></td><td>${data.targetOrg}</td></tr><tr><td style="padding: 8px 0;"><b>วันที่ประเมิน:</b></td><td>${dateTh}</td></tr><tr><td style="padding: 8px 0;"><b>ช่วงเวลา:</b></td><td>${data.timeSlot}</td></tr></table><h3 style="margin-top: 20px; background-color: #f3f4f6; padding: 10px;">ข้อมูลสุขภาพเบื้องต้น</h3><table style="width: 100%; border-collapse: collapse; border: 1px solid #d1d5db; font-size: 14px;"><tr><th style="border: 1px solid #d1d5db; padding: 10px; background-color: #f9fafb; text-align: left;">รายการ</th><th style="border: 1px solid #d1d5db; padding: 10px; background-color: #f9fafb; text-align: left;">ผลการตรวจ</th></tr><tr><td style="border: 1px solid #d1d5db; padding: 10px;">ชั่วโมงการนอน</td><td style="border: 1px solid #d1d5db; padding: 10px;">${data.sleepHours} ชั่วโมง</td></tr><tr><td style="border: 1px solid #d1d5db; padding: 10px;">ระดับความอ่อนล้า</td><td style="border: 1px solid #d1d5db; padding: 10px;">${data.fatigue} / 10</td></tr><tr><td style="border: 1px solid #d1d5db; padding: 10px;">อุณหภูมิร่างกาย</td><td style="border: 1px solid #d1d5db; padding: 10px;">${data.temperature} °C</td></tr><tr><td style="border: 1px solid #d1d5db; padding: 10px;">ความดันโลหิต (Sys/Dia)</td><td style="border: 1px solid #d1d5db; padding: 10px;">${data.systolic} / ${data.diastolic} mmHg</td></tr><tr><td style="border: 1px solid #d1d5db; padding: 10px;">ชีพจร</td><td style="border: 1px solid #d1d5db; padding: 10px;">${data.pulse} ครั้ง/นาที</td></tr></table><h3 style="margin-top: 20px; background-color: #f3f4f6; padding: 10px;">สรุปผลการประเมิน</h3><p style="font-size: 18px;">ระดับความพร้อม: <b style="color: ${data.band === 'RED' ? '#dc2626' : (data.band === 'AMBER' ? '#d97706' : '#16a34a')}">${data.band === 'RED' ? 'งดปฏิบัติงาน (RED)' : (data.band === 'AMBER' ? 'เฝ้าระวัง (AMBER)' : 'พร้อมปฏิบัติงาน (GREEN)')}</b></p><p><b>ความเสี่ยง/สาเหตุที่พบ:</b> ${data.reasons.length > 0 ? data.reasons.join(', ') : 'ปกติ ไม่มีอาการผิดปกติ'}</p><br><br><br><br><div style="display: flex; justify-content: space-between; text-align: center; margin-top: 50px;"><div style="width: 45%;"><p>ลงชื่อ.......................................................</p><p>(${data.targetName})</p><p>ผู้รับการประเมิน</p></div></div></div>`;
             window.print();
         }
 
@@ -899,7 +996,7 @@
                 grouped[org].forEach((r, index) => {
                     let actionBtn = '-';
                     if (r.status === 'PENDING') {
-                        if (['super_admin','provincial_admin'].includes(appUser?.role) || (appUser?.role === 'hospital_admin' && r.reqUserRole === 'driver')) {
+                        if (['super_admin','provincial_admin'].includes(appUser?.role) || (appUser?.role === 'hospital_admin' && ['driver','staff'].includes(r.reqUserRole))) {
                             actionBtn = `<div class="flex gap-1 justify-center"><button onclick="approveReq('${r.id}')" class="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded text-[10px] shadow-sm transition font-medium">อนุมัติ</button><button onclick="rejectReq('${r.id}')" class="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-[10px] shadow-sm transition font-medium">ไม่อนุมัติ</button></div>`;
                         } else { actionBtn = `<span class="text-[11px] text-orange-600 font-bold bg-orange-100 px-2 py-1 rounded border border-orange-200">รอระดับสูงอนุมัติ</span>`; }
                     }
@@ -988,7 +1085,7 @@
                     renderDonutChart(res.stats); if(res.orgStats) renderBarChart(res.orgStats);
 
                     let isSpecificDay = filterPeriod === 'today' || filterPeriod.match(/^\d{4}-\d{2}-\d{2}$/);
-                    let lAction = document.getElementById('labelActionReq'); if(lAction) lAction.innerText = isSpecificDay ? 'รายชื่อพนักงานที่ต้องเฝ้าระวัง / งดขับ (วันที่เลือก)' : `ประวัติการประเมินที่ต้องเฝ้าระวัง (ช่วง ${filterPeriod === '7d' ? '7 วัน' : '30 วัน'})`;
+                    let lAction = document.getElementById('labelActionReq'); if(lAction) lAction.innerText = isSpecificDay ? 'รายชื่อผู้ที่ต้องเฝ้าระวัง / งดขับ (วันที่เลือก)' : `ประวัติการประเมินที่ต้องเฝ้าระวัง (ช่วง ${filterPeriod === '7d' ? '7 วัน' : '30 วัน'})`;
 
                     renderGroupedTable('adminActionList', res.actionRequired, (i, no) => {
                         let dParts = String(i.date).split('-'); let thDate = `${dParts[2]}/${dParts[1]}/${parseInt(dParts[0]) + 543}`;
@@ -1131,7 +1228,7 @@
                 grouped[org].sort((a,b) => a.role.localeCompare(b.role)).forEach((u, index) => {
                     let roleThText = getRoleTh(u.role, u.org); let isSelf = (u.userId === myId); let btnStatus = '';
                     if (u.status !== 'APPROVED') {
-                        if (myRole === 'super_admin' || (myRole === 'provincial_admin' && !['super_admin', 'provincial_admin', 'provincial_audit'].includes(u.role)) || (myRole === 'hospital_admin' && u.role === 'driver')) {
+                        if (myRole === 'super_admin' || (myRole === 'provincial_admin' && !['super_admin', 'provincial_admin', 'provincial_audit'].includes(u.role)) || (myRole === 'hospital_admin' && ['driver','staff'].includes(u.role))) {
                             btnStatus = `<div class="flex gap-1 justify-center mb-1"><button onclick="updStatus('${u.userId}', '${u.displayName}', 'APPROVED')" class="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded text-[10px] font-medium shadow-sm transition">อนุมัติ</button><button onclick="rejectUser('${u.userId}', '${u.displayName}')" class="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-[10px] font-medium shadow-sm transition">ไม่อนุมัติ</button></div>`;
                         } else { btnStatus = `<span class="text-[10px] text-orange-500 font-medium mr-1 bg-orange-50 px-1 rounded border border-orange-200">รอระดับสูงอนุมัติ</span>`; }
                     } else {
@@ -1139,7 +1236,7 @@
                             btnStatus = `<button onclick="updStatus('${u.userId}', '${u.displayName}', 'SUSPENDED')" class="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-[10px] font-medium mr-1 shadow-sm transition">ระงับ</button>`;
                         } else if (myRole === 'provincial_admin' && !['super_admin', 'exec_ppho', 'provincial_admin', 'provincial_audit'].includes(u.role)) {
                             btnStatus = `<button onclick="updStatus('${u.userId}', '${u.displayName}', 'SUSPENDED')" class="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-[10px] font-medium mr-1 shadow-sm transition">ระงับ</button>`;
-                        } else if (myRole === 'hospital_admin' && u.role === 'driver') {
+                        } else if (myRole === 'hospital_admin' && ['driver','staff'].includes(u.role)) {
                             btnStatus = `<button onclick="updStatus('${u.userId}', '${u.displayName}', 'SUSPENDED')" class="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-[10px] font-medium mr-1 shadow-sm transition">ระงับ</button>`;
                         }
                     }
@@ -1147,10 +1244,10 @@
                     let canEdit = false; let canViewPin = false; let canDelete = false;
                     if (myRole === 'super_admin') { canEdit = true; canViewPin = true; canDelete = (u.role !== 'super_admin'); } 
                     else if (myRole === 'provincial_admin') { canEdit = (!['super_admin', 'provincial_admin', 'provincial_audit'].includes(u.role) || isSelf); canViewPin = (!['super_admin', 'provincial_admin', 'provincial_audit', 'exec_ppho'].includes(u.role) || isSelf); canDelete = !['super_admin', 'provincial_admin', 'provincial_audit', 'exec_ppho'].includes(u.role); } 
-                    else if (myRole === 'hospital_admin') { canEdit = (u.role === 'driver' || isSelf); canViewPin = (u.role === 'driver' || isSelf); canDelete = false; }
+                    else if (myRole === 'hospital_admin') { canEdit = (['driver','staff'].includes(u.role) || isSelf); canViewPin = (['driver','staff'].includes(u.role) || isSelf); canDelete = false; }
                     
                     let btnEdit = canEdit ? `<button onclick="openEditUser('${u.userId}', '${u.phone}', '${u.displayName}', '${u.org}', '${u.role}', '${u.email}')" class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-[10px] font-medium mr-1 shadow-sm transition">แก้ไข</button>` : '';
-                    let btnView = u.role === 'driver' ? `<button onclick="confirmViewProfile('${u.userId}', '${u.displayName}')" class="bg-indigo-500 hover:bg-indigo-600 text-white px-2 py-1 rounded text-[10px] font-medium shadow-sm transition mr-1">ดูข้อมูล</button>` : '';
+                    let btnView = ['driver','staff'].includes(u.role) ? `<button onclick="confirmViewProfile('${u.userId}', '${u.displayName}')" class="bg-indigo-500 hover:bg-indigo-600 text-white px-2 py-1 rounded text-[10px] font-medium shadow-sm transition mr-1">ดูข้อมูล</button>` : '';
                     let btnDelete = canDelete ? `<button onclick="deleteUserBtn('${u.userId}', '${u.displayName}')" class="bg-gray-500 hover:bg-gray-600 text-white px-2 py-1 rounded text-[10px] font-medium shadow-sm transition mt-1 md:mt-0">ลบ</button>` : '';
                     let pinBtn = canViewPin ? `<br><button onclick="togglePin(this, '${u.pin}')" class="text-[11px] text-indigo-500 mt-1 hover:underline transition">ดู PIN</button>` : '';
                         
@@ -1195,15 +1292,16 @@
                     ['optAddProvAdmin','optAddProvAudit','optAddExec','optAddSuper'].forEach(id => { let el = document.getElementById(id); if(el) el.style.display = 'none'; });
                     ['optAddDir','optAddAdmin'].forEach(id => { let el = document.getElementById(id); if(el) el.style.display = 'block'; });
                     let elDr = document.getElementById('optAddDriver'); if(elDr) elDr.style.display = 'none';
+                    let elSt = document.getElementById('optAddStaff'); if(elSt) elSt.style.display = 'none';
                     if(roleSelect) roleSelect.value = 'hospital_admin'; 
                 } else if (appUser && appUser.role === 'provincial_admin') {
                     if(orgSelect) orgSelect.disabled = false;
                     ['optAddProvAdmin','optAddProvAudit','optAddExec','optAddSuper'].forEach(id => { let el = document.getElementById(id); if(el) el.style.display = 'none'; });
-                    ['optAddDir','optAddAdmin','optAddDriver'].forEach(id => { let el = document.getElementById(id); if(el) el.style.display = 'block'; });
+                    ['optAddDir','optAddAdmin','optAddDriver','optAddStaff'].forEach(id => { let el = document.getElementById(id); if(el) el.style.display = 'block'; });
                     if(roleSelect) roleSelect.value = 'driver';
                 } else {
                     if(orgSelect) orgSelect.disabled = false;
-                    ['optAddProvAdmin','optAddProvAudit','optAddExec','optAddSuper','optAddDir','optAddAdmin','optAddDriver'].forEach(id => { let el = document.getElementById(id); if(el) el.style.display = 'block'; });
+                    ['optAddProvAdmin','optAddProvAudit','optAddExec','optAddSuper','optAddDir','optAddAdmin','optAddDriver','optAddStaff'].forEach(id => { let el = document.getElementById(id); if(el) el.style.display = 'block'; });
                     if(roleSelect) roleSelect.value = 'driver';
                 }
                 toggleAddDriverFields(); 
@@ -1238,7 +1336,7 @@
 
         function toggleAddDriverFields() { 
             const roleEl = document.getElementById('addRole'); if(!roleEl) return;
-            const role = roleEl.value; const isDriver = (role === 'driver');
+            const role = roleEl.value; const isDriver = (role === 'driver' || role === 'staff');
             let dExt = document.getElementById('addDriverExtraFields'); if(dExt) dExt.classList.toggle('hidden', !isDriver);
             const emailLabel = document.getElementById('labelAddEmail'); const emailInput = document.getElementById('addEmail');
             if (appUser && appUser.role === 'hospital_admin' && role === 'hospital_admin') {
@@ -1333,9 +1431,17 @@
             const roleThText = getRoleTh(u.role, u.org);
             let html = `<div class="grid grid-cols-2 gap-y-3 text-sm"><div><span class="text-gray-500 block text-xs">ชื่อ-สกุล</span><span class="font-bold">${u.displayName}</span></div><div><span class="text-gray-500 block text-xs">หน่วยงาน</span><span class="font-bold">${u.org}</span></div><div><span class="text-gray-500 block text-xs">เบอร์โทรศัพท์</span><span class="font-bold font-mono">${u.phone}</span></div><div><span class="text-gray-500 block text-xs">บทบาท/สิทธิ์</span><span class="font-bold text-blue-600">${roleThText}</span></div><div class="col-span-2 border-b my-1"></div>`;
             
-            if (u.role === 'driver') {
-                html += `<div><span class="text-gray-500 block text-xs">อายุ</span><span class="font-bold">${p.age || '-'} ปี</span></div><div><span class="text-gray-500 block text-xs">วันเกิด</span><span class="font-bold">${formatThaiDate(p.dob)}</span></div>
-                    <div class="col-span-2 bg-yellow-50 p-3 rounded-lg border border-yellow-100 mt-2 mb-2"><p class="font-bold text-yellow-800 mb-2 border-b border-yellow-200 pb-1">ข้อมูลสุขภาพเบื้องต้น</p><div class="grid grid-cols-2 gap-2"><div><span class="text-gray-500 block text-[10px]">โรคประจำตัว</span><span class="font-bold text-red-600">${p.chronicDisease || '-'}</span></div><div><span class="text-gray-500 block text-[10px]">ยาที่ใช้ประจำ</span><span class="font-bold text-red-600">${p.regularMeds || '-'}</span></div><div><span class="text-gray-500 block text-[10px]">ประวัติการสูบบุหรี่</span><span class="font-bold">${p.smoking || '-'}</span></div><div><span class="text-gray-500 block text-[10px]">ประวัติการดื่มแอลกอฮอล์</span><span class="font-bold">${p.alcohol || '-'}</span></div></div></div>`;
+            if (u.role === 'driver' || u.role === 'staff') {
+                html += `<div><span class="text-gray-500 block text-xs">อายุ</span><span class="font-bold">${p.age || '-'} ปี</span></div><div><span class="text-gray-500 block text-xs">วันเกิด</span><span class="font-bold">${formatThaiDate(p.dob)}</span></div>`;
+                
+                if (u.role === 'staff') {
+                     html += `<div><span class="text-gray-500 block text-xs">ตำแหน่ง</span><span class="font-bold">${p.position || '-'}</span></div>
+                              <div><span class="text-gray-500 block text-xs">กลุ่มงาน</span><span class="font-bold">${p.department || '-'}</span></div>
+                              <div class="col-span-2"><span class="text-gray-500 block text-xs">ไฟล์คำสั่ง</span>
+                              ${p.authFileUrl ? `<a href="${p.authFileUrl}" target="_blank" class="text-blue-600 hover:underline text-sm font-bold">📄 ดูไฟล์แนบ (PDF)</a>` : '<span class="text-gray-400 text-sm">ไม่มีไฟล์แนบ</span>'}</div>`;
+                }
+
+                html += `<div class="col-span-2 bg-yellow-50 p-3 rounded-lg border border-yellow-100 mt-2 mb-2"><p class="font-bold text-yellow-800 mb-2 border-b border-yellow-200 pb-1">ข้อมูลสุขภาพเบื้องต้น</p><div class="grid grid-cols-2 gap-2"><div><span class="text-gray-500 block text-[10px]">โรคประจำตัว</span><span class="font-bold text-red-600">${p.chronicDisease || '-'}</span></div><div><span class="text-gray-500 block text-[10px]">ยาที่ใช้ประจำ</span><span class="font-bold text-red-600">${p.regularMeds || '-'}</span></div><div><span class="text-gray-500 block text-[10px]">ประวัติการสูบบุหรี่</span><span class="font-bold">${p.smoking || '-'}</span></div><div><span class="text-gray-500 block text-[10px]">ประวัติการดื่มแอลกอฮอล์</span><span class="font-bold">${p.alcohol || '-'}</span></div></div></div>`;
                 
                 html += `<div class="col-span-2 mt-2"><p class="font-bold text-gray-700 mb-2">ประวัติการประเมินล่าสุด</p><div class="space-y-2 max-h-48 overflow-y-auto pr-1">`;
                 if (h && h.length > 0) {
