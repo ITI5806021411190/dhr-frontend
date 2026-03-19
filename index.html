@@ -449,10 +449,13 @@
                     method: 'POST',
                     body: JSON.stringify({ action: action, payload: payload, sessionToken: token })
                 })
-                .then(res => res.json())
+                .then(res => {
+                    if (!res.ok) throw new Error("HTTP Status " + res.status);
+                    return res.json();
+                })
                 .catch(err => {
                     console.error("API Error:", err);
-                    throw new Error("เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาลองใหม่อีกครั้ง");
+                    throw new Error("ไม่สามารถเชื่อมต่อฐานข้อมูลได้ (โปรดเช็คสิทธิ์ Deploy ของ Google Apps Script ว่าตั้ง Execute as: Me หรือไม่)");
                 });
             }
         };
@@ -500,8 +503,10 @@
 
         function goToHome() {
             const token = localStorage.getItem('dhr_session');
-            if (token && appUser) { if(appUser.role === 'driver') switchView('viewDriver'); else { switchView('viewAdmin'); loadAdminDashboard(token); }
-            } else { switchView('viewAdmin'); loadAdminDashboard(null); }
+            if (token && appUser) { 
+                if(appUser.role === 'driver') switchView('viewDriver'); 
+                else { switchView('viewAdmin'); loadAdminDashboard(); }
+            } else { switchView('viewAdmin'); loadAdminDashboard(); }
         }
 
         function openManual() {
@@ -530,15 +535,15 @@
                         }
                         renderDynamicHealthForm(); handleLoginSuccess(res.currentUser);
                     } else { 
-                        localStorage.removeItem('dhr_session'); loadAdminDashboard(null); 
+                        localStorage.removeItem('dhr_session'); loadAdminDashboard(); 
                         let btnL = document.getElementById('btnNavLogin'); if(btnL) btnL.classList.remove('hidden'); 
                     }
                 }).catch(err => { 
-                    loadAdminDashboard(null); 
+                    loadAdminDashboard(); 
                     let btnL = document.getElementById('btnNavLogin'); if(btnL) btnL.classList.remove('hidden'); 
                 });
             } else { 
-                loadAdminDashboard(null); 
+                loadAdminDashboard(); 
                 let btnL = document.getElementById('btnNavLogin'); if(btnL) btnL.classList.remove('hidden'); 
             }
         };
@@ -569,7 +574,7 @@
                 let bLogin = document.getElementById('btnNavLogin'); if(bLogin) bLogin.classList.remove('hidden'); 
                 let bManual = document.getElementById('btnNavManual'); if(bManual) bManual.classList.add('hidden');
                 ['btnNavDash', 'btnNavUsers', 'btnNavEditReq', 'btnNavAudit', 'btnNavSetting', 'navUserName'].forEach(id => { let el = document.getElementById(id); if(el) el.classList.add('hidden'); }); 
-                switchView('viewAdmin'); loadAdminDashboard(null);
+                switchView('viewAdmin'); loadAdminDashboard();
             };
         }
 
@@ -629,6 +634,8 @@
             
             let nUser = document.getElementById('navUserName');
             if(nUser) { nUser.innerText = `${user.displayName} (${getRoleTh(user.role, user.org)})`; nUser.classList.remove('hidden'); }
+            
+            const token = localStorage.getItem('dhr_session');
             
             if(user.role === 'driver') {
                 let dName = document.getElementById('driverName'); if(dName) dName.innerText = user.displayName;
@@ -756,7 +763,11 @@
         }
 
         function executePrint() { if(!tempCurrentSubmission) return; generatePrintView(tempCurrentSubmission); }
-        function printHistoryItem(index) { let item = cachedHistory[index]; if(!item) return; let pData = { date: item.rawDate, timeSlot: item.timeSlot, sleepHours: item.sleepHours, fatigue: item.fatigue, temperature: item.temp, systolic: item.sys, diastolic: item.dia, pulse: item.pulse, band: item.band, reasons: item.reasons, targetName: appUser.displayName, targetOrg: appUser.org }; generatePrintView(pData); }
+        function printHistoryItem(index) {
+            let item = cachedHistory[index]; if(!item) return;
+            let pData = { date: item.rawDate, timeSlot: item.timeSlot, sleepHours: item.sleepHours, fatigue: item.fatigue, temperature: item.temp, systolic: item.sys, diastolic: item.dia, pulse: item.pulse, band: item.band, reasons: item.reasons, targetName: appUser.displayName, targetOrg: appUser.org };
+            generatePrintView(pData);
+        }
 
         function generatePrintView(data) {
             let printDiv = document.getElementById('printArea'); let dateTh = formatThaiDate(data.date); if(!printDiv) return;
@@ -995,7 +1006,7 @@
                         }, 6);
                         renderGroupedTable('adminNoDataList', res.noDataList, (i, no) => { return `<tr class="border-b bg-white"><td class="px-4 py-3 text-center text-gray-500 font-bold">${no}</td><td class="px-4 py-3 font-medium text-gray-700">${i.name}</td><td class="px-4 py-3 text-center font-mono text-sm">${i.phone}</td><td class="px-4 py-3 text-center"><span class="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">ยังไม่ประเมิน</span></td></tr>`; }, 4);
                     }
-                }
+                } else { Swal.fire('ข้อผิดพลาด', res.error, 'error'); }
             }).catch(err => { hideLoader(); console.error(err); });
         }
 
@@ -1051,6 +1062,7 @@
                     if(res.ok) { Swal.fire('สำเร็จ','บันทึกข้อมูลระบบเรียบร้อยแล้ว','success'); globalSettings.timeSlots = payload.timeSlots; globalSettings.criticalRisks = payload.criticalRisks; globalSettings.manualUrls = payload.manualUrls; globalSettings.scoringCriteria = payload.scoringCriteria; renderDynamicHealthForm(); } 
                     else { Swal.fire('ข้อผิดพลาด', res.error, 'error'); }
                 }).catch(err => { hideLoader(); Swal.fire('ข้อผิดพลาด', err.message, 'error'); });
+                return false;
             };
         }
 
