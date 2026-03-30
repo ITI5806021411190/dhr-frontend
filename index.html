@@ -887,7 +887,2635 @@
                 <button onclick="document.getElementById('modalViewProfile').classList.add('hidden')" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-lg font-medium transition">ปิดหน้าต่าง</button>
             </div>
         </div>
-    </div>
-</script>
+        <script>
+        // 🚀 ลิงก์ API เชื่อมต่อกับระบบหลังบ้าน
+        const API_URL = "https://script.google.com/macros/s/AKfycbzPsmOjoCyzsa459DgNpC6oupSyExXi3jV4y5F7Iochg53uN2qwPTzU1kwpZ82KCeqd/exec"; 
+
+        const api = {
+            run: function(action, payload = {}) {
+                const token = localStorage.getItem('dhr_session');
+                return fetch(API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ 
+                        action: action, 
+                        payload: payload, 
+                        sessionToken: token 
+                    })
+                })
+                .then(res => {
+                    if (!res.ok) {
+                        throw new Error("HTTP Status " + res.status);
+                    }
+                    return res.json();
+                })
+                .catch(err => {
+                    console.error("API Error:", err);
+                    Swal.fire({
+                        title: 'การเชื่อมต่อถูกปฏิเสธ',
+                        html: 'ระบบไม่สามารถดึงข้อมูลจากฐานข้อมูลได้<br><br><b>วิธีแก้ไข:</b><br>โปรดตรวจสอบการตั้งค่า Deploy ใน Google Apps Script ตรงช่อง <b>Who has access</b> ว่าได้ตั้งเป็น <b>"ทุกคน (Anyone)"</b> แล้วหรือไม่',
+                        icon: 'error'
+                    });
+                    throw err;
+                });
+            }
+        };
+
+        let appUser = null; 
+        let globalSettings = { 
+            timeSlots: [], 
+            criticalRisks: [], 
+            manualUrls: {}, 
+            scoringCriteria: null, 
+            telegramConfig: null 
+        };
+        let dashChartInstance = null; 
+        let barChartInstance = null;
+        
+        let cachedUsers = []; 
+        let cachedReqs = []; 
+        let cachedLogs = []; 
+        let cachedMyRole = ''; 
+        let cachedHistory = []; 
+        
+        const ACTION_TH = { 
+            'LOGIN_SUCCESS': 'เข้าสู่ระบบสำเร็จ', 
+            'REGISTER_USER': 'สมัครสมาชิกใหม่', 
+            'SUBMIT_HEALTH_CHECK': 'ส่งแบบประเมินสุขภาพ', 
+            'UPDATE_USER_STATUS': 'ปรับเปลี่ยนสถานะ', 
+            'ADD_USER': 'เพิ่มผู้ใช้งานระบบ', 
+            'EDIT_USER': 'แก้ไขข้อมูลผู้ใช้', 
+            'UPDATE_SETTINGS': 'แก้ไขตั้งค่าระบบ', 
+            'GENERATE_TEST_DATA': 'สร้างข้อมูลทดสอบ', 
+            'CLEAR_DATABASE': 'ล้างฐานข้อมูลระบบ', 
+            'SEED_ADMINS': 'นำเข้าผู้ดูแลระบบเริ่มต้น', 
+            'APPROVE_EDIT_REQUEST': 'อนุมัติแก้ไขข้อมูลส่วนตัว', 
+            'REJECT_EDIT_REQUEST': 'ไม่อนุมัติคำขอแก้ไข', 
+            'CANCEL_EDIT_REQUEST': 'ยกเลิกคำขอแก้ไข', 
+            'VIEW_PERSONAL_DATA': 'เปิดดูข้อมูลส่วนบุคคล', 
+            'DELETE_USER': 'ลบผู้ใช้งาน' 
+        };
+
+        const ROLE_TH_MAP = { 
+            'driver': 'พนักงานขับรถประจำ', 
+            'staff': 'เจ้าหน้าที่ (ขับรถจำเป็น)', 
+            'hospital_admin': 'Admin รพ.', 
+            'hospital_director': 'ผอ.รพ.', 
+            'exec_ppho': 'ผู้บริหาร สสจ.', 
+            'provincial_admin': 'Admin จังหวัด', 
+            'provincial_audit': 'Audit จังหวัด', 
+            'super_admin': 'Super Admin', 
+            'guest': 'ผู้เยี่ยมชม' 
+        };
+
+        function getRoleTh(role, org) {
+            if (role === 'hospital_admin' && org === 'สำนักงานสาธารณสุขจังหวัดนครนายก (สสจ.)') {
+                return 'Admin สสจ.';
+            }
+            return ROLE_TH_MAP[role] || role;
+        }
+
+        const globalLoader = document.getElementById('globalLoader');
+        const views = [
+            'viewAdmin', 'viewLogin', 'viewRegister', 'viewDriver', 
+            'viewHealthForm', 'viewEditDriverReq', 'viewAdminEditReq', 
+            'viewUserManagement', 'viewSettings', 'viewAuditLog'
+        ];
+        
+        let dateEl = document.getElementById('adminDateNow');
+        if (dateEl) {
+            dateEl.innerText = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+        }
+
+        function showLoader(txt = "กำลังทำงาน...") { 
+            let lt = document.getElementById('loaderText'); 
+            if (lt) {
+                lt.innerText = txt; 
+            }
+            if (globalLoader) {
+                globalLoader.classList.remove('hidden'); 
+            }
+        }
+
+        function hideLoader() { 
+            if (globalLoader) {
+                globalLoader.classList.add('hidden'); 
+            }
+        }
+
+        function formatThaiDate(dateStr) {
+            if (!dateStr || dateStr === '-') {
+                return '-'; 
+            }
+            const d = new Date(dateStr); 
+            if (isNaN(d.getTime())) {
+                return dateStr;
+            }
+            const months = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+            return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear() + 543}`;
+        }
+
+        function switchView(viewId) {
+            views.forEach(v => { 
+                let el = document.getElementById(v); 
+                if (el) {
+                    el.classList.add('hidden'); 
+                }
+            }); 
+            
+            let targetView = document.getElementById(viewId); 
+            if (targetView) {
+                targetView.classList.remove('hidden');
+            }
+            
+            let navBtns = ['btnNavDash', 'btnNavUsers', 'btnNavEditReq', 'btnNavAudit', 'btnNavSetting'];
+            navBtns.forEach(b => { 
+                let btn = document.getElementById(b); 
+                if (btn) {
+                    btn.classList.remove('text-white', 'underline'); 
+                }
+            });
+
+            if (viewId === 'viewAdmin') { 
+                let b = document.getElementById('btnNavDash'); 
+                if (b) b.classList.add('text-white', 'underline'); 
+            }
+            if (viewId === 'viewUserManagement') { 
+                let b = document.getElementById('btnNavUsers'); 
+                if (b) b.classList.add('text-white', 'underline'); 
+            }
+            if (viewId === 'viewAdminEditReq') { 
+                let b = document.getElementById('btnNavEditReq'); 
+                if (b) b.classList.add('text-white', 'underline'); 
+            }
+            if (viewId === 'viewAuditLog') { 
+                let b = document.getElementById('btnNavAudit'); 
+                if (b) b.classList.add('text-white', 'underline'); 
+                if (appUser) { 
+                    localStorage.setItem('localAuditCount_' + appUser.phone, localStorage.getItem('backendAuditCount') || '0'); 
+                    updateAuditBadge(0); 
+                } 
+            }
+            if (viewId === 'viewSettings') { 
+                let b = document.getElementById('btnNavSetting'); 
+                if (b) b.classList.add('text-white', 'underline'); 
+            }
+        }
+
+        function goToHome() {
+            const token = localStorage.getItem('dhr_session');
+            if (token && appUser) { 
+                if (appUser.role === 'driver' || appUser.role === 'staff') {
+                    switchView('viewDriver'); 
+                } else { 
+                    switchView('viewAdmin'); 
+                    loadAdminDashboard(); 
+                }
+            } else { 
+                switchView('viewAdmin'); 
+                loadAdminDashboard(); 
+            }
+        }
+
+        function openManual() {
+            if (!appUser || !globalSettings.manualUrls) {
+                return;
+            }
+            let userRoleKey = appUser.role === 'provincial_audit' ? 'provincial_admin' : appUser.role;
+            if (userRoleKey === 'staff') {
+                userRoleKey = 'driver'; 
+            }
+            const url = globalSettings.manualUrls[userRoleKey];
+            if (url && url.trim() !== "") {
+                window.open(url, '_blank'); 
+            } else {
+                Swal.fire('แจ้งเตือน', `ยังไม่ได้ตั้งค่าลิงก์คู่มือสำหรับสิทธิ์ของท่าน`, 'info'); 
+            }
+        }
+
+        window.onload = function() {
+            if (API_URL.includes("ใส่_URL")) {
+                return Swal.fire('ตั้งค่าไม่สมบูรณ์', 'กรุณานำลิงก์ /exec มาใส่ในตัวแปร API_URL ที่บรรทัดแรกของ Javascript ด้วยครับ', 'error');
+            }
+            switchView('viewAdmin');
+            const token = localStorage.getItem('dhr_session');
+            
+            if (token) {
+                api.run('getInitialData').then(res => {
+                    if (res.ok && res.currentUser.role !== 'guest') {
+                        globalSettings = res.settings; 
+                        updateEditReqBadge(res.pendingReqs); 
+                        updateUsersBadge(res.pendingUsers); 
+                        if (res.auditLogCount !== undefined) {
+                            localStorage.setItem('backendAuditCount', res.auditLogCount);
+                            let localCount = parseInt(localStorage.getItem('localAuditCount_' + res.currentUser.phone) || '0');
+                            updateAuditBadge(res.auditLogCount - localCount > 0 ? res.auditLogCount - localCount : 0);
+                        }
+                        renderDynamicHealthForm(); 
+                        handleLoginSuccess(res.currentUser);
+                    } else { 
+                        localStorage.removeItem('dhr_session'); 
+                        loadAdminDashboard(); 
+                        let btnL = document.getElementById('btnNavLogin'); 
+                        if (btnL) {
+                            btnL.classList.remove('hidden'); 
+                        }
+                    }
+                }).catch(err => { 
+                    loadAdminDashboard(); 
+                    let btnL = document.getElementById('btnNavLogin'); 
+                    if (btnL) {
+                        btnL.classList.remove('hidden'); 
+                    }
+                });
+            } else { 
+                loadAdminDashboard(); 
+                let btnL = document.getElementById('btnNavLogin'); 
+                if (btnL) {
+                    btnL.classList.remove('hidden'); 
+                }
+            }
+        };
+
+        function updateEditReqBadge(count) { 
+            const badge = document.getElementById('badgeEditReq'); 
+            if (!badge) return; 
+            if (count > 0) { 
+                badge.innerText = count; 
+                badge.classList.remove('hidden'); 
+            } else {
+                badge.classList.add('hidden'); 
+            }
+        }
+
+        function updateUsersBadge(count) { 
+            const badge = document.getElementById('badgeUsers'); 
+            if (!badge) return; 
+            if (count > 0) { 
+                badge.innerText = count; 
+                badge.classList.remove('hidden'); 
+            } else {
+                badge.classList.add('hidden'); 
+            }
+        }
+
+        function updateAuditBadge(count) { 
+            const badge = document.getElementById('badgeAudit'); 
+            if (!badge) return; 
+            if (count > 0) { 
+                badge.innerText = count; 
+                badge.classList.remove('hidden'); 
+            } else {
+                badge.classList.add('hidden'); 
+            }
+        }
+
+        function renderDynamicHealthForm() {
+            let elTS = document.getElementById('inputTimeSlot'); 
+            if (elTS) {
+                elTS.innerHTML = '<option value="">เลือกช่วงเวลา...</option>' + (globalSettings.timeSlots || []).map(t => `<option value="${t}">${t}</option>`).join('');
+            }
+
+            let elCR = document.getElementById('divCriticalRisks'); 
+            if (elCR) {
+                elCR.innerHTML = (globalSettings.criticalRisks || []).map(r => `<label class="flex items-center p-3 border border-red-200 bg-red-50 rounded-lg cursor-pointer"><input type="checkbox" name="criticalRiskItem" value="${r}" class="w-5 h-5 text-red-600 flex-shrink-0"><span class="ml-3 text-red-800 text-sm font-medium">${r}</span></label>`).join('');
+            }
+
+            let setTS = document.getElementById('set_timeSlots'); 
+            if (setTS) {
+                setTS.value = (globalSettings.timeSlots || []).join(',');
+            }
+
+            let setCR = document.getElementById('set_criticalRisks'); 
+            if (setCR) {
+                setCR.value = (globalSettings.criticalRisks || []).join(',');
+            }
+
+            if (globalSettings.manualUrls) { 
+                let roles = ['driver','hospital_admin','hospital_director','exec_ppho','super_admin', 'provincial_admin'];
+                roles.forEach(r => { 
+                    let el = document.getElementById('set_url_' + r); 
+                    if (el) {
+                        el.value = globalSettings.manualUrls[r] || ''; 
+                    }
+                }); 
+            }
+
+            if (globalSettings.scoringCriteria) { 
+                const sc = globalSettings.scoringCriteria; 
+                let scFields = ['sc_tempHigh','sc_tempLow','sc_sysRed','sc_diaRed','sc_sysAmber','sc_diaAmber','sc_pulseMin','sc_pulseMax','sc_fatigueRed','sc_fatigueAmber','sc_sleepMin'];
+                scFields.forEach(id => { 
+                    let el = document.getElementById(id); 
+                    if (el && sc[id.replace('sc_', '')]) {
+                        el.value = sc[id.replace('sc_', '')]; 
+                    }
+                }); 
+            }
+            
+            // นำค่า Telegram Config มาแสดงในหน้าตั้งค่า
+            if (globalSettings.telegramConfig) {
+                const tg = globalSettings.telegramConfig;
+                let elEn = document.getElementById('tg_enabled'); 
+                if (elEn) {
+                    elEn.checked = tg.enabled;
+                }
+
+                let elBt = document.getElementById('tg_botToken'); 
+                if (elBt) {
+                    elBt.value = tg.botToken || '';
+                }
+
+                let elGl = document.getElementById('tg_globalChatId'); 
+                if (elGl) {
+                    elGl.value = tg.globalChatId || '';
+                }
+                
+                if (tg.orgChatIds) {
+                    let e1 = document.getElementById('tg_org_1'); 
+                    if (e1) e1.value = tg.orgChatIds['สำนักงานสาธารณสุขจังหวัดนครนายก (สสจ.)'] || '';
+                    
+                    let e2 = document.getElementById('tg_org_2'); 
+                    if (e2) e2.value = tg.orgChatIds['โรงพยาบาลนครนายก'] || '';
+                    
+                    let e3 = document.getElementById('tg_org_3'); 
+                    if (e3) e3.value = tg.orgChatIds['โรงพยาบาลปากพลี'] || '';
+                    
+                    let e4 = document.getElementById('tg_org_4'); 
+                    if (e4) e4.value = tg.orgChatIds['โรงพยาบาลบ้านนา'] || '';
+                    
+                    let e5 = document.getElementById('tg_org_5'); 
+                    if (e5) e5.value = tg.orgChatIds['โรงพยาบาลองครักษ์'] || '';
+                }
+            }
+        }
+
+        let btnNavLoginEl = document.getElementById('btnNavLogin');
+        if (btnNavLoginEl) { 
+            btnNavLoginEl.onclick = function() { 
+                let fLogin = document.getElementById('loginForm'); 
+                if (fLogin) {
+                    fLogin.reset(); 
+                }
+                switchView('viewLogin'); 
+            }; 
+        }
+        
+        let btnLogoutEl = document.getElementById('btnLogout');
+        if (btnLogoutEl) {
+            btnLogoutEl.onclick = function() {
+                localStorage.removeItem('dhr_session'); 
+                appUser = null; 
+                
+                let fLogin = document.getElementById('loginForm'); 
+                if (fLogin) fLogin.reset();
+                
+                let fHealth = document.getElementById('healthForm'); 
+                if (fHealth) fHealth.reset();
+                
+                let bLogout = document.getElementById('btnLogout'); 
+                if (bLogout) bLogout.classList.add('hidden'); 
+                
+                let bLogin = document.getElementById('btnNavLogin'); 
+                if (bLogin) bLogin.classList.remove('hidden'); 
+                
+                let bManual = document.getElementById('btnNavManual'); 
+                if (bManual) bManual.classList.add('hidden');
+                
+                let hideElements = ['btnNavDash', 'btnNavUsers', 'btnNavEditReq', 'btnNavAudit', 'btnNavSetting', 'navUserName'];
+                hideElements.forEach(id => { 
+                    let el = document.getElementById(id); 
+                    if (el) el.classList.add('hidden'); 
+                }); 
+
+                switchView('viewAdmin'); 
+                loadAdminDashboard();
+            };
+        }
+
+        // ================= AUTH =================
+        let loginFormEl = document.getElementById('loginForm');
+        if (loginFormEl) {
+            loginFormEl.onsubmit = function(e) {
+                e.preventDefault(); 
+                let phone = document.getElementById('inputPhone').value; 
+                let pin = document.getElementById('inputPin').value;
+                
+                if (!phone || phone.length !== 10) {
+                    return Swal.fire('แจ้งเตือน', 'กรุณากรอกเบอร์โทรศัพท์ 10 หลัก', 'warning');
+                }
+                if (!pin || pin.length !== 6) {
+                    return Swal.fire('แจ้งเตือน', 'กรุณากรอกรหัส PIN 6 หลัก', 'warning');
+                }
+
+                showLoader("กำลังตรวจสอบข้อมูลและเข้าสู่ระบบ...");
+                
+                api.run('login', { phone: phone, pin: pin }).then(res => {
+                    if (res.ok) { 
+                        localStorage.setItem('dhr_session', res.sessionToken); 
+                        showLoader("กำลังดึงข้อมูลส่วนบุคคล...");
+                        
+                        api.run('getInitialData').then(initRes => { 
+                            hideLoader();
+                            if (initRes.ok) { 
+                                globalSettings = initRes.settings; 
+                                renderDynamicHealthForm(); 
+                                updateEditReqBadge(initRes.pendingReqs); 
+                                updateUsersBadge(initRes.pendingUsers); 
+                                
+                                if (initRes.auditLogCount !== undefined) {
+                                    localStorage.setItem('backendAuditCount', initRes.auditLogCount);
+                                    let localCount = parseInt(localStorage.getItem('localAuditCount_' + res.user.phone) || '0');
+                                    let diff = initRes.auditLogCount - localCount;
+                                    updateAuditBadge(diff > 0 ? diff : 0);
+                                }
+                                handleLoginSuccess(initRes.currentUser);
+                            } 
+                        }).catch(err => { 
+                            hideLoader(); 
+                            Swal.fire('ข้อผิดพลาด', 'ดึงข้อมูลไม่สำเร็จ', 'error'); 
+                        });
+                    } else { 
+                        hideLoader(); 
+                        Swal.fire('ข้อมูลไม่ถูกต้อง', res.error, 'error'); 
+                    }
+                }).catch(err => { 
+                    hideLoader(); 
+                });
+                return false;
+            };
+        }
+
+        function toggleRegFields() {
+            const role = document.getElementById('regRole').value;
+            const staffFields = document.getElementById('staffExtraFields');
+            const authFile = document.getElementById('regAuthFile');
+            
+            if (role === 'staff') {
+                staffFields.classList.remove('hidden');
+                authFile.required = true;
+            } else {
+                staffFields.classList.add('hidden');
+                authFile.required = false;
+            }
+        }
+
+        let regAuthFileEl = document.getElementById('regAuthFile');
+        if (regAuthFileEl) {
+            regAuthFileEl.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (!file) {
+                    return;
+                }
+                
+                if (file.type !== "application/pdf") {
+                    Swal.fire('ประเภทไฟล์ไม่ถูกต้อง', 'กรุณาอัปโหลดไฟล์ในรูปแบบ PDF เท่านั้น', 'warning');
+                    this.value = ''; 
+                    return;
+                }
+
+                if (file.size > 5 * 1024 * 1024) {
+                    Swal.fire('ขนาดไฟล์เกิน', 'กรุณาอัปโหลดไฟล์ขนาดไม่เกิน 5MB', 'warning');
+                    this.value = ''; 
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const base64String = event.target.result.split(',')[1];
+                    document.getElementById('regAuthFileBase64').value = base64String;
+                    document.getElementById('regAuthFileName').value = file.name;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        let regFormEl = document.getElementById('registerForm');
+        if (regFormEl) {
+            regFormEl.onsubmit = function(e) {
+                e.preventDefault();
+                const payload = { 
+                    phone: document.getElementById('regPhone').value, 
+                    firstName: document.getElementById('regFirstName').value, 
+                    lastName: document.getElementById('regLastName').value, 
+                    org: document.getElementById('regOrg').value, 
+                    dob: document.getElementById('regDob').value, 
+                    chronicDisease: document.getElementById('regChronic').value, 
+                    regularMeds: document.getElementById('regMeds').value, 
+                    smoking: document.getElementById('regSmoking').value, 
+                    alcohol: document.getElementById('regAlcohol').value, 
+                    email: document.getElementById('regEmail').value, 
+                    pdpaConsent: document.getElementById('regPdpa').checked,
+                    regRole: document.getElementById('regRole').value, 
+                    position: document.getElementById('regPosition').value, 
+                    department: document.getElementById('regDepartment').value,
+                    authFileBase64: document.getElementById('regAuthFileBase64').value, 
+                    authFileName: document.getElementById('regAuthFileName').value
+                };
+                
+                showLoader("กำลังอัปโหลดไฟล์และลงทะเบียน...");
+                api.run('registerUser', payload).then(res => {
+                    hideLoader();
+                    if (res.ok) { 
+                        Swal.fire({ 
+                            title: 'ลงทะเบียนสำเร็จ!', 
+                            html: `<b>รหัส PIN ของคุณคือ: <span style="color:red; font-size:24px">${res.generatedPin}</span></b><br><br>กรุณาจดจำรหัสนี้ไว้ และรอ Admin รพ. อนุมัติสิทธิ์`, 
+                            icon: 'success' 
+                        }).then(() => { 
+                            document.getElementById('registerForm').reset(); 
+                            document.getElementById('regAuthFileBase64').value = ""; 
+                            document.getElementById('regAuthFileName').value = ""; 
+                            switchView('viewLogin'); 
+                        }); 
+                    } else { 
+                        Swal.fire('ข้อมูลผิดพลาด', res.error, 'error'); 
+                    }
+                }).catch(err => { 
+                    hideLoader(); 
+                });
+                return false;
+            };
+        }
+
+        function handleLoginSuccess(user) {
+            appUser = user; 
+            let bLogin = document.getElementById('btnNavLogin'); 
+            if (bLogin) {
+                bLogin.classList.add('hidden'); 
+            }
+            
+            let bLogout = document.getElementById('btnLogout'); 
+            if (bLogout) {
+                bLogout.classList.remove('hidden'); 
+            }
+            
+            let bManual = document.getElementById('btnNavManual'); 
+            if (bManual) {
+                bManual.classList.remove('hidden');
+            }
+            
+            let nUser = document.getElementById('navUserName');
+            if (nUser) { 
+                nUser.innerText = `${user.displayName} (${getRoleTh(user.role, user.org)})`; 
+                nUser.classList.remove('hidden'); 
+            }
+            
+            const token = localStorage.getItem('dhr_session');
+            
+            if (user.role === 'driver' || user.role === 'staff') {
+                let dName = document.getElementById('driverName'); 
+                if (dName) {
+                    dName.innerText = user.displayName;
+                }
+
+                let dOrg = document.getElementById('driverOrg'); 
+                if (dOrg) {
+                    dOrg.innerText = user.org + (user.profile?.age ? ` (อายุ ${user.profile.age} ปี)` : '');
+                }
+                
+                let notice = document.getElementById('staffExemptNotice');
+                if (notice) { 
+                    if (user.role === 'staff') {
+                        notice.classList.remove('hidden'); 
+                    } else {
+                        notice.classList.add('hidden'); 
+                    }
+                }
+
+                const actionArea = document.getElementById('driverActionArea');
+                if (actionArea) {
+                    if (user.pendingEditReq) {
+                        actionArea.innerHTML = `
+                            <span class="text-xs text-orange-600 font-bold bg-orange-100 px-2 py-1 rounded mb-2 block border border-orange-200">⏳ รอ Admin อนุมัติข้อมูล</span>
+                            <button onclick="cancelDriverReq('${user.pendingEditReq.id}')" class="text-sm bg-red-50 hover:bg-red-100 text-red-600 px-3 py-1.5 rounded border border-red-200 transition shadow-sm font-medium">ยกเลิกคำขอแก้ไข</button>
+                        `;
+                    } else {
+                        actionArea.innerHTML = `<button onclick="switchView('viewEditDriverReq')" class="text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded border border-gray-300 transition shadow-sm font-medium">ขอแก้ไขข้อมูล</button>`;
+                        
+                        let elEmailGroup = document.getElementById('selfEditEmailGroup'); 
+                        if (elEmailGroup) elEmailGroup.classList.add('hidden');
+                        
+                        let elNameGroup = document.getElementById('selfEditNameGroup'); 
+                        if (elNameGroup) elNameGroup.classList.add('hidden');
+                        
+                        let elOrgGroup = document.getElementById('selfEditOrgGroup'); 
+                        if (elOrgGroup) elOrgGroup.classList.add('hidden');
+                        
+                        let elDriverOnly = document.getElementById('driverOnlyReqFields'); 
+                        if (elDriverOnly) elDriverOnly.classList.remove('hidden');
+
+                        if (user.profile) { 
+                            let elPhone = document.getElementById('reqPhoneForm'); 
+                            if (elPhone) elPhone.value = user.phone || ''; 
+                            
+                            let elEmail = document.getElementById('reqEmailForm'); 
+                            if (elEmail) elEmail.value = user.email || '';
+                            
+                            let elChr = document.getElementById('reqChronicForm'); 
+                            if (elChr) elChr.value = user.profile.chronicDisease || ''; 
+                            
+                            let elMed = document.getElementById('reqMedsForm'); 
+                            if (elMed) elMed.value = user.profile.regularMeds || ''; 
+                            
+                            let elSmo = document.getElementById('reqSmokingForm'); 
+                            if (elSmo) elSmo.value = user.profile.smoking || 'ไม่สูบ';
+                            
+                            let elAlc = document.getElementById('reqAlcoholForm'); 
+                            if (elAlc) elAlc.value = user.profile.alcohol || 'ไม่ดื่ม';
+                        }
+                    }
+                }
+                switchView('viewDriver'); 
+                loadDriverHistory();
+            } else {
+                let nDash = document.getElementById('btnNavDash'); 
+                if (nDash) nDash.classList.remove('hidden'); 
+                
+                let nUserList = document.getElementById('btnNavUsers'); 
+                if (nUserList) nUserList.classList.remove('hidden'); 
+                
+                let nReq = document.getElementById('btnNavEditReq'); 
+                if (nReq) nReq.classList.remove('hidden');
+                
+                if (['super_admin', 'exec_ppho', 'hospital_director', 'provincial_admin', 'provincial_audit'].includes(user.role)) {
+                    let nAudit = document.getElementById('btnNavAudit'); 
+                    if (nAudit) nAudit.classList.remove('hidden');
+                }
+                
+                let btnAdd = document.getElementById('btnOpenAddUser'); 
+                let btnSet = document.getElementById('btnNavSetting');
+
+                if (user.role === 'super_admin') { 
+                    if (btnAdd) btnAdd.classList.remove('hidden'); 
+                    if (btnSet) btnSet.classList.remove('hidden'); 
+                } else if (['hospital_admin', 'provincial_admin'].includes(user.role)) { 
+                    if (btnAdd) btnAdd.classList.remove('hidden'); 
+                    if (btnSet) btnSet.classList.add('hidden'); 
+                } else { 
+                    if (btnAdd) btnAdd.classList.add('hidden'); 
+                    if (btnSet) btnSet.classList.add('hidden'); 
+                }
+                
+                let orgFilter = document.getElementById('adminOrgFilter');
+                if (orgFilter) { 
+                    if (['hospital_admin', 'hospital_director'].includes(user.role)) { 
+                        orgFilter.value = user.org; 
+                        orgFilter.disabled = true; 
+                    } else {
+                        orgFilter.disabled = false; 
+                    }
+                }
+                
+                let btnSubmitAdmin = document.getElementById('btnAdminSubmitCheck');
+                if (btnSubmitAdmin) { 
+                    if (['super_admin', 'hospital_admin', 'provincial_admin'].includes(user.role)) {
+                        btnSubmitAdmin.classList.remove('hidden'); 
+                    } else {
+                        btnSubmitAdmin.classList.add('hidden'); 
+                    }
+                }
+                
+                switchView('viewAdmin'); 
+                loadAdminDashboard();
+            }
+        }
+
+        // ================= DRIVER & ADMIN SUBMIT =================
+        function openAdminSubmitCheck() {
+            showLoader("กำลังดึงรายชื่อผู้ขับขี่...");
+            api.run('getDriversForAdmin').then(res => {
+                hideLoader();
+                if (res.ok && res.drivers.length > 0) {
+                    let targetSelect = document.getElementById('adminTargetDriver');
+                    if (targetSelect) {
+                        targetSelect.innerHTML = '<option value="" data-name="" data-org="">-- กรุณาเลือกผู้ขับขี่ --</option>' + res.drivers.map(d => `<option value="${d.userId}" data-name="${d.name}" data-org="${d.org}">${d.name} (${d.org})</option>`).join('');
+                    }
+
+                    let tContainer = document.getElementById('adminTargetDriverContainer'); 
+                    if (tContainer) {
+                        tContainer.classList.remove('hidden'); 
+                    }
+
+                    let iDate = document.getElementById('inputDate'); 
+                    if (iDate) {
+                        iDate.value = new Date().toISOString().split('T')[0]; 
+                    }
+
+                    switchView('viewHealthForm');
+                } else { 
+                    Swal.fire('แจ้งเตือน', 'ไม่พบรายชื่อผู้ขับขี่รถยนต์ราชการในหน่วยงาน', 'info'); 
+                }
+            }).catch(err => { 
+                hideLoader(); 
+                Swal.fire('ข้อผิดพลาด', err.message, 'error'); 
+            });
+        }
+
+        let btnOpenForm = document.getElementById('btnOpenForm');
+        if (btnOpenForm) {
+            btnOpenForm.onclick = function() { 
+                let tContainer = document.getElementById('adminTargetDriverContainer'); 
+                if (tContainer) {
+                    tContainer.classList.add('hidden'); 
+                }
+
+                let targetSelect = document.getElementById('adminTargetDriver'); 
+                if (targetSelect) {
+                    targetSelect.value = ""; 
+                }
+
+                let iDate = document.getElementById('inputDate'); 
+                if (iDate) {
+                    iDate.value = new Date().toISOString().split('T')[0]; 
+                }
+
+                switchView('viewHealthForm'); 
+            };
+        }
+
+        let tempCurrentSubmission = null;
+        let healthFormEl = document.getElementById('healthForm');
+        if (healthFormEl) {
+            healthFormEl.onsubmit = function(e) {
+                e.preventDefault();
+                let targetUserId = appUser.userId; 
+                let tName = appUser.displayName; 
+                let tOrg = appUser.org;
+                let tContainer = document.getElementById('adminTargetDriverContainer');
+
+                if (tContainer && !tContainer.classList.contains('hidden')) {
+                    let selectEl = document.getElementById('adminTargetDriver'); 
+                    targetUserId = selectEl.value;
+                    if (!targetUserId) {
+                        return Swal.fire('แจ้งเตือน', 'กรุณาเลือกผู้ที่ต้องการประเมินแทน', 'warning');
+                    }
+                    let selectedOption = selectEl.options[selectEl.selectedIndex]; 
+                    tName = selectedOption.getAttribute('data-name'); 
+                    tOrg = selectedOption.getAttribute('data-org');
+                }
+                
+                let tSlot = document.getElementById('inputTimeSlot').value;
+                if (tSlot.includes('เวลาปัจจุบัน')) {
+                    const timeStr = new Date().toLocaleTimeString('th-TH', {hour: '2-digit', minute: '2-digit'}); 
+                    tSlot = `เวลาปัจจุบัน (${timeStr} น.)`;
+                }
+
+                const payload = {
+                    targetUserId: targetUserId, 
+                    date: document.getElementById('inputDate').value, 
+                    timeSlot: tSlot, 
+                    sleepHours: parseFloat(document.getElementById('inputSleep').value), 
+                    temperature: parseFloat(document.getElementById('inputTemp').value), 
+                    systolic: parseFloat(document.getElementById('inputSys').value), 
+                    diastolic: parseFloat(document.getElementById('inputDia').value), 
+                    pulse: parseInt(document.getElementById('inputPulse').value), 
+                    fatigue: parseInt(document.getElementById('inputFatigue').value), 
+                    criticalRisksSelected: Array.from(document.querySelectorAll('input[name="criticalRiskItem"]:checked')).map(cb => cb.value), 
+                    symptoms: Array.from(document.querySelectorAll('input[name="symptomItem"]:checked')).map(cb => cb.value)
+                };
+                
+                showLoader("กำลังประมวลผลข้อมูล...");
+                api.run('submitHealthCheck', payload).then(res => {
+                    hideLoader();
+                    if (res.ok) { 
+                        document.getElementById('healthForm').reset(); 
+                        
+                        let fVal = document.getElementById('fatigueVal'); 
+                        if (fVal) {
+                            fVal.innerText = '0'; 
+                        }
+
+                        if (appUser.role === 'driver' || appUser.role === 'staff') {
+                            loadDriverHistory();
+                        }
+
+                        tempCurrentSubmission = {
+                            date: payload.date, 
+                            timeSlot: payload.timeSlot, 
+                            sleepHours: payload.sleepHours, 
+                            fatigue: payload.fatigue, 
+                            temperature: payload.temperature,
+                            systolic: payload.systolic, 
+                            diastolic: payload.diastolic, 
+                            pulse: payload.pulse, 
+                            band: res.band, 
+                            reasons: res.reasons, 
+                            targetName: tName, 
+                            targetOrg: tOrg 
+                        };
+
+                        let iconType = res.band === 'RED' ? 'error' : (res.band === 'AMBER' ? 'warning' : 'success');
+                        
+                        let adviceBtnHtml = '';
+                        if (res.band === 'RED' || res.band === 'AMBER') {
+                            adviceBtnHtml = `<button onclick="executeAdvice()" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded w-full transition">💡 ดูคำแนะนำสุขภาพ</button>`;
+                        }
+
+                        let buttonsHtml = `
+                            <div class="flex flex-col gap-2 mt-4">
+                                <button onclick="executePrint()" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded w-full transition">🖨️ พิมพ์/บันทึก PDF</button>
+                                ${adviceBtnHtml}
+                                <button onclick="Swal.close(); goToHome();" class="bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded w-full transition mt-2">ปิดหน้าต่าง</button>
+                            </div>
+                        `;
+
+                        Swal.fire({ 
+                            title: 'บันทึกผลเรียบร้อย', 
+                            icon: iconType, 
+                            html: `
+                                <p class="mb-2">สถานะที่ได้คือ: <b>${res.band}</b></p>
+                                <p class="text-sm text-gray-500 mb-4">เหตุผล: ${res.reasons.join(', ') || 'ปกติ พร้อมปฏิบัติงาน'}</p>
+                                ${buttonsHtml}
+                            `, 
+                            showConfirmButton: false, 
+                            allowOutsideClick: false 
+                        });
+                    } else { 
+                        Swal.fire('เกิดข้อผิดพลาด', res.error, 'error'); 
+                    }
+                }).catch(err => { 
+                    hideLoader(); 
+                    Swal.fire('เกิดข้อผิดพลาด', err.message, 'error'); 
+                });
+                return false;
+            };
+        }
+
+        function executePrint() { 
+            if (!tempCurrentSubmission) {
+                return;
+            }
+            generatePrintView(tempCurrentSubmission); 
+        }
+
+        function printHistoryItem(index) {
+            let item = cachedHistory[index]; 
+            if (!item) {
+                return;
+            }
+            let pData = { 
+                date: item.rawDate, 
+                timeSlot: item.timeSlot, 
+                sleepHours: item.sleepHours, 
+                fatigue: item.fatigue, 
+                temperature: item.temp, 
+                systolic: item.sys, 
+                diastolic: item.dia, 
+                pulse: item.pulse, 
+                band: item.band, 
+                reasons: item.reasons, 
+                targetName: appUser.displayName, 
+                targetOrg: appUser.org 
+            };
+            generatePrintView(pData);
+        }
+
+        function generatePrintView(data) {
+            let printDiv = document.getElementById('printArea'); 
+            let dateTh = formatThaiDate(data.date); 
+            
+            if (!printDiv) {
+                return;
+            }
+
+            printDiv.innerHTML = `
+                <div style="font-family: 'Noto Sans Thai', sans-serif; color: #1f2937;">
+                    <h2 style="text-align: center; color: #1e3a8a; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px;">รายงานผลการประเมินความพร้อมก่อนปฏิบัติงาน</h2>
+                    <br>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 16px;">
+                        <tr><td style="padding: 8px 0; width: 30%;"><b>ชื่อ-สกุล:</b></td><td>${data.targetName}</td></tr>
+                        <tr><td style="padding: 8px 0;"><b>หน่วยงาน:</b></td><td>${data.targetOrg}</td></tr>
+                        <tr><td style="padding: 8px 0;"><b>วันที่ประเมิน:</b></td><td>${dateTh}</td></tr>
+                        <tr><td style="padding: 8px 0;"><b>ช่วงเวลา:</b></td><td>${data.timeSlot}</td></tr>
+                    </table>
+                    
+                    <h3 style="margin-top: 20px; background-color: #f3f4f6; padding: 10px;">ข้อมูลสุขภาพเบื้องต้น</h3>
+                    <table style="width: 100%; border-collapse: collapse; border: 1px solid #d1d5db; font-size: 14px;">
+                        <tr>
+                            <th style="border: 1px solid #d1d5db; padding: 10px; background-color: #f9fafb; text-align: left;">รายการ</th>
+                            <th style="border: 1px solid #d1d5db; padding: 10px; background-color: #f9fafb; text-align: left;">ผลการตรวจ</th>
+                        </tr>
+                        <tr><td style="border: 1px solid #d1d5db; padding: 10px;">ชั่วโมงการนอน</td><td style="border: 1px solid #d1d5db; padding: 10px;">${data.sleepHours} ชั่วโมง</td></tr>
+                        <tr><td style="border: 1px solid #d1d5db; padding: 10px;">ระดับความอ่อนล้า</td><td style="border: 1px solid #d1d5db; padding: 10px;">${data.fatigue} / 10</td></tr>
+                        <tr><td style="border: 1px solid #d1d5db; padding: 10px;">อุณหภูมิร่างกาย</td><td style="border: 1px solid #d1d5db; padding: 10px;">${data.temperature} °C</td></tr>
+                        <tr><td style="border: 1px solid #d1d5db; padding: 10px;">ความดันโลหิต (Sys/Dia)</td><td style="border: 1px solid #d1d5db; padding: 10px;">${data.systolic} / ${data.diastolic} mmHg</td></tr>
+                        <tr><td style="border: 1px solid #d1d5db; padding: 10px;">ชีพจร</td><td style="border: 1px solid #d1d5db; padding: 10px;">${data.pulse} ครั้ง/นาที</td></tr>
+                    </table>
+                    
+                    <h3 style="margin-top: 20px; background-color: #f3f4f6; padding: 10px;">สรุปผลการประเมิน</h3>
+                    <p style="font-size: 18px;">ระดับความพร้อม: 
+                        <b style="color: ${data.band === 'RED' ? '#dc2626' : (data.band === 'AMBER' ? '#d97706' : '#16a34a')}">
+                            ${data.band === 'RED' ? 'งดปฏิบัติงาน (RED)' : (data.band === 'AMBER' ? 'เฝ้าระวัง (AMBER)' : 'พร้อมปฏิบัติงาน (GREEN)')}
+                        </b>
+                    </p>
+                    <p><b>ความเสี่ยง/สาเหตุที่พบ:</b> ${data.reasons.length > 0 ? data.reasons.join(', ') : 'ปกติ ไม่มีอาการผิดปกติ'}</p>
+                    <br><br><br><br>
+                    <div style="display: flex; justify-content: space-between; text-align: center; margin-top: 50px;">
+                        <div style="width: 45%;">
+                            <p>ลงชื่อ.......................................................</p>
+                            <p>(${data.targetName})</p>
+                            <p>ผู้รับการประเมิน</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            window.print();
+        }
+
+        function executeAdvice() { 
+            if (!tempCurrentSubmission) {
+                return;
+            }
+            openAdviceModal(tempCurrentSubmission); 
+        }
+
+        function adviseHistoryItem(index) { 
+            let item = cachedHistory[index]; 
+            if (!item) {
+                return;
+            }
+            let pData = { 
+                sleepHours: item.sleepHours, 
+                systolic: item.sys, 
+                diastolic: item.dia, 
+                fatigue: item.fatigue 
+            }; 
+            openAdviceModal(pData); 
+        }
+
+        function openAdviceModal(data) {
+            currentAssesmentForAdvice = data;
+            
+            let aRes = document.getElementById('adviceResultSection'); 
+            if (aRes) {
+                aRes.classList.add('hidden');
+            }
+            
+            let aInp = document.getElementById('adviceInputSection'); 
+            if (aInp) {
+                aInp.classList.remove('hidden');
+            }
+            
+            let mAdv = document.getElementById('modalAdvice'); 
+            if (mAdv) {
+                mAdv.classList.remove('hidden');
+            }
+        }
+
+        function calculateAdvice() {
+            let w = parseFloat(document.getElementById('advWeight').value); 
+            let h = parseFloat(document.getElementById('advHeight').value);
+            
+            if (!w || !h) {
+                return Swal.fire('ข้อมูลไม่ครบ', 'กรุณากรอกน้ำหนักและส่วนสูงก่อน', 'warning');
+            }
+
+            let bmi = w / ((h / 100) * (h / 100)); 
+            let bmiStr = bmi.toFixed(2); 
+            let bmiMeaning = bmi < 18.5 ? "น้ำหนักน้อย" : (bmi < 23 ? "ปกติ" : (bmi < 25 ? "ท้วม" : (bmi < 30 ? "อ้วน" : "อ้วนมาก")));
+            
+            let p = appUser.profile || {}; 
+            let advice = `
+                <p class="font-bold text-lg mb-2 border-b border-blue-200 pb-2">ผลวิเคราะห์ BMI: ${bmiStr} (${bmiMeaning})</p>
+                <ul class="text-left list-disc pl-5 space-y-2 mt-2">
+            `;
+
+            if (bmi >= 25) {
+                advice += `<li><b>คุมน้ำหนักด่วน:</b> คุณมีภาวะน้ำหนักเกิน เสี่ยงต่อโรคหัวใจและความดัน ควรลดอาหารหวานมันทอด และออกกำลังกาย 30 นาที/วัน</li>`;
+            }
+            if (p.smoking && p.smoking !== 'ไม่สูบ') {
+                advice += `<li><b>ลดการสูบบุหรี่:</b> บุหรี่ทำให้หลอดเลือดตีบและเสี่ยงความดันพุ่งปรี๊ดระหว่างขับรถ ควรปรึกษาคลินิกเลิกบุหรี่</li>`;
+            }
+            if (p.alcohol && p.alcohol !== 'ไม่ดื่ม') {
+                advice += `<li><b>งดแอลกอฮอล์ก่อนขับ:</b> ส่งผลต่อการตัดสินใจและทำให้ชีพจรเต้นผิดปกติ ควรงดดื่มอย่างน้อย 24 ชม. ก่อนเริ่มงาน</li>`;
+            }
+            if (currentAssesmentForAdvice.sleepHours < 6) {
+                advice += `<li><b>จัดตารางการนอน:</b> การนอนน้อยกว่า 6 ชม. เพิ่มความเสี่ยง "หลับใน" สูงมาก ควรพักผ่อนให้เพียงพอ 7-8 ชม.</li>`;
+            }
+            if (currentAssesmentForAdvice.systolic >= 140 || currentAssesmentForAdvice.diastolic >= 90) {
+                advice += `<li><b>เฝ้าระวังความดัน:</b> ความดันเริ่มสูง ควรหลีกเลี่ยงอาหารเค็ม, ผงชูรส และพักผ่อนให้เพียงพอ หากมีโรคประจำตัวควรทานยาอย่างเคร่งครัด</li>`;
+            }
+            if (currentAssesmentForAdvice.fatigue >= 8) {
+                advice += `<li><b>ความอ่อนล้าสูง:</b> ร่างกายเตือนว่าต้องพัก ดื่มน้ำเปล่าเยอะๆ ล้างหน้า ยืดเส้นยืดสายก่อนกลับไปทำงาน</li>`;
+            }
+
+            if (advice.endsWith('</ul>')) {
+                advice += `<li>ทานอาหารให้ตรงเวลา ดื่มน้ำวันละ 8 แก้ว และยึดหลักความปลอดภัยในการขับขี่เสมอ</li>`; 
+            }
+            
+            advice += `</ul>`;
+            
+            let aRes = document.getElementById('adviceResultSection'); 
+            if (aRes) { 
+                aRes.innerHTML = advice; 
+                aRes.classList.remove('hidden'); 
+            }
+            
+            let aInp = document.getElementById('adviceInputSection'); 
+            if (aInp) {
+                aInp.classList.add('hidden');
+            }
+        }
+
+        function loadDriverHistory() {
+            let histEl = document.getElementById('driverHistory'); 
+            if (histEl) {
+                histEl.innerHTML = '<p class="text-sm text-gray-400">กำลังโหลดประวัติ...</p>';
+            }
+            
+            let btnAna = document.getElementById('btnHealthAnalysis'); 
+            if (btnAna) {
+                btnAna.classList.add('hidden');
+            }
+            
+            api.run('getDriverHistory').then(res => {
+                if (res.ok && res.history.length > 0) { 
+                    cachedHistory = res.history; 
+                    
+                    if (btnAna) {
+                        btnAna.classList.remove('hidden');
+                    }
+                    
+                    if (histEl) {
+                        histEl.innerHTML = res.history.map((i, index) => {
+                            let btnAddon = '';
+                            if (i.band === 'RED' || i.band === 'AMBER') {
+                                btnAddon = `
+                                    <div class="mt-2 pt-2 border-t border-gray-200 flex gap-2 justify-end">
+                                        <button onclick="printHistoryItem(${index})" class="text-[10px] bg-blue-100 hover:bg-blue-200 text-blue-700 px-2 py-1 rounded shadow-sm border border-blue-200 transition">🖨️ พิมพ์</button>
+                                        <button onclick="adviseHistoryItem(${index})" class="text-[10px] bg-yellow-100 hover:bg-yellow-200 text-yellow-700 px-2 py-1 rounded shadow-sm border border-yellow-200 transition">💡 คำแนะนำ</button>
+                                    </div>
+                                `;
+                            }
+                            
+                            let bandClass = '';
+                            if (i.band === 'RED') {
+                                bandClass = 'bg-red-100 text-red-700 border border-red-200';
+                            } else if (i.band === 'AMBER') {
+                                bandClass = 'bg-yellow-100 text-yellow-700 border border-yellow-200';
+                            } else {
+                                bandClass = 'bg-green-100 text-green-700 border border-green-200';
+                            }
+
+                            return `
+                                <div class="p-3 border rounded-lg flex flex-col bg-gray-50">
+                                    <div class="flex justify-between items-start">
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-800">${i.date} <span class="text-xs text-gray-500">(${i.timeSlot})</span></p>
+                                            <p class="text-xs text-gray-500">BP: ${i.sys}/${i.dia} | HR: ${i.pulse} | นอน ${i.sleepHours}ชม.</p>
+                                        </div>
+                                        <span class="px-2 py-1 text-xs font-bold rounded shadow-sm ${bandClass}">${i.band}</span>
+                                    </div>
+                                    ${btnAddon}
+                                </div>
+                            `;
+                        }).join('');
+                    }
+                } else { 
+                    if (histEl) {
+                        histEl.innerHTML = '<p class="text-sm text-gray-400">ยังไม่มีประวัติการประเมิน</p>'; 
+                    }
+                }
+            }).catch(err => {
+                console.error(err);
+            });
+        }
+        
+        function openHealthAnalysis() {
+            showLoader("กำลังวิเคราะห์ข้อมูล 15 วัน...");
+            api.run('getHealthAnalysis15Days').then(res => {
+                hideLoader();
+                if (res.ok && res.hasData) {
+                    let st = res.stats;
+                    let html = `
+                        <div class="grid grid-cols-2 gap-3 mb-4 text-center">
+                            <div class="bg-gray-50 border rounded p-3">
+                                <p class="text-xs text-gray-500">ประเมินทั้งหมด</p>
+                                <p class="text-2xl font-bold text-gray-800">${st.count} <span class="text-sm">ครั้ง</span></p>
+                            </div>
+                            <div class="bg-red-50 border border-red-100 rounded p-3">
+                                <p class="text-xs text-red-600 font-bold">เฝ้าระวัง / งดขับ</p>
+                                <p class="text-2xl font-bold text-red-700">${st.red + st.amber} <span class="text-sm">ครั้ง</span></p>
+                            </div>
+                        </div>
+                        <p class="font-bold text-indigo-800 mb-2">ค่าเฉลี่ยสุขภาพของคุณ</p>
+                        <ul class="text-sm text-gray-700 space-y-1 mb-4 border-l-2 border-indigo-400 pl-3">
+                            <li>ความดันโลหิตเฉลี่ย: <b>${st.avgSys} / ${st.avgDia}</b></li>
+                            <li>ชั่วโมงการนอนเฉลี่ย: <b>${st.avgSleep} ชม.</b></li>
+                            <li>ระดับความอ่อนล้าเฉลี่ย: <b>${st.avgFatigue} / 10</b></li>
+                        </ul>
+                    `;
+
+                    if (st.issues && st.issues.length > 0) { 
+                        html += `<p class="font-bold text-orange-700 mb-2">ปัญหาที่พบบ่อย (15 วันที่ผ่านมา)</p><ul class="text-sm text-gray-600 list-disc pl-5">`; 
+                        st.issues.forEach(iss => {
+                            html += `<li>${iss}</li>`;
+                        }); 
+                        html += `</ul>`; 
+                    } else { 
+                        html += `<p class="text-sm text-green-600 font-bold">สุขภาพโดยรวมของคุณอยู่ในเกณฑ์ดีเยี่ยม เยี่ยมมากครับ! 👏</p>`; 
+                    }
+                    
+                    let hContent = document.getElementById('healthAnalysisContent'); 
+                    if (hContent) {
+                        hContent.innerHTML = html;
+                    }
+                    
+                    let mAna = document.getElementById('modalHealthAnalysis'); 
+                    if (mAna) {
+                        mAna.classList.remove('hidden');
+                    }
+                } else { 
+                    Swal.fire('ข้อมูลไม่เพียงพอ', 'ไม่พบประวัติการประเมินใน 15 วันที่ผ่านมาครับ', 'info'); 
+                }
+            }).catch(err => { 
+                hideLoader(); 
+                Swal.fire('ข้อผิดพลาด', err.message, 'error'); 
+            });
+        }
+
+        // ================= EDIT REQUESTS =================
+        function cancelDriverReq(reqId) {
+            if (!confirm("ยืนยันการยกเลิกคำขอแก้ไขข้อมูล?")) {
+                return;
+            }
+            showLoader("กำลังยกเลิกคำขอ...");
+            api.run('cancelEditRequest', { reqId: reqId }).then(res => { 
+                hideLoader(); 
+                if (res.ok) { 
+                    Swal.fire('สำเร็จ', 'ยกเลิกคำขอแก้ไขข้อมูลเรียบร้อยแล้ว', 'success'); 
+                    api.run('getInitialData').then(initRes => { 
+                        if (initRes.ok) {
+                            handleLoginSuccess(initRes.currentUser); 
+                        }
+                    }); 
+                } else { 
+                    Swal.fire('ข้อผิดพลาด', res.error, 'error'); 
+                } 
+            }).catch(err => { 
+                hideLoader(); 
+                Swal.fire('ข้อผิดพลาด', err.message, 'error'); 
+            });
+        }
+
+        let editReqFormEl = document.getElementById('editReqForm');
+        if (editReqFormEl) {
+            editReqFormEl.onsubmit = function(e) {
+                e.preventDefault();
+                let elName = document.getElementById('reqNameForm'); 
+                let elOrg = document.getElementById('reqOrgForm');
+                let elChr = document.getElementById('reqChronicForm'); 
+                let elMeds = document.getElementById('reqMedsForm');
+                let elSmo = document.getElementById('reqSmokingForm'); 
+                let elAlc = document.getElementById('reqAlcoholForm');
+                let elEmail = document.getElementById('reqEmailForm');
+                
+                const payload = { 
+                    reqName: elName ? elName.value : "", 
+                    reqOrg: elOrg ? elOrg.value : "", 
+                    reqPhone: document.getElementById('reqPhoneForm').value, 
+                    reqEmail: elEmail ? elEmail.value : "",
+                    reqChronic: elChr ? elChr.value : "", 
+                    reqMeds: elMeds ? elMeds.value : "", 
+                    reqSmoking: elSmo ? elSmo.value : "", 
+                    reqAlcohol: elAlc ? elAlc.value : ""
+                };
+                
+                showLoader("กำลังส่งคำขอแก้ไขข้อมูล..."); 
+                api.run('submitEditRequest', payload).then(res => { 
+                    hideLoader(); 
+                    if (res.ok) { 
+                        Swal.fire('สำเร็จ','ส่งคำขอเรียบร้อยแล้ว กรุณารอระดับที่สูงกว่าอนุมัติ','success'); 
+                        api.run('getInitialData').then(initRes => { 
+                            if (initRes.ok) {
+                                handleLoginSuccess(initRes.currentUser); 
+                            }
+                        }); 
+                    } else { 
+                        Swal.fire('ข้อผิดพลาด', res.error, 'error'); 
+                    }
+                }).catch(err => { 
+                    hideLoader(); 
+                    Swal.fire('ข้อผิดพลาด', err.message, 'error'); 
+                });
+                return false;
+            };
+        }
+        
+        let btnEditReq = document.getElementById('btnNavEditReq');
+        if (btnEditReq) {
+            btnEditReq.onclick = () => { 
+                switchView('viewAdminEditReq'); 
+                loadAdminEditReqs(); 
+            };
+        }
+        
+        function loadAdminEditReqs() {
+            showLoader("กำลังโหลดรายการคำขอ...");
+            api.run('getEditRequestsList').then(res => {
+                hideLoader(); 
+                if (res.ok) { 
+                    cachedReqs = res.requests; 
+                    updateEditReqBadge(res.pendingCount); 
+                    applyReqFilter(); 
+                }
+            }).catch(err => { 
+                hideLoader(); 
+                Swal.fire('ข้อผิดพลาด', err.message, 'error'); 
+            });
+        }
+        
+        function applyReqFilter() {
+            let elSearch = document.getElementById('filterReqSearch'); 
+            let elStatus = document.getElementById('filterReqStatus'); 
+            
+            if (!elSearch || !elStatus) {
+                return;
+            }
+
+            const search = elSearch.value.toLowerCase(); 
+            const status = elStatus.value;
+            
+            let filtered = cachedReqs.filter(r => { 
+                const matchSearch = r.driverName.toLowerCase().includes(search) || r.phone.includes(search); 
+                const matchStatus = status === 'ALL' || r.status === status; 
+                return matchSearch && matchStatus; 
+            });
+
+            renderReqTable(filtered);
+        }
+        
+        function renderReqTable(dataArray) {
+            const tbody = document.getElementById('adminEditReqList'); 
+            if (!tbody) {
+                return;
+            }
+
+            if (dataArray.length === 0) {
+                return tbody.innerHTML = '<tr><td colspan="8" class="text-center py-6 text-gray-500">ไม่มีคำขอแก้ไขข้อมูล</td></tr>';
+            }
+            
+            const grouped = dataArray.reduce((acc, r) => { 
+                if (!acc[r.org]) {
+                    acc[r.org] = []; 
+                }
+                acc[r.org].push(r); 
+                return acc; 
+            }, {});
+            
+            let html = '';
+            Object.keys(grouped).sort().forEach(org => {
+                html += `
+                    <tr class="bg-blue-50 border-t-2 border-blue-200">
+                        <td colspan="8" class="px-4 py-2 font-bold text-blue-900 border-l-4 border-l-blue-600">${org}</td>
+                    </tr>
+                `;
+                grouped[org].forEach((r, index) => {
+                    let actionBtn = '-';
+                    if (r.status === 'PENDING') {
+                        if (['super_admin','provincial_admin'].includes(appUser?.role) || (appUser?.role === 'hospital_admin' && ['driver','staff'].includes(r.reqUserRole))) {
+                            actionBtn = `
+                                <div class="flex gap-1 justify-center">
+                                    <button onclick="approveReq('${r.id}')" class="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded text-[10px] shadow-sm transition font-medium">อนุมัติ</button>
+                                    <button onclick="rejectReq('${r.id}')" class="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-[10px] shadow-sm transition font-medium">ไม่อนุมัติ</button>
+                                </div>
+                            `;
+                        } else { 
+                            actionBtn = `<span class="text-[11px] text-orange-600 font-bold bg-orange-100 px-2 py-1 rounded border border-orange-200">รอระดับสูงอนุมัติ</span>`; 
+                        }
+                    }
+                    
+                    const formatCmp = (o, n) => { 
+                        let ol = o || '-'; 
+                        let ne = n || '-'; 
+                        if (ol === ne || ne === '-') {
+                            return `<span class="text-gray-500">${ol}</span>`; 
+                        }
+                        return `<s class="text-gray-400 mr-1">${ol}</s><span class="text-green-600 font-bold">➜ ${ne}</span>`; 
+                    };
+                    
+                    let targetNameStr = r.reqName ? formatCmp(r.driverName, r.reqName) : r.driverName;
+                    let targetOrgStr = r.reqOrg ? formatCmp(r.oldOrg, r.reqOrg) : "";
+                    
+                    let contactInfoHtml = `
+                        <div class="mb-1 text-[11px]">
+                            <span class="text-gray-400">📞 </span>${formatCmp(r.oldPhone, r.reqPhone)}
+                        </div>
+                        <div class="text-[10px]">
+                            <span class="text-gray-400">📧 </span>${formatCmp(r.oldEmail, r.reqEmail)}
+                        </div>
+                    `;
+                    
+                    let healthInfo = '';
+                    if (r.reqChronic || r.reqMeds || r.reqSmoking || r.reqAlcohol) {
+                        healthInfo = `
+                            <td class="px-4 py-3 text-[11px] text-gray-700">
+                                โรค: ${formatCmp(r.oldChronic, r.reqChronic)}<br>
+                                ยา: ${formatCmp(r.oldMeds, r.reqMeds)}
+                            </td>
+                            <td class="px-4 py-3 text-[11px] text-gray-700">
+                                บุหรี่: ${formatCmp(r.oldSmoking, r.reqSmoking)}<br>
+                                สุรา: ${formatCmp(r.oldAlcohol, r.reqAlcohol)}
+                            </td>
+                        `;
+                    } else { 
+                        healthInfo = `<td class="px-4 py-3 text-center text-[10px] text-gray-400" colspan="2">ไม่มีข้อมูลสุขภาพ (แก้ไขโดยผู้ดูแล)</td>`; 
+                    }
+
+                    let statusClass = '';
+                    if (r.status === 'PENDING') {
+                        statusClass = 'bg-yellow-100 text-yellow-700';
+                    } else if (r.status === 'CANCELLED') {
+                        statusClass = 'bg-gray-100 text-gray-500';
+                    } else if (r.status === 'REJECTED') {
+                        statusClass = 'bg-red-100 text-red-700';
+                    } else {
+                        statusClass = 'bg-green-100 text-green-700';
+                    }
+
+                    html += `
+                        <tr class="hover:bg-gray-50 bg-white border-b border-gray-100">
+                            <td class="px-4 py-3 text-center text-gray-500 font-bold">${index + 1}</td>
+                            <td class="px-4 py-3 text-xs text-gray-500">${String(r.createdAt).substring(0, 10)}</td>
+                            <td class="px-4 py-3">
+                                <span class="font-bold text-gray-800">${targetNameStr}</span>
+                                ${targetOrgStr ? `<br><span class="text-[10px] text-gray-500">${targetOrgStr}</span>` : ''}
+                            </td>
+                            <td class="px-4 py-3 font-mono align-middle">${contactInfoHtml}</td>
+                            ${healthInfo}
+                            <td class="px-4 py-3">
+                                <span class="px-2 py-1 rounded text-[10px] font-bold ${statusClass}">${r.status}</span>
+                            </td>
+                            <td class="px-4 py-3 text-center">${actionBtn}</td>
+                        </tr>
+                    `;
+                });
+            });
+            tbody.innerHTML = html;
+        }
+        
+        function approveReq(id) {
+            if (!confirm("ยืนยันการอนุมัติข้อมูลนี้หรือไม่? (ระบบจะส่งอีเมลแจ้งเตือนไปยังผู้ใช้ด้วย)")) {
+                return;
+            }
+            showLoader("กำลังอนุมัติข้อมูล..."); 
+            api.run('approveEditRequest', { reqId: id }).then(res => { 
+                hideLoader(); 
+                if (res.ok) { 
+                    Swal.fire('สำเร็จ','อนุมัติการแก้ไขเรียบร้อยแล้ว','success'); 
+                    loadAdminEditReqs(); 
+                } else { 
+                    Swal.fire('ข้อผิดพลาด', res.error, 'error'); 
+                } 
+            }).catch(err => { 
+                hideLoader(); 
+                Swal.fire('ข้อผิดพลาด', err.message, 'error'); 
+            });
+        }
+
+        function rejectReq(id) {
+            Swal.fire({
+                title: 'ไม่อนุมัติคำขอแก้ไข', 
+                input: 'text', 
+                inputLabel: 'ระบุเหตุผลที่ไม่อนุมัติ (บังคับกรอก)', 
+                showCancelButton: true, 
+                confirmButtonColor: '#d33', 
+                cancelButtonColor: '#3085d6', 
+                confirmButtonText: 'ยืนยันไม่อนุมัติ', 
+                cancelButtonText: 'ยกเลิก', 
+                inputValidator: (value) => { 
+                    if (!value) {
+                        return 'คุณต้องระบุเหตุผลที่ไม่อนุมัติด้วย';
+                    }
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    showLoader("กำลังบันทึกการไม่อนุมัติ..."); 
+                    api.run('rejectEditRequest', { reqId: id, rejectReason: result.value }).then(res => { 
+                        hideLoader(); 
+                        if (res.ok) { 
+                            Swal.fire('สำเร็จ', 'บันทึกการไม่อนุมัติ และส่งอีเมลแจ้งเตือนเรียบร้อยแล้ว', 'success'); 
+                            loadAdminEditReqs(); 
+                        } else { 
+                            Swal.fire('ข้อผิดพลาด', res.error, 'error'); 
+                        } 
+                    }).catch(err => { 
+                        hideLoader(); 
+                        Swal.fire('ข้อผิดพลาด', err.message, 'error'); 
+                    });
+                }
+            });
+        }
+
+        // ================= ADMIN DASHBOARD & CHART =================
+        function refreshAdminDashboard() { 
+            let dFilter = document.getElementById('adminDateFilter'); 
+            let pFilter = document.getElementById('adminPeriodFilter');
+            const filterParam = (dFilter && dFilter.value) ? dFilter.value : (pFilter ? pFilter.value : 'today');
+            loadAdminDashboard(filterParam);
+        }
+        
+        function renderDonutChart(stats) {
+            let el = document.getElementById('dashChart'); 
+            if (!el) {
+                return;
+            }
+            
+            const ctx = el.getContext('2d'); 
+            if (dashChartInstance) {
+                dashChartInstance.destroy();
+            }
+
+            const total = stats.statGreen + stats.statAmber + stats.statRed + stats.statNoData;
+            
+            let bgColors = [];
+            let dataValues = [];
+
+            if (total === 0) {
+                dataValues = [0, 0, 0, 1];
+                bgColors = ['#f3f4f6', '#f3f4f6', '#f3f4f6', '#e5e7eb'];
+            } else {
+                dataValues = [stats.statGreen, stats.statAmber, stats.statRed, stats.statNoData];
+                bgColors = ['#22c55e', '#eab308', '#ef4444', '#d1d5db'];
+            }
+
+            dashChartInstance = new Chart(ctx, { 
+                type: 'doughnut', 
+                data: { 
+                    labels: ['พร้อม (GREEN)', 'เฝ้าระวัง (AMBER)', 'งดขับ (RED)', 'ยังไม่ประเมิน'], 
+                    datasets: [{ 
+                        data: dataValues, 
+                        backgroundColor: bgColors, 
+                        borderWidth: 1 
+                    }] 
+                }, 
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    plugins: { 
+                        legend: { 
+                            position: 'bottom', 
+                            labels: { font: { family: "'Noto Sans Thai', sans-serif" } } 
+                        }, 
+                        tooltip: { 
+                            enabled: total > 0 
+                        } 
+                    }, 
+                    cutout: '65%' 
+                } 
+            });
+        }
+        
+        function renderBarChart(orgStats) {
+            let el = document.getElementById('orgBarChart'); 
+            if (!el) {
+                return;
+            }
+
+            const ctx = el.getContext('2d'); 
+            if (barChartInstance) {
+                barChartInstance.destroy();
+            }
+
+            const labels = Object.keys(orgStats);
+            
+            barChartInstance = new Chart(ctx, { 
+                type: 'bar', 
+                data: { 
+                    labels: labels, 
+                    datasets: [ 
+                        { 
+                            label: 'พร้อม', 
+                            data: labels.map(l => orgStats[l].green), 
+                            backgroundColor: '#22c55e' 
+                        }, 
+                        { 
+                            label: 'เฝ้าระวัง', 
+                            data: labels.map(l => orgStats[l].amber), 
+                            backgroundColor: '#eab308' 
+                        }, 
+                        { 
+                            label: 'งดขับ', 
+                            data: labels.map(l => orgStats[l].red), 
+                            backgroundColor: '#ef4444' 
+                        } 
+                    ] 
+                }, 
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    scales: { 
+                        x: { 
+                            stacked: true, 
+                            ticks: { font: { family: "'Noto Sans Thai', sans-serif" } } 
+                        }, 
+                        y: { 
+                            stacked: true, 
+                            beginAtZero: true 
+                        } 
+                    }, 
+                    plugins: { 
+                        legend: { 
+                            labels: { font: { family: "'Noto Sans Thai', sans-serif" } } 
+                        } 
+                    } 
+                } 
+            });
+        }
+        
+        function renderGroupedTable(tbodyId, dataArray, columnsRenderer, colspan) {
+            const tbody = document.getElementById(tbodyId); 
+            if (!tbody) {
+                return;
+            }
+
+            if (dataArray.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="${colspan}" class="py-6 text-center text-gray-500">ไม่มีข้อมูล</td></tr>`;
+                return;
+            }
+
+            const grouped = dataArray.reduce((acc, item) => { 
+                if (!acc[item.org]) {
+                    acc[item.org] = []; 
+                }
+                acc[item.org].push(item); 
+                return acc; 
+            }, {});
+            
+            let html = '';
+            Object.keys(grouped).sort().forEach(org => { 
+                html += `
+                    <tr class="bg-blue-50 border-t-2 border-blue-200">
+                        <td colspan="${colspan}" class="px-4 py-2 font-bold text-blue-900 border-l-4 border-l-blue-600">${org}</td>
+                    </tr>
+                `; 
+                grouped[org].forEach((item, index) => { 
+                    html += columnsRenderer(item, index + 1); 
+                }); 
+            });
+            
+            tbody.innerHTML = html;
+        }
+        
+        function loadAdminDashboard(periodOverride = null) {
+            showLoader("กำลังดึงข้อมูลสรุป...");
+            
+            let elOrg = document.getElementById('adminOrgFilter'); 
+            let org = elOrg ? elOrg.value : 'ALL';
+            
+            let dFilter = document.getElementById('adminDateFilter'); 
+            let pFilter = document.getElementById('adminPeriodFilter');
+            const filterPeriod = periodOverride || ((dFilter && dFilter.value) ? dFilter.value : ((pFilter && pFilter.value) ? pFilter.value : 'today'));
+
+            api.run('getAdminDashboard', { filters: { org: org, period: filterPeriod } }).then(res => {
+                hideLoader();
+                if (res.ok) {
+                    let dTitle = document.getElementById('dashTitle'); 
+                    if (dTitle) {
+                        dTitle.innerText = res.isPublicView ? "ภาพรวมความพร้อม (สาธารณะ)" : "แดชบอร์ดผู้ดูแลระบบ";
+                    }
+
+                    let pAlert = document.getElementById('publicAlert'); 
+                    if (pAlert) {
+                        if (!res.isPublicView) {
+                            pAlert.classList.add('hidden');
+                        } else {
+                            pAlert.classList.remove('hidden');
+                        }
+                    }
+                    
+                    let eTotalDriver = document.getElementById('statTotalDriver'); 
+                    if (eTotalDriver) eTotalDriver.innerText = res.totalDrivers;
+                    
+                    let eTotalStaff = document.getElementById('statTotalStaff'); 
+                    if (eTotalStaff) eTotalStaff.innerText = res.totalStaff;
+                    
+                    let eGreen = document.getElementById('statGreen'); 
+                    if (eGreen) eGreen.innerText = res.stats.statGreen;
+                    
+                    let eAmber = document.getElementById('statAmber'); 
+                    if (eAmber) eAmber.innerText = res.stats.statAmber;
+                    
+                    let eRed = document.getElementById('statRed'); 
+                    if (eRed) eRed.innerText = res.stats.statRed;
+                    
+                    let eNoData = document.getElementById('statNoData'); 
+                    if (eNoData) eNoData.innerText = res.stats.statNoData;
+                    
+                    renderDonutChart(res.stats); 
+                    
+                    if (res.orgStats) {
+                        renderBarChart(res.orgStats);
+                    }
+
+                    let isSpecificDay = filterPeriod === 'today' || filterPeriod.match(/^\d{4}-\d{2}-\d{2}$/);
+                    let lAction = document.getElementById('labelActionReq'); 
+                    if (lAction) {
+                        lAction.innerText = isSpecificDay ? 'รายชื่อผู้ที่ต้องเฝ้าระวัง / งดขับ (วันที่เลือก)' : `ประวัติการประเมินที่ต้องเฝ้าระวัง (ช่วง ${filterPeriod === '7d' ? '7 วัน' : '30 วัน'})`;
+                    }
+
+                    const actionRenderer = (i, no) => {
+                        let dParts = String(i.date).split('-'); 
+                        let thDate = `${dParts[2]}/${dParts[1]}/${parseInt(dParts[0]) + 543}`;
+                        let timeStr = i.createdAt ? new Date(i.createdAt).toLocaleTimeString('th-TH', {hour: '2-digit', minute: '2-digit'}) : '-';
+                        
+                        let bandClass = '';
+                        if (i.band === 'RED') {
+                            bandClass = 'bg-red-100 text-red-700';
+                        } else {
+                            bandClass = 'bg-yellow-100 text-yellow-700';
+                        }
+
+                        return `
+                            <tr class="border-b hover:bg-gray-50 bg-white">
+                                <td class="px-4 py-3 text-center text-gray-500 font-bold">${no}</td>
+                                <td class="px-4 py-3 text-sm text-gray-700 font-medium">${thDate}<br><span class="text-[11px] text-gray-500">${timeStr} น.</span></td>
+                                <td class="px-4 py-3 font-medium text-gray-700">${i.name}</td>
+                                <td class="px-4 py-3 font-mono text-sm">${i.phone}</td>
+                                <td class="px-4 py-3">
+                                    <span class="px-2 py-1 rounded text-xs font-bold ${bandClass}">${i.band}</span>
+                                </td>
+                                <td class="px-4 py-3 text-xs text-red-600">${i.reasons.join(', ')}</td>
+                            </tr>
+                        `;
+                    };
+                    
+                    renderGroupedTable('adminActionListDriver', res.actionRequiredDriver || [], actionRenderer, 6);
+                    renderGroupedTable('adminActionListStaff', res.actionRequiredStaff || [], actionRenderer, 6);
+
+                    let dGreen = document.getElementById('divGreenListArea'); 
+                    let dNoData = document.getElementById('divNoDataList');
+                    
+                    if (!isSpecificDay) { 
+                        if (dGreen) dGreen.classList.add('hidden'); 
+                        if (dNoData) dNoData.classList.add('hidden'); 
+                    } else {
+                        if (dGreen) dGreen.classList.remove('hidden'); 
+                        if (dNoData) dNoData.classList.remove('hidden');
+                        
+                        const greenRenderer = (i, no) => {
+                            let timeStr = i.createdAt ? new Date(i.createdAt).toLocaleTimeString('th-TH', {hour: '2-digit', minute: '2-digit'}) : '-';
+                            return `
+                                <tr class="border-b hover:bg-green-50 bg-white">
+                                    <td class="px-4 py-3 text-center text-gray-500 font-bold">${no}</td>
+                                    <td class="px-4 py-3 font-medium text-gray-700">${i.name}</td>
+                                    <td class="px-4 py-3 text-center text-blue-600 font-medium">${i.temp}</td>
+                                    <td class="px-4 py-3 text-center font-mono">${i.bp}</td>
+                                    <td class="px-4 py-3 text-center font-mono">${i.pulse}</td>
+                                    <td class="px-4 py-3 text-center text-green-700 font-medium">${timeStr} น.</td>
+                                </tr>
+                            `;
+                        };
+                        
+                        let areaGD = document.getElementById('divGreenListDriver');
+                        let areaGS = document.getElementById('divGreenListStaff');
+                        
+                        if (res.greenListDriver && res.greenListDriver.length > 0) { 
+                            if (areaGD) areaGD.classList.remove('hidden'); 
+                            renderGroupedTable('adminGreenListDriver', res.greenListDriver, greenRenderer, 6); 
+                        } else { 
+                            if (areaGD) areaGD.classList.add('hidden'); 
+                        }
+
+                        if (res.greenListStaff && res.greenListStaff.length > 0) { 
+                            if (areaGS) areaGS.classList.remove('hidden'); 
+                            renderGroupedTable('adminGreenListStaff', res.greenListStaff, greenRenderer, 6); 
+                        } else { 
+                            if (areaGS) areaGS.classList.add('hidden'); 
+                        }
+                        
+                        renderGroupedTable('adminNoDataList', res.noDataList, (i, no) => { 
+                            return `
+                                <tr class="border-b bg-white">
+                                    <td class="px-4 py-3 text-center text-gray-500 font-bold">${no}</td>
+                                    <td class="px-4 py-3 font-medium text-gray-700">${i.name}</td>
+                                    <td class="px-4 py-3 text-center font-mono text-sm">${i.phone}</td>
+                                    <td class="px-4 py-3 text-center">
+                                        <span class="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">ยังไม่ประเมิน</span>
+                                    </td>
+                                </tr>
+                            `; 
+                        }, 4);
+                    }
+                } else { 
+                    Swal.fire('ข้อผิดพลาด', res.error, 'error'); 
+                }
+            }).catch(err => { 
+                hideLoader(); 
+                console.error(err); 
+            });
+        }
+
+        // ================= SUPER ADMIN & LOGS =================
+        let bDash = document.getElementById('btnNavDash'); 
+        if (bDash) {
+            bDash.onclick = () => { 
+                switchView('viewAdmin'); 
+                loadAdminDashboard(); 
+            };
+        }
+
+        let bUser = document.getElementById('btnNavUsers'); 
+        if (bUser) {
+            bUser.onclick = () => { 
+                switchView('viewUserManagement'); 
+                loadAdminUsers(); 
+            };
+        }
+
+        let bSet = document.getElementById('btnNavSetting'); 
+        if (bSet) {
+            bSet.onclick = () => { 
+                switchView('viewSettings'); 
+            };
+        }
+
+        let bAud = document.getElementById('btnNavAudit'); 
+        if (bAud) {
+            bAud.onclick = () => { 
+                switchView('viewAuditLog'); 
+                loadAuditLogs(); 
+            };
+        }
+        
+        function loadAuditLogs() {
+            showLoader("กำลังดึงข้อมูลประวัติการใช้งาน...");
+            api.run('getAuditLogsList').then(res => { 
+                hideLoader(); 
+                if (res.ok) { 
+                    cachedLogs = res.logs; 
+                    applyLogFilter(); 
+                } 
+            }).catch(err => { 
+                hideLoader(); 
+                Swal.fire('ข้อผิดพลาด', err.message, 'error'); 
+            });
+        }
+        
+        function applyLogFilter() {
+            let elS = document.getElementById('filterLogSearch'); 
+            let elA = document.getElementById('filterLogAction'); 
+            
+            if (!elS || !elA) {
+                return;
+            }
+
+            const search = elS.value.toLowerCase(); 
+            const action = elA.value;
+            
+            let filtered = cachedLogs.filter(l => { 
+                const matchSearch = l.actorName.toLowerCase().includes(search) || l.targetName.toLowerCase().includes(search) || l.actorPhone.includes(search); 
+                const matchAction = action === 'ALL' || l.action === action; 
+                return matchSearch && matchAction; 
+            });
+
+            renderLogTable(filtered);
+        }
+        
+        function renderLogTable(dataArray) {
+            const tbody = document.getElementById('auditLogList'); 
+            if (!tbody) {
+                return;
+            }
+
+            if (dataArray.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center py-6 text-gray-500">ไม่มีข้อมูลการใช้งาน</td></tr>';
+                return;
+            }
+
+            const grouped = dataArray.reduce((acc, l) => { 
+                if (!acc[l.org]) {
+                    acc[l.org] = []; 
+                }
+                acc[l.org].push(l); 
+                return acc; 
+            }, {});
+
+            let html = '';
+            Object.keys(grouped).sort().forEach(org => {
+                html += `
+                    <tr class="bg-blue-50 border-t-2 border-blue-200">
+                        <td colspan="8" class="px-4 py-2 font-bold text-blue-900 border-l-4 border-l-blue-600">${org}</td>
+                    </tr>
+                `;
+                grouped[org].forEach((l, index) => {
+                    let d = new Date(l.createdAt); 
+                    let dateStr = `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()+543} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+                    
+                    let actionText = ACTION_TH[l.action] || l.action; 
+                    let logRoleTh = getRoleTh(l.actorRole, l.org);
+                    
+                    let targetText = '';
+                    if (l.targetName && l.targetName !== l.targetPhone) {
+                        targetText = `<span class="font-bold text-gray-800">${l.targetName}</span><br><span class="font-mono text-gray-500">${l.targetPhone}</span>`;
+                    } else {
+                        targetText = `<span class="font-mono text-gray-800">${l.targetPhone}</span>`;
+                    }
+
+                    html += `
+                        <tr class="border-b hover:bg-gray-50 bg-white">
+                            <td class="px-4 py-3 text-center text-gray-500 font-bold">${index + 1}</td>
+                            <td class="px-4 py-3 text-[11px] whitespace-nowrap text-gray-500">${dateStr}</td>
+                            <td class="px-4 py-3 font-medium text-gray-800 text-sm">
+                                ${l.actorName}<br>
+                                <span class="text-[10px] text-gray-400 font-mono">${l.actorPhone}</span>
+                            </td>
+                            <td class="px-4 py-3 text-xs">
+                                <span class="bg-gray-100 px-2 py-0.5 rounded border border-gray-200 text-gray-600">${logRoleTh}</span>
+                            </td>
+                            <td class="px-4 py-3 text-xs font-bold text-blue-700">${actionText}</td>
+                            <td class="px-4 py-3 text-xs">${targetText}</td>
+                            <td class="px-4 py-3 text-xs text-gray-500">${l.org}</td>
+                            <td class="px-4 py-3">
+                                <span class="text-[10px] px-2 py-1 rounded bg-gray-100 font-bold border border-gray-200">${l.status}</span>
+                            </td>
+                        </tr>
+                    `;
+                });
+            });
+            tbody.innerHTML = html;
+        }
+
+        function seedInitialAdmins() {
+            if (!confirm("ระบบจะทำการดึงข้อมูลผู้ดูแลระบบเริ่มต้น (ที่ตั้งค่าไว้ในโค้ด) กลับเข้าสู่ระบบ ยืนยันหรือไม่?")) {
+                return;
+            }
+
+            showLoader("กำลังนำเข้าข้อมูลผู้ดูแลระบบ..."); 
+            api.run('apiSeedAdmins').then(res => { 
+                hideLoader(); 
+                if (res.ok) { 
+                    Swal.fire('สำเร็จ', res.message, 'success').then(() => { 
+                        switchView('viewAdmin'); 
+                        loadAdminDashboard(); 
+                    }); 
+                } else { 
+                    Swal.fire('ข้อผิดพลาด', res.error, 'error'); 
+                } 
+            }).catch(err => { 
+                hideLoader(); 
+                Swal.fire('ข้อผิดพลาด', err.message, 'error'); 
+            });
+        }
+
+        function generateMockData() {
+            if (!confirm("ยืนยันการสร้างข้อมูลจำลอง 25 รายการ? (สำหรับทดสอบกราฟ)")) {
+                return;
+            }
+
+            showLoader("กำลังสร้างข้อมูลอัตโนมัติ..."); 
+            api.run('apiGenerateTestData').then(res => { 
+                hideLoader(); 
+                if (res.ok) { 
+                    Swal.fire('สำเร็จ','สร้างข้อมูลจำลองเรียบร้อยแล้ว','success').then(() => { 
+                        switchView('viewAdmin'); 
+                        loadAdminDashboard(); 
+                    }); 
+                } else { 
+                    Swal.fire('ข้อผิดพลาด', res.error, 'error'); 
+                } 
+            }).catch(err => { 
+                hideLoader(); 
+                Swal.fire('ข้อผิดพลาด', err.message, 'error'); 
+            });
+        }
+
+        function clearDatabaseConfirm() {
+            Swal.fire({ 
+                title: 'คำเตือนขั้นสูงสุด!', 
+                html: '<span class="text-red-600 font-bold">การกระทำนี้จะลบข้อมูลต่อไปนี้ถาวร:</span><br>- พนักงานขับรถทั้งหมด<br>- ประวัติการประเมินสุขภาพ<br>- ประวัติ Log และการยินยอม PDPA<br><br><b>(บัญชี Admin และ ผอ. จะยังคงอยู่)</b><br><br>พิมพ์คำว่า <b>"ยืนยัน"</b> เพื่อดำเนินการ', 
+                input: 'text', 
+                icon: 'warning', 
+                showCancelButton: true, 
+                confirmButtonColor: '#d33', 
+                cancelButtonColor: '#3085d6', 
+                confirmButtonText: 'ล้างข้อมูลถาวร', 
+                cancelButtonText: 'ยกเลิก', 
+                inputValidator: (value) => { 
+                    if (value !== 'ยืนยัน') {
+                        return 'คุณต้องพิมพ์คำว่า "ยืนยัน" ให้ถูกต้อง';
+                    }
+                }
+            }).then((result) => {
+                if (result.isConfirmed && result.value === 'ยืนยัน') {
+                    showLoader("กำลังล้างฐานข้อมูลระบบทั้งหมด...");
+                    api.run('clearDatabase').then(res => { 
+                        hideLoader(); 
+                        if (res.ok) { 
+                            Swal.fire('สำเร็จ', 'ล้างฐานข้อมูลเรียบร้อยแล้ว ระบบพร้อมเริ่มต้นใหม่', 'success').then(() => { 
+                                window.location.reload(); 
+                            }); 
+                        } else { 
+                            Swal.fire('ข้อผิดพลาด', res.error, 'error'); 
+                        } 
+                    }).catch(err => { 
+                        hideLoader(); 
+                        Swal.fire('ข้อผิดพลาด', err.message, 'error'); 
+                    });
+                }
+            });
+        }
+
+        function togglePin(btn, pin) { 
+            if (btn.innerText === 'ดู PIN') { 
+                btn.innerText = `PIN: ${pin}`; 
+                btn.classList.replace('text-indigo-500', 'text-gray-800'); 
+                btn.classList.add('font-bold', 'bg-gray-100', 'px-2', 'py-0.5', 'rounded', 'border'); 
+            } else { 
+                btn.innerText = 'ดู PIN'; 
+                btn.classList.replace('text-gray-800', 'text-indigo-500'); 
+                btn.classList.remove('font-bold', 'bg-gray-100', 'px-2', 'py-0.5', 'rounded', 'border'); 
+            } 
+        }
+
+        function deleteUserBtn(userId, name) {
+            Swal.fire({ 
+                title: `ยืนยันการลบ ${name} ถาวร?`, 
+                text: "หากลบแล้วจะไม่สามารถกู้คืนข้อมูลของบุคคลนี้ได้ คุณแน่ใจหรือไม่?", 
+                icon: 'warning', 
+                showCancelButton: true, 
+                confirmButtonColor: '#d33', 
+                cancelButtonColor: '#3085d6', 
+                confirmButtonText: 'ยืนยันลบถาวร', 
+                cancelButtonText: 'ยกเลิก'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    showLoader("กำลังลบข้อมูลออกจากระบบ...");
+                    api.run('deleteUser', { targetUserId: userId, targetName: name }).then(res => { 
+                        hideLoader(); 
+                        if (res.ok) { 
+                            Swal.fire('สำเร็จ', 'ลบผู้ใช้เรียบร้อยแล้ว', 'success'); 
+                            loadAdminUsers(); 
+                        } else { 
+                            Swal.fire('เกิดข้อผิดพลาด', res.error, 'error'); 
+                        } 
+                    }).catch(err => { 
+                        hideLoader(); 
+                        Swal.fire('ข้อผิดพลาด', err.message, 'error'); 
+                    });
+                }
+            });
+        }
+
+        function loadAdminUsers() {
+            showLoader("กำลังโหลดรายชื่อผู้ใช้งาน...");
+            api.run('getAdminUsersList').then(res => {
+                hideLoader();
+                if (res.ok) { 
+                    cachedUsers = res.users; 
+                    cachedMyRole = res.myRole; 
+                    updateUsersBadge(res.users.filter(u => u.status === 'PENDING').length); 
+                    applyUserFilter(); 
+                }
+            }).catch(err => { 
+                hideLoader(); 
+                Swal.fire('ข้อผิดพลาด', err.message, 'error'); 
+            });
+        }
+        
+        function applyUserFilter() {
+            let elS = document.getElementById('filterUserSearch'); 
+            let elR = document.getElementById('filterUserRole'); 
+            let elSt = document.getElementById('filterUserStatus'); 
+            
+            if (!elS || !elR || !elSt) {
+                return;
+            }
+
+            const search = elS.value.toLowerCase(); 
+            const role = elR.value; 
+            const status = elSt.value;
+            
+            let filtered = cachedUsers.filter(u => { 
+                const matchSearch = u.displayName.toLowerCase().includes(search) || u.phone.includes(search); 
+                const matchRole = role === 'ALL' || u.role === role; 
+                const matchStatus = status === 'ALL' || u.status === status; 
+                return matchSearch && matchRole && matchStatus; 
+            });
+
+            renderUserTable(filtered, cachedMyRole);
+        }
+        
+        function renderUserTable(dataArray, myRole) {
+            const tbody = document.getElementById('adminUserList'); 
+            if (!tbody) {
+                return;
+            }
+
+            const myId = appUser ? appUser.userId : '';
+            
+            const grouped = dataArray.reduce((acc, u) => { 
+                if (!acc[u.org]) {
+                    acc[u.org] = []; 
+                }
+                acc[u.org].push(u); 
+                return acc; 
+            }, {});
+            
+            let html = '';
+            
+            if (Object.keys(grouped).length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="px-4 py-6 text-center text-gray-500">ไม่มีข้อมูลผู้ใช้งาน</td></tr>';
+                return;
+            }
+            
+            Object.keys(grouped).sort().forEach(org => {
+                html += `
+                    <tr class="bg-blue-50 border-t-2 border-blue-200">
+                        <td colspan="7" class="px-4 py-2 font-bold text-blue-900 border-l-4 border-l-blue-600">${org}</td>
+                    </tr>
+                `;
+                grouped[org].sort((a,b) => a.role.localeCompare(b.role)).forEach((u, index) => {
+                    let roleThText = getRoleTh(u.role, u.org); 
+                    let isSelf = (u.userId === myId); 
+                    let btnStatus = '';
+                    
+                    if (u.status !== 'APPROVED') {
+                        if (myRole === 'super_admin' || (myRole === 'provincial_admin' && !['super_admin', 'provincial_admin', 'provincial_audit'].includes(u.role)) || (myRole === 'hospital_admin' && ['driver','staff'].includes(u.role))) {
+                            btnStatus = `
+                                <div class="flex gap-1 justify-center mb-1">
+                                    <button onclick="updStatus('${u.userId}', '${u.displayName}', 'APPROVED')" class="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded text-[10px] font-medium shadow-sm transition">อนุมัติ</button>
+                                    <button onclick="rejectUser('${u.userId}', '${u.displayName}')" class="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-[10px] font-medium shadow-sm transition">ไม่อนุมัติ</button>
+                                </div>
+                            `;
+                        } else { 
+                            btnStatus = `<span class="text-[10px] text-orange-500 font-medium mr-1 bg-orange-50 px-1 rounded border border-orange-200">รอระดับสูงอนุมัติ</span>`; 
+                        }
+                    } else {
+                        if (myRole === 'super_admin' && !['super_admin', 'exec_ppho'].includes(u.role)) {
+                            btnStatus = `<button onclick="updStatus('${u.userId}', '${u.displayName}', 'SUSPENDED')" class="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-[10px] font-medium mr-1 shadow-sm transition">ระงับ</button>`;
+                        } else if (myRole === 'provincial_admin' && !['super_admin', 'exec_ppho', 'provincial_admin', 'provincial_audit'].includes(u.role)) {
+                            btnStatus = `<button onclick="updStatus('${u.userId}', '${u.displayName}', 'SUSPENDED')" class="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-[10px] font-medium mr-1 shadow-sm transition">ระงับ</button>`;
+                        } else if (myRole === 'hospital_admin' && ['driver','staff'].includes(u.role)) {
+                            btnStatus = `<button onclick="updStatus('${u.userId}', '${u.displayName}', 'SUSPENDED')" class="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-[10px] font-medium mr-1 shadow-sm transition">ระงับ</button>`;
+                        }
+                    }
+
+                    let canEdit = false; 
+                    let canViewPin = false; 
+                    let canDelete = false;
+                    
+                    if (myRole === 'super_admin') { 
+                        canEdit = true; 
+                        canViewPin = true; 
+                        canDelete = (u.role !== 'super_admin'); 
+                    } else if (myRole === 'provincial_admin') { 
+                        canEdit = (!['super_admin', 'provincial_admin', 'provincial_audit'].includes(u.role) || isSelf); 
+                        canViewPin = (!['super_admin', 'provincial_admin', 'provincial_audit', 'exec_ppho'].includes(u.role) || isSelf); 
+                        canDelete = !['super_admin', 'provincial_admin', 'provincial_audit', 'exec_ppho'].includes(u.role); 
+                    } else if (myRole === 'hospital_admin') { 
+                        canEdit = (['driver','staff'].includes(u.role) || isSelf); 
+                        canViewPin = (['driver','staff'].includes(u.role) || isSelf); 
+                        canDelete = false; 
+                    }
+                    
+                    let btnEdit = '';
+                    if (canEdit) {
+                        btnEdit = `<button onclick="openEditUser('${u.userId}', '${u.phone}', '${u.displayName}', '${u.org}', '${u.role}', '${u.email}')" class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-[10px] font-medium mr-1 shadow-sm transition">แก้ไข</button>`;
+                    }
+
+                    let btnView = '';
+                    if (['driver','staff'].includes(u.role)) {
+                        btnView = `<button onclick="confirmViewProfile('${u.userId}', '${u.displayName}')" class="bg-indigo-500 hover:bg-indigo-600 text-white px-2 py-1 rounded text-[10px] font-medium shadow-sm transition mr-1">ดูข้อมูล</button>`;
+                    }
+
+                    let btnDelete = '';
+                    if (canDelete) {
+                        btnDelete = `<button onclick="deleteUserBtn('${u.userId}', '${u.displayName}')" class="bg-gray-500 hover:bg-gray-600 text-white px-2 py-1 rounded text-[10px] font-medium shadow-sm transition mt-1 md:mt-0">ลบ</button>`;
+                    }
+
+                    let pinBtn = '';
+                    if (canViewPin) {
+                        pinBtn = `<br><button onclick="togglePin(this, '${u.pin}')" class="text-[11px] text-indigo-500 mt-1 hover:underline transition">ดู PIN</button>`;
+                    }
+                        
+                    let statusClass = '';
+                    if (u.status === 'APPROVED') {
+                        statusClass = 'bg-green-100 text-green-700';
+                    } else if (u.status === 'REJECTED') {
+                        statusClass = 'bg-red-100 text-red-700';
+                    } else {
+                        statusClass = 'bg-yellow-100 text-yellow-700';
+                    }
+
+                    html += `
+                        <tr class="border-b hover:bg-gray-50 bg-white">
+                            <td class="px-4 py-3 text-center text-gray-500 font-bold">${index + 1}</td>
+                            <td class="px-4 py-3 font-medium text-gray-800">${u.displayName}</td>
+                            <td class="px-4 py-3 font-mono text-sm text-gray-600">${u.phone}${pinBtn}</td>
+                            <td class="px-4 py-3 text-xs text-gray-500">${u.email || '-'}</td>
+                            <td class="px-4 py-3 text-xs">
+                                <span class="bg-gray-100 border border-gray-200 text-gray-700 px-2 py-0.5 rounded font-medium">${roleThText}</span>
+                            </td>
+                            <td class="px-4 py-3">
+                                <span class="px-2 py-1 rounded text-[10px] font-bold ${statusClass}">${u.status}</span>
+                            </td>
+                            <td class="px-4 py-3 text-center whitespace-nowrap">${btnStatus}${btnEdit}${btnView}${btnDelete}</td>
+                        </tr>
+                    `;
+                });
+            });
+            tbody.innerHTML = html;
+        }
+
+        function updStatus(uid, name, s) {
+            if (!confirm(`ยืนยันการเปลี่ยนสถานะบัญชีของ ${name} เป็น ${s} หรือไม่?`)) {
+                return;
+            }
+            
+            showLoader("กำลังอัปเดตข้อมูล..."); 
+            api.run('adminUpdateUserStatus', { 
+                targetUserId: uid, 
+                targetName: name, 
+                newStatus: s, 
+                rejectReason: "" 
+            }).then(r => { 
+                hideLoader(); 
+                if (r.ok) { 
+                    loadAdminUsers(); 
+                    loadAdminDashboard(); 
+                } else { 
+                    Swal.fire('ข้อผิดพลาด', r.error, 'error'); 
+                } 
+            }).catch(err => { 
+                hideLoader(); 
+                Swal.fire('ข้อผิดพลาด', err.message, 'error'); 
+            });
+        }
+
+        function rejectUser(uid, name) {
+            Swal.fire({
+                title: `ไม่อนุมัติบัญชีผู้ใช้`, 
+                html: `ระบุเหตุผลที่ไม่อนุมัติบัญชีของ <b>${name}</b> (บังคับกรอก)`, 
+                input: 'text', 
+                inputPlaceholder: 'เช่น ไม่พบชื่อในระบบ, ข้อมูลไม่ถูกต้อง...', 
+                showCancelButton: true, 
+                confirmButtonColor: '#d33', 
+                cancelButtonColor: '#3085d6', 
+                confirmButtonText: 'ยืนยันไม่อนุมัติ', 
+                cancelButtonText: 'ยกเลิก', 
+                inputValidator: (value) => { 
+                    if (!value) {
+                        return 'คุณต้องระบุเหตุผลที่ไม่อนุมัติด้วย';
+                    }
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    showLoader("กำลังบันทึกการไม่อนุมัติ..."); 
+                    api.run('adminUpdateUserStatus', { 
+                        targetUserId: uid, 
+                        targetName: name, 
+                        newStatus: "REJECTED", 
+                        rejectReason: result.value 
+                    }).then(r => { 
+                        hideLoader(); 
+                        if (r.ok) { 
+                            Swal.fire('สำเร็จ', 'บันทึกการไม่อนุมัติ และส่งอีเมลแจ้งเตือนเรียบร้อยแล้ว', 'success'); 
+                            loadAdminUsers(); 
+                        } else { 
+                            Swal.fire('ข้อผิดพลาด', r.error, 'error'); 
+                        } 
+                    }).catch(err => { 
+                        hideLoader(); 
+                        Swal.fire('ข้อผิดพลาด', err.message, 'error'); 
+                    });
+                }
+            });
+        }
+
+        let btnAddUser = document.getElementById('btnOpenAddUser');
+        if (btnAddUser) {
+            btnAddUser.onclick = () => { 
+                let fAdd = document.getElementById('formAddUser'); 
+                if (fAdd) {
+                    fAdd.reset(); 
+                }
+                
+                const roleSelect = document.getElementById('addRole'); 
+                const orgSelect = document.getElementById('addOrg');
+                
+                if (appUser && appUser.role === 'hospital_admin') {
+                    if (orgSelect) { 
+                        orgSelect.value = appUser.org; 
+                        orgSelect.disabled = true; 
+                    }
+                    
+                    let hiddenOpts = ['optAddProvAdmin','optAddProvAudit','optAddExec','optAddSuper', 'optAddDriver', 'optAddStaff'];
+                    hiddenOpts.forEach(id => { 
+                        let el = document.getElementById(id); 
+                        if (el) el.style.display = 'none'; 
+                    });
+                    
+                    let showOpts = ['optAddDir','optAddAdmin'];
+                    showOpts.forEach(id => { 
+                        let el = document.getElementById(id); 
+                        if (el) el.style.display = 'block'; 
+                    });
+
+                    if (roleSelect) {
+                        roleSelect.value = 'hospital_admin'; 
+                    }
+                } else if (appUser && appUser.role === 'provincial_admin') {
+                    if (orgSelect) {
+                        orgSelect.disabled = false;
+                    }
+                    
+                    let hiddenOpts = ['optAddProvAdmin','optAddProvAudit','optAddExec','optAddSuper'];
+                    hiddenOpts.forEach(id => { 
+                        let el = document.getElementById(id); 
+                        if (el) el.style.display = 'none'; 
+                    });
+                    
+                    let showOpts = ['optAddDir','optAddAdmin','optAddDriver','optAddStaff'];
+                    showOpts.forEach(id => { 
+                        let el = document.getElementById(id); 
+                        if (el) el.style.display = 'block'; 
+                    });
+
+                    if (roleSelect) {
+                        roleSelect.value = 'driver';
+                    }
+                } else {
+                    if (orgSelect) {
+                        orgSelect.disabled = false;
+                    }
+                    
+                    let showOpts = ['optAddProvAdmin','optAddProvAudit','optAddExec','optAddSuper','optAddDir','optAddAdmin','optAddDriver','optAddStaff'];
+                    showOpts.forEach(id => { 
+                        let el = document.getElementById(id); 
+                        if (el) el.style.display = 'block'; 
+                    });
+
+                    if (roleSelect) {
+                        roleSelect.value = 'driver';
+                    }
+                }
+
+                toggleAddDriverFields(); 
+                
+                let mAUser = document.getElementById('modalAddUser'); 
+                if (mAUser) {
+                    mAUser.classList.remove('hidden'); 
+                }
+            };
+        }
+
+        let formAddUsr = document.getElementById('formAddUser');
+        if (formAddUsr) {
+            formAddUsr.onsubmit = function(e) {
+                e.preventDefault();
+                const orgSelect = document.getElementById('addOrg'); 
+                const orgValue = orgSelect.disabled ? appUser.org : orgSelect.value;
+                
+                const payload = { 
+                    firstName: document.getElementById('addFirstName').value, 
+                    lastName: document.getElementById('addLastName').value, 
+                    displayName: document.getElementById('addFirstName').value + ' ' + document.getElementById('addLastName').value, 
+                    phone: document.getElementById('addPhone').value, 
+                    org: orgValue, 
+                    role: document.getElementById('addRole').value, 
+                    email: document.getElementById('addEmail').value, 
+                    dob: document.getElementById('addDob').value, 
+                    chronicDisease: document.getElementById('addChronic').value, 
+                    regularMeds: document.getElementById('addMeds').value, 
+                    smoking: document.getElementById('addSmoking').value, 
+                    alcohol: document.getElementById('addAlcohol').value 
+                };
+                
+                showLoader("กำลังสร้างบัญชีผู้ใช้งาน..."); 
+                api.run('addUser', payload).then(res => { 
+                    hideLoader(); 
+                    if (res.ok) { 
+                        if (res.hidePin) { 
+                            Swal.fire('ส่งคำขอสำเร็จ', `คำขอเพิ่ม ${payload.role} ของคุณถูกส่งไปยังผู้ดูแลระดับสูงแล้ว\n(รหัส PIN จะถูกส่งไปยัง Email ที่ระบุหลังได้รับการอนุมัติ)`, 'success');
+                        } else if (res.status === 'PENDING') { 
+                            Swal.fire('ส่งคำขอสำเร็จ', `คำขอเพิ่ม ${payload.role} ของคุณถูกส่งไปยังผู้ดูแลระดับสูงเพื่อพิจารณาอนุมัติแล้ว\n(PIN คือ: ${res.generatedPin})`, 'success'); 
+                        } else { 
+                            Swal.fire('เพิ่มข้อมูลสำเร็จ', `รหัสเข้าใช้งาน (PIN) สำหรับผู้ใช้นี้คือ: ${res.generatedPin}`, 'success'); 
+                        }
+                        
+                        let mAUser = document.getElementById('modalAddUser'); 
+                        if (mAUser) {
+                            mAUser.classList.add('hidden'); 
+                        }
+                        
+                        loadAdminUsers(); 
+                    } else { 
+                        Swal.fire('ข้อมูลผิดพลาด', res.error, 'error'); 
+                    }
+                }).catch(err => { 
+                    hideLoader(); 
+                    Swal.fire('ข้อผิดพลาด', err.message, 'error'); 
+                });
+                return false;
+            };
+        }
+
+        function toggleAddDriverFields() { 
+            const roleEl = document.getElementById('addRole'); 
+            if (!roleEl) return;
+            
+            const role = roleEl.value; 
+            const isDriver = (role === 'driver' || role === 'staff');
+            
+            let dExt = document.getElementById('addDriverExtraFields'); 
+            if (dExt) {
+                if (isDriver) {
+                    dExt.classList.remove('hidden');
+                } else {
+                    dExt.classList.add('hidden');
+                }
+            }
+            
+            const emailLabel = document.getElementById('labelAddEmail'); 
+            const emailInput = document.getElementById('addEmail');
+            
+            if (appUser && appUser.role === 'hospital_admin' && role === 'hospital_admin') {
+                if (emailLabel) {
+                    emailLabel.innerHTML = 'Email <span class="text-red-500">* (บังคับกรอก)</span>';
+                }
+                if (emailInput) {
+                    emailInput.required = true;
+                }
+            } else {
+                if (emailLabel) {
+                    emailLabel.innerHTML = 'Email';
+                }
+                if (emailInput) {
+                    emailInput.required = false;
+                }
+            }
+        }
+
+        function openEditUser(uid, p, n, o, r, e) {
+            let elUid = document.getElementById('editUserId'); if (elUid) elUid.value = uid; 
+            let elOp = document.getElementById('editOldPhone'); if (elOp) elOp.value = p; 
+            let elOn = document.getElementById('editOldName'); if (elOn) elOn.value = n; 
+            let elOo = document.getElementById('editOldOrg'); if (elOo) elOo.value = o;
+            let elP = document.getElementById('editPhone'); if (elP) elP.value = p; 
+            let elN = document.getElementById('editName'); if (elN) elN.value = n; 
+            let elO = document.getElementById('editOrg'); if (elO) elO.value = o; 
+            let elR = document.getElementById('editRole'); if (elR) elR.value = r; 
+            let elE = document.getElementById('editEmail'); if (elE) elE.value = e || '';
+            
+            const nameInput = document.getElementById('editName'); 
+            const phoneInput = document.getElementById('editPhone'); 
+            const orgSelect = document.getElementById('editOrg'); 
+            const roleSelect = document.getElementById('editRole'); 
+            
+            const alertBoxSelf = document.getElementById('editSelfAlert'); 
+            const alertBoxOther = document.getElementById('editOtherAlert');
+            
+            if (appUser.role === 'hospital_admin') {
+                if (uid === appUser.userId) {
+                    if (alertBoxSelf) alertBoxSelf.classList.remove('hidden'); 
+                    if (alertBoxOther) alertBoxOther.classList.add('hidden');
+                    
+                    if (nameInput) { nameInput.disabled = false; nameInput.classList.remove('bg-gray-100', 'text-gray-500'); }
+                    if (phoneInput) { phoneInput.disabled = false; phoneInput.classList.remove('bg-gray-100', 'text-gray-500'); }
+                    if (orgSelect) { orgSelect.disabled = false; orgSelect.classList.remove('bg-gray-100', 'text-gray-500'); }
+                    if (roleSelect) { roleSelect.disabled = true; roleSelect.classList.add('bg-gray-100', 'text-gray-500'); }
+                } else {
+                    if (alertBoxSelf) alertBoxSelf.classList.add('hidden'); 
+                    if (alertBoxOther) alertBoxOther.classList.remove('hidden');
+                    
+                    if (nameInput) { nameInput.disabled = true; nameInput.classList.add('bg-gray-100', 'text-gray-500'); }
+                    if (phoneInput) { phoneInput.disabled = true; phoneInput.classList.add('bg-gray-100', 'text-gray-500'); }
+                    if (orgSelect) { orgSelect.disabled = true; orgSelect.classList.add('bg-gray-100', 'text-gray-500'); }
+                    if (roleSelect) { roleSelect.disabled = true; roleSelect.classList.add('bg-gray-100', 'text-gray-500'); }
+                }
+            } else if (appUser.role === 'provincial_admin') {
+                if (alertBoxSelf) alertBoxSelf.classList.add('hidden'); 
+                if (alertBoxOther) alertBoxOther.classList.add('hidden');
+                
+                if (nameInput) { nameInput.disabled = false; nameInput.classList.remove('bg-gray-100', 'text-gray-500'); }
+                if (phoneInput) { phoneInput.disabled = false; phoneInput.classList.remove('bg-gray-100', 'text-gray-500'); }
+                if (orgSelect) { orgSelect.disabled = false; orgSelect.classList.remove('bg-gray-100', 'text-gray-500'); }
+                if (roleSelect) { roleSelect.disabled = false; roleSelect.classList.remove('bg-gray-100', 'text-gray-500'); }
+                
+                ['optEditProvAdmin','optEditProvAudit','optEditExec','optEditSuper'].forEach(id => { 
+                    let el = document.getElementById(id); 
+                    if (el) el.style.display = 'none'; 
+                });
+            } else {
+                if (alertBoxSelf) alertBoxSelf.classList.add('hidden'); 
+                if (alertBoxOther) alertBoxOther.classList.add('hidden');
+                
+                if (nameInput) { nameInput.disabled = false; nameInput.classList.remove('bg-gray-100', 'text-gray-500'); }
+                if (phoneInput) { phoneInput.disabled = false; phoneInput.classList.remove('bg-gray-100', 'text-gray-500'); }
+                if (orgSelect) { orgSelect.disabled = false; orgSelect.classList.remove('bg-gray-100', 'text-gray-500'); }
+                if (roleSelect) { roleSelect.disabled = false; roleSelect.classList.remove('bg-gray-100', 'text-gray-500'); }
+                
+                ['optEditProvAdmin','optEditProvAudit','optEditExec','optEditSuper'].forEach(id => { 
+                    let el = document.getElementById(id); 
+                    if (el) el.style.display = 'block'; 
+                });
+            }
+
+            let mEdit = document.getElementById('modalEditUser'); 
+            if (mEdit) {
+                mEdit.classList.remove('hidden');
+            }
+        }
+        
+        let fEdit = document.getElementById('formEditUser');
+        if (fEdit) {
+            fEdit.onsubmit = function(e) {
+                e.preventDefault();
+                const payload = { 
+                    targetUserId: document.getElementById('editUserId').value, 
+                    oldPhone: document.getElementById('editOldPhone').value, 
+                    oldDisplayName: document.getElementById('editOldName').value, 
+                    oldOrg: document.getElementById('editOldOrg').value,
+                    newPhone: document.getElementById('editPhone').value, 
+                    displayName: document.getElementById('editName').value, 
+                    org: document.getElementById('editOrg').value, 
+                    role: document.getElementById('editRole').value, 
+                    email: document.getElementById('editEmail').value 
+                };
+                
+                showLoader("กำลังบันทึกข้อมูล..."); 
+                api.run('adminEditUser', payload).then(res => { 
+                    hideLoader(); 
+                    if (res.ok) { 
+                        Swal.fire('สำเร็จ', res.message || 'อัปเดตข้อมูลผู้ใช้เรียบร้อยแล้ว', 'success'); 
+                        
+                        let me = document.getElementById('modalEditUser'); 
+                        if (me) {
+                            me.classList.add('hidden'); 
+                        }
+                        
+                        loadAdminUsers(); 
+                    } else { 
+                        Swal.fire('เกิดข้อผิดพลาด', res.error, 'error'); 
+                    }
+                }).catch(err => { 
+                    hideLoader(); 
+                    Swal.fire('ข้อผิดพลาด', err.message, 'error'); 
+                });
+                return false;
+            };
+        }
+
+        function confirmViewProfile(targetUserId, targetName) {
+            Swal.fire({
+                title: 'ยืนยันการดูข้อมูลส่วนบุคคล', 
+                text: "ระบบจะบันทึกการกระทำนี้ลงในประวัติการใช้งานระบบ (Audit Log) คุณต้องการดูข้อมูลสุขภาพส่วนบุคคลนี้หรือไม่?", 
+                icon: 'warning', 
+                showCancelButton: true, 
+                confirmButtonColor: '#3085d6', 
+                cancelButtonColor: '#d33', 
+                confirmButtonText: 'ยืนยัน', 
+                cancelButtonText: 'ยกเลิก'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    showLoader("กำลังดึงข้อมูลส่วนบุคคล...");
+                    api.run('getUserProfileDetail', { 
+                        targetUserId: targetUserId, 
+                        targetName: targetName 
+                    }).then(res => {
+                        hideLoader();
+                        if (res.ok) {
+                            renderProfileModal(res.user, res.profile, res.history);
+                        } else {
+                            Swal.fire('ข้อผิดพลาด', res.error, 'error');
+                        }
+                    }).catch(err => { 
+                        hideLoader(); 
+                        Swal.fire('ข้อผิดพลาด', err.message, 'error'); 
+                    });
+                }
+            });
+        }
+
+        function renderProfileModal(u, p, h) {
+            const roleThText = getRoleTh(u.role, u.org);
+            let html = `
+                <div class="grid grid-cols-2 gap-y-3 text-sm">
+                    <div>
+                        <span class="text-gray-500 block text-xs">ชื่อ-สกุล</span>
+                        <span class="font-bold">${u.displayName}</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-500 block text-xs">หน่วยงาน</span>
+                        <span class="font-bold">${u.org}</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-500 block text-xs">เบอร์โทรศัพท์</span>
+                        <span class="font-bold font-mono">${u.phone}</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-500 block text-xs">บทบาท/สิทธิ์</span>
+                        <span class="font-bold text-blue-600">${roleThText}</span>
+                    </div>
+                    <div class="col-span-2 border-b my-1"></div>
+            `;
+            
+            if (u.role === 'driver' || u.role === 'staff') {
+                html += `
+                    <div>
+                        <span class="text-gray-500 block text-xs">อายุ</span>
+                        <span class="font-bold">${p.age || '-'} ปี</span>
+                    </div>
+                    <div>
+                        <span class="text-gray-500 block text-xs">วันเกิด</span>
+                        <span class="font-bold">${formatThaiDate(p.dob)}</span>
+                    </div>
+                `;
+                
+                if (u.role === 'staff') {
+                     let fileLinkHtml = '';
+                     if (p.authFileUrl) {
+                         fileLinkHtml = `<a href="${p.authFileUrl}" target="_blank" class="text-blue-600 hover:underline text-sm font-bold">📄 ดูไฟล์แนบ (PDF)</a>`;
+                     } else {
+                         fileLinkHtml = '<span class="text-gray-400 text-sm">ไม่มีไฟล์แนบ</span>';
+                     }
+
+                     html += `
+                        <div>
+                            <span class="text-gray-500 block text-xs">ตำแหน่ง</span>
+                            <span class="font-bold">${p.position || '-'}</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-500 block text-xs">กลุ่มงาน</span>
+                            <span class="font-bold">${p.department || '-'}</span>
+                        </div>
+                        <div class="col-span-2">
+                            <span class="text-gray-500 block text-xs">ไฟล์คำสั่ง</span>
+                            ${fileLinkHtml}
+                        </div>
+                    `;
+                }
+
+                html += `
+                    <div class="col-span-2 bg-yellow-50 p-3 rounded-lg border border-yellow-100 mt-2 mb-2">
+                        <p class="font-bold text-yellow-800 mb-2 border-b border-yellow-200 pb-1">ข้อมูลสุขภาพเบื้องต้น</p>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <span class="text-gray-500 block text-[10px]">โรคประจำตัว</span>
+                                <span class="font-bold text-red-600">${p.chronicDisease || '-'}</span>
+                            </div>
+                            <div>
+                                <span class="text-gray-500 block text-[10px]">ยาที่ใช้ประจำ</span>
+                                <span class="font-bold text-red-600">${p.regularMeds || '-'}</span>
+                            </div>
+                            <div>
+                                <span class="text-gray-500 block text-[10px]">ประวัติการสูบบุหรี่</span>
+                                <span class="font-bold">${p.smoking || '-'}</span>
+                            </div>
+                            <div>
+                                <span class="text-gray-500 block text-[10px]">ประวัติการดื่มแอลกอฮอล์</span>
+                                <span class="font-bold">${p.alcohol || '-'}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                html += `
+                    <div class="col-span-2 mt-2">
+                        <p class="font-bold text-gray-700 mb-2">ประวัติการประเมินล่าสุด</p>
+                        <div class="space-y-2 max-h-48 overflow-y-auto pr-1">
+                `;
+                
+                if (h && h.length > 0) {
+                    h.forEach(i => { 
+                        let bandClass = '';
+                        if (i.band === 'RED') {
+                            bandClass = 'bg-red-100 text-red-700 border border-red-200';
+                        } else if (i.band === 'AMBER') {
+                            bandClass = 'bg-yellow-100 text-yellow-700 border border-yellow-200';
+                        } else {
+                            bandClass = 'bg-green-100 text-green-700 border border-green-200';
+                        }
+
+                        html += `
+                            <div class="p-2 border rounded-lg flex justify-between items-center bg-gray-50 text-xs">
+                                <div>
+                                    <p class="font-medium text-gray-800">${i.date} (${i.timeSlot})</p>
+                                    <p class="text-gray-500">BP: ${i.sys}/${i.dia} | HR: ${i.pulse} | นอน ${i.sleepHours}ชม.</p>
+                                </div>
+                                <span class="px-2 py-1 font-bold rounded shadow-sm ${bandClass}">${i.band}</span>
+                            </div>
+                        `; 
+                    });
+                } else { 
+                    html += `<p class="text-xs text-gray-400 italic">ยังไม่มีประวัติการประเมิน</p>`; 
+                }
+                
+                html += `</div></div>`;
+            } else { 
+                html += `<div class="col-span-2 text-center text-gray-400 py-4">ไม่มีข้อมูลประวัติสุขภาพสำหรับ Role นี้</div>`; 
+            }
+            html += `</div>`;
+            
+            let vp = document.getElementById('viewProfileContent'); 
+            if (vp) {
+                vp.innerHTML = html;
+            }
+            
+            let md = document.getElementById('modalViewProfile'); 
+            if (md) {
+                md.classList.remove('hidden');
+            }
+        }
+    </script>
 </body>
 </html>
