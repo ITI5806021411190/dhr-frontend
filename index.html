@@ -902,8 +902,168 @@
             </div>
         </div>
     </div>
+
     <script>
-        // 🚀 ลิงก์ API เชื่อมต่อกับระบบหลังบ้านของคุณเอิร์ท
+        // 💡 อัปเดตส่วน renderDynamicHealthForm ให้รองรับค่าจาก Telegram Settings ด้วยครับ
+        function renderDynamicHealthForm() {
+            let elTS = document.getElementById('inputTimeSlot'); 
+            if (elTS) {
+                elTS.innerHTML = '<option value="">เลือกช่วงเวลา...</option>' + (globalSettings.timeSlots || []).map(t => `<option value="${t}">${t}</option>`).join('');
+            }
+
+            let elCR = document.getElementById('divCriticalRisks'); 
+            if (elCR) {
+                elCR.innerHTML = (globalSettings.criticalRisks || []).map(r => `<label class="flex items-center p-3 border border-red-200 bg-red-50 rounded-lg cursor-pointer"><input type="checkbox" name="criticalRiskItem" value="${r}" class="w-5 h-5 text-red-600 flex-shrink-0"><span class="ml-3 text-red-800 text-sm font-medium">${r}</span></label>`).join('');
+            }
+
+            let setTS = document.getElementById('set_timeSlots'); 
+            if (setTS) {
+                setTS.value = (globalSettings.timeSlots || []).join(',');
+            }
+
+            let setCR = document.getElementById('set_criticalRisks'); 
+            if (setCR) {
+                setCR.value = (globalSettings.criticalRisks || []).join(',');
+            }
+
+            if (globalSettings.manualUrls) { 
+                let roles = ['driver','hospital_admin','hospital_director','exec_ppho','super_admin', 'provincial_admin'];
+                roles.forEach(r => { 
+                    let el = document.getElementById('set_url_' + r); 
+                    if (el) {
+                        el.value = globalSettings.manualUrls[r] || ''; 
+                    }
+                }); 
+            }
+
+            if (globalSettings.scoringCriteria) { 
+                const sc = globalSettings.scoringCriteria; 
+                let scFields = ['sc_tempHigh','sc_tempLow','sc_sysRed','sc_diaRed','sc_sysAmber','sc_diaAmber','sc_pulseMin','sc_pulseMax','sc_fatigueRed','sc_fatigueAmber','sc_sleepMin'];
+                scFields.forEach(id => { 
+                    let el = document.getElementById(id); 
+                    if (el && sc[id.replace('sc_', '')]) {
+                        el.value = sc[id.replace('sc_', '')]; 
+                    }
+                }); 
+            }
+            
+            // นำค่า Telegram Config มาแสดงในหน้าตั้งค่า
+            if (globalSettings.telegramConfig) {
+                const tg = globalSettings.telegramConfig;
+                let elEn = document.getElementById('tg_enabled'); 
+                if (elEn) {
+                    elEn.checked = tg.enabled;
+                }
+
+                let elBt = document.getElementById('tg_botToken'); 
+                if (elBt) {
+                    elBt.value = tg.botToken || '';
+                }
+
+                let elGl = document.getElementById('tg_globalChatId'); 
+                if (elGl) {
+                    elGl.value = tg.globalChatId || '';
+                }
+                
+                if (tg.orgChatIds) {
+                    let e1 = document.getElementById('tg_org_1'); 
+                    if (e1) {
+                        e1.value = tg.orgChatIds['สำนักงานสาธารณสุขจังหวัดนครนายก (สสจ.)'] || '';
+                    }
+                    
+                    let e2 = document.getElementById('tg_org_2'); 
+                    if (e2) {
+                        e2.value = tg.orgChatIds['โรงพยาบาลนครนายก'] || '';
+                    }
+                    
+                    let e3 = document.getElementById('tg_org_3'); 
+                    if (e3) {
+                        e3.value = tg.orgChatIds['โรงพยาบาลปากพลี'] || '';
+                    }
+                    
+                    let e4 = document.getElementById('tg_org_4'); 
+                    if (e4) {
+                        e4.value = tg.orgChatIds['โรงพยาบาลบ้านนา'] || '';
+                    }
+                    
+                    let e5 = document.getElementById('tg_org_5'); 
+                    if (e5) {
+                        e5.value = tg.orgChatIds['โรงพยาบาลองครักษ์'] || '';
+                    }
+                }
+            }
+        }
+
+        let fSet = document.getElementById('formSystemSettings');
+        if (fSet) {
+            fSet.onsubmit = function(e) {
+                e.preventDefault();
+                
+                // ดึงค่าการตั้งค่า Telegram จากหน้าจอ
+                const tgPayload = {
+                    enabled: document.getElementById('tg_enabled').checked,
+                    botToken: document.getElementById('tg_botToken').value,
+                    globalChatId: document.getElementById('tg_globalChatId').value,
+                    orgChatIds: {
+                        'สำนักงานสาธารณสุขจังหวัดนครนายก (สสจ.)': document.getElementById('tg_org_1').value,
+                        'โรงพยาบาลนครนายก': document.getElementById('tg_org_2').value,
+                        'โรงพยาบาลปากพลี': document.getElementById('tg_org_3').value,
+                        'โรงพยาบาลบ้านนา': document.getElementById('tg_org_4').value,
+                        'โรงพยาบาลองครักษ์': document.getElementById('tg_org_5').value
+                    }
+                };
+
+                const payload = { 
+                    timeSlots: document.getElementById('set_timeSlots').value.split(',').map(s => s.trim()).filter(s => s), 
+                    criticalRisks: document.getElementById('set_criticalRisks').value.split(',').map(s => s.trim()).filter(s => s), 
+                    manualUrls: { 
+                        driver: document.getElementById('set_url_driver').value, 
+                        hospital_admin: document.getElementById('set_url_hospital_admin').value, 
+                        hospital_director: document.getElementById('set_url_hospital_director').value, 
+                        exec_ppho: document.getElementById('set_url_exec_ppho').value, 
+                        super_admin: document.getElementById('set_url_super_admin').value, 
+                        provincial_admin: document.getElementById('set_url_provincial_admin').value 
+                    },
+                    scoringCriteria: { 
+                        tempHigh: parseFloat(document.getElementById('sc_tempHigh').value), 
+                        tempLow: parseFloat(document.getElementById('sc_tempLow').value), 
+                        sysRed: parseInt(document.getElementById('sc_sysRed').value), 
+                        diaRed: parseInt(document.getElementById('sc_diaRed').value), 
+                        sysAmber: parseInt(document.getElementById('sc_sysAmber').value), 
+                        diaAmber: parseInt(document.getElementById('sc_diaAmber').value), 
+                        pulseMin: parseInt(document.getElementById('sc_pulseMin').value), 
+                        pulseMax: parseInt(document.getElementById('sc_pulseMax').value), 
+                        fatigueRed: parseInt(document.getElementById('sc_fatigueRed').value), 
+                        fatigueAmber: parseInt(document.getElementById('sc_fatigueAmber').value), 
+                        sleepMin: parseFloat(document.getElementById('sc_sleepMin').value) 
+                    },
+                    telegramConfig: tgPayload // ส่งค่า Telegram ไปบันทึกด้วย
+                };
+                
+                showLoader("กำลังบันทึกการตั้งค่า..."); 
+                api.run('saveSystemSettings', payload).then(res => { 
+                    hideLoader(); 
+                    if (res.ok) { 
+                        Swal.fire('สำเร็จ','บันทึกข้อมูลระบบเรียบร้อยแล้ว','success'); 
+                        globalSettings.timeSlots = payload.timeSlots; 
+                        globalSettings.criticalRisks = payload.criticalRisks; 
+                        globalSettings.manualUrls = payload.manualUrls; 
+                        globalSettings.scoringCriteria = payload.scoringCriteria; 
+                        globalSettings.telegramConfig = payload.telegramConfig; // อัปเดตตัวแปรในเครื่อง
+                        renderDynamicHealthForm(); 
+                    } else { 
+                        Swal.fire('ข้อผิดพลาด', res.error, 'error'); 
+                    }
+                }).catch(err => { 
+                    hideLoader(); 
+                    Swal.fire('ข้อผิดพลาด', err.message, 'error'); 
+                });
+                return false;
+            };
+        }
+    </script>
+<script>
+        // 🚀 ลิงก์ API เชื่อมต่อกับระบบหลังบ้าน
         const API_URL = "https://script.google.com/macros/s/AKfycbzPsmOjoCyzsa459DgNpC6oupSyExXi3jV4y5F7Iochg53uN2qwPTzU1kwpZ82KCeqd/exec"; 
 
         const api = {
@@ -927,7 +1087,7 @@
                     console.error("API Error:", err);
                     Swal.fire({
                         title: 'การเชื่อมต่อถูกปฏิเสธ',
-                        html: 'ระบบไม่สามารถดึงข้อมูลจากฐานข้อมูลได้<br><br><b>วิธีแก้ไข (สำหรับผู้พัฒนา):</b><br>โปรดตรวจสอบการตั้งค่า Deploy ใน Google Apps Script ตรงช่อง <b>Who has access</b> ว่าได้ตั้งเป็น <b>"ทุกคน (Anyone)"</b> แล้วหรือไม่',
+                        html: 'ระบบไม่สามารถดึงข้อมูลจากฐานข้อมูลได้<br><br><b>วิธีแก้ไข:</b><br>โปรดตรวจสอบการตั้งค่า Deploy ใน Google Apps Script ตรงช่อง <b>Who has access</b> ว่าได้ตั้งเป็น <b>"ทุกคน (Anyone)"</b> แล้วหรือไม่',
                         icon: 'error'
                     });
                     throw err;
