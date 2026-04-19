@@ -99,6 +99,10 @@
                     <button id="btnAdminSubmitCheck" onclick="openAdminSubmitCheck()" class="hidden bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-lg text-sm transition shadow-sm mr-2 flex items-center gap-1">
                         ประเมินแทนผู้ขับขี่
                     </button>
+                    <button id="btnExportReport" onclick="document.getElementById('modalExport').classList.remove('hidden')" class="hidden bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg text-sm transition shadow-sm mr-2 flex items-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                        ส่งออกรายงาน
+                    </button>
                     <span class="text-sm font-medium text-gray-600">ตัวกรองวันที่:</span>
                     <input type="date" id="adminDateFilter" class="border rounded-lg px-3 py-2 text-sm bg-gray-50 focus:ring-blue-500" onchange="document.getElementById('adminPeriodFilter').value=''; refreshAdminDashboard();">
                     <span class="text-sm font-medium text-gray-600 ml-2">หรือเลือกช่วง:</span>
@@ -618,6 +622,7 @@
                     <option value="UPDATE_SETTINGS">แก้ไขตั้งค่าระบบ</option>
                     <option value="CLEAR_DATABASE">ล้างฐานข้อมูลระบบ</option>
                     <option value="SEED_ADMINS">นำเข้าผู้ดูแลระบบ</option>
+                    <option value="EXPORT_REPORT">ส่งออกรายงาน</option>
                 </select>
             </div>
             <div class="overflow-x-auto border rounded-lg shadow-sm max-h-[600px] overflow-y-auto">
@@ -813,6 +818,34 @@
         </div>
     </div>
 
+    <div id="modalExport" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
+            <h3 class="text-xl font-bold mb-4 text-gray-800 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" /></svg>
+                ส่งออกรายงาน (Excel / CSV)
+            </h3>
+            <p class="text-sm text-gray-600 mb-4">ระบบจะทำการดึงข้อมูลประวัติการประเมินสุขภาพตามช่วงวันที่กำหนด เพื่อนำไปใช้งานต่อในโปรแกรม Excel</p>
+            <form id="formExport" class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">ตั้งแต่วันที่</label>
+                        <input type="date" id="exportStartDate" class="w-full px-3 py-2 border rounded-lg focus:ring-green-500" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">ถึงวันที่</label>
+                        <input type="date" id="exportEndDate" class="w-full px-3 py-2 border rounded-lg focus:ring-green-500" required>
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2 mt-4 pt-4 border-t">
+                    <button type="button" onclick="document.getElementById('modalExport').classList.add('hidden')" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded transition font-medium">ยกเลิก</button>
+                    <button type="submit" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded shadow-sm transition font-medium flex items-center gap-1">
+                        ดาวน์โหลด
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div id="modalAddUser" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
         <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <h3 class="text-xl font-bold mb-4">เพิ่มผู้ใช้งาน</h3>
@@ -1003,7 +1036,8 @@
             'REJECT_EDIT_REQUEST': 'ไม่อนุมัติคำขอแก้ไข', 
             'CANCEL_EDIT_REQUEST': 'ยกเลิกคำขอแก้ไข', 
             'VIEW_PERSONAL_DATA': 'เปิดดูข้อมูลส่วนบุคคล', 
-            'DELETE_USER': 'ลบผู้ใช้งาน' 
+            'DELETE_USER': 'ลบผู้ใช้งาน',
+            'EXPORT_REPORT': 'ส่งออกรายงาน'
         };
 
         const ROLE_TH_MAP = { 
@@ -1327,7 +1361,6 @@
             }
         }
 
-        // ================= PERSONAL SETTINGS (Email Toggle) =================
         function openPersonalSettings() {
             if (!appUser) {
                 return;
@@ -1433,7 +1466,6 @@
             };
         }
 
-        // ================= AUTH =================
         let loginFormEl = document.getElementById('loginForm');
         if (loginFormEl) {
             loginFormEl.onsubmit = function(e) {
@@ -1605,6 +1637,16 @@
                 nUser.classList.remove('hidden'); 
             }
             
+            // 💡 เปิดใช้งานปุ่ม Export เฉพาะระดับ Admin และผู้บริหาร
+            let btnExport = document.getElementById('btnExportReport');
+            if (btnExport) {
+                if (['super_admin', 'exec_ppho', 'hospital_director', 'hospital_admin', 'provincial_admin', 'provincial_audit'].includes(user.role)) {
+                    btnExport.classList.remove('hidden');
+                } else {
+                    btnExport.classList.add('hidden');
+                }
+            }
+
             const token = localStorage.getItem('dhr_session');
             
             if (user.role === 'driver' || user.role === 'staff') {
@@ -1765,7 +1807,6 @@
             }
         }
 
-        // ================= DRIVER & ADMIN SUBMIT & IMAGE COMPRESSION =================
         let inputEvidenceEl = document.getElementById('inputEvidence');
         if (inputEvidenceEl) {
             inputEvidenceEl.addEventListener('change', function(e) {
@@ -1776,13 +1817,12 @@
                 
                 const preview = document.getElementById('previewEvidence');
                 
-                // กระบวนการบีบอัดภาพ (Resize & Compress)
                 const reader = new FileReader();
                 reader.onload = function(event) {
                     const img = new Image();
                     img.onload = function() {
                         const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 800; // ล็อกขนาดกว้างสุดที่ 800px เพื่อความไวในการอัปโหลด
+                        const MAX_WIDTH = 800; 
                         const MAX_HEIGHT = 800;
                         let width = img.width;
                         let height = img.height;
@@ -1804,7 +1844,6 @@
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, width, height);
                         
-                        // แปลงรูปกลับเป็น Base64 แบบ JPEG Quality 70%
                         const dataUrl = canvas.toDataURL('image/jpeg', 0.7); 
                         
                         document.getElementById('inputEvidenceBase64').value = dataUrl.split(',')[1];
@@ -1912,7 +1951,7 @@
                     fatigue: parseInt(document.getElementById('inputFatigue').value), 
                     criticalRisksSelected: Array.from(document.querySelectorAll('input[name="criticalRiskItem"]:checked')).map(cb => cb.value), 
                     symptoms: Array.from(document.querySelectorAll('input[name="symptomItem"]:checked')).map(cb => cb.value),
-                    evidenceBase64: document.getElementById('inputEvidenceBase64').value, // 💡 ส่งรูปภาพไปด้วย
+                    evidenceBase64: document.getElementById('inputEvidenceBase64').value,
                     evidenceMimeType: document.getElementById('inputEvidenceMimeType').value
                 };
                 
@@ -2207,7 +2246,6 @@
                                 bandClass = 'bg-green-100 text-green-700 border border-green-200';
                             }
 
-                            // 💡 เพิ่มปุ่มดูรูปหลักฐาน ในกล่องประวัติ
                             let evidenceBtnHtml = '';
                             if (i.evidenceUrl) {
                                 evidenceBtnHtml = `
@@ -2788,7 +2826,6 @@
                             bandClass = 'bg-yellow-100 text-yellow-700';
                         }
 
-                        // 💡 เพิ่มลิงก์ดูรูปหลักฐานในตารางของ Admin
                         let evidenceHtml = '';
                         if (i.evidenceUrl) {
                             evidenceHtml = `
@@ -2834,7 +2871,6 @@
                         const greenRenderer = (i, no) => {
                             let timeStr = i.createdAt ? new Date(i.createdAt).toLocaleTimeString('th-TH', {hour: '2-digit', minute: '2-digit'}) : '-';
                             
-                            // 💡 เพิ่มลิงก์ดูรูปหลักฐานสำหรับตารางคนปกติ (Green)
                             let evidenceHtml = '';
                             if (i.evidenceUrl) {
                                 evidenceHtml = `
@@ -3026,6 +3062,47 @@
                 });
             });
             tbody.innerHTML = html;
+        }
+
+        // 💡 จัดการปุ่ม Export Report
+        let fExport = document.getElementById('formExport');
+        if (fExport) {
+            fExport.onsubmit = function(e) {
+                e.preventDefault();
+                const startDate = document.getElementById('exportStartDate').value;
+                const endDate = document.getElementById('exportEndDate').value;
+
+                if (!startDate || !endDate) {
+                    return Swal.fire('แจ้งเตือน', 'กรุณาเลือกช่วงวันที่ให้ครบถ้วน', 'warning');
+                }
+
+                showLoader("กำลังดึงข้อมูลรายงาน...");
+                api.run('exportReport', { startDate: startDate, endDate: endDate }).then(res => {
+                    hideLoader();
+                    if (res.ok) {
+                        // สร้างและดาวน์โหลดไฟล์ CSV อัตโนมัติ
+                        const blob = new Blob([res.csvData], { type: 'text/csv;charset=utf-8;' });
+                        const link = document.createElement("a");
+                        const url = URL.createObjectURL(blob);
+                        link.setAttribute("href", url);
+                        link.setAttribute("download", `DHR_Report_${startDate}_to_${endDate}.csv`);
+                        link.style.visibility = 'hidden';
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+
+                        let modExport = document.getElementById('modalExport');
+                        if (modExport) modExport.classList.add('hidden');
+
+                        Swal.fire('สำเร็จ', 'ดาวน์โหลดรายงานเรียบร้อยแล้ว', 'success');
+                    } else {
+                        Swal.fire('ข้อผิดพลาด', res.error, 'error');
+                    }
+                }).catch(err => {
+                    hideLoader();
+                    Swal.fire('ข้อผิดพลาด', err.message, 'error');
+                });
+            };
         }
 
         function seedInitialAdmins() {
