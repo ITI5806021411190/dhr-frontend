@@ -99,11 +99,11 @@
                     <button id="btnAdminSubmitCheck" onclick="openAdminSubmitCheck()" class="hidden bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-lg text-sm transition shadow-sm mr-2 flex items-center gap-1">
                         ประเมินแทนผู้ขับขี่
                     </button>
-                    <button id="btnExportReport" onclick="document.getElementById('modalExport').classList.remove('hidden')" class="hidden bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg text-sm transition shadow-sm mr-2 flex items-center gap-1">
+                    <button id="btnExportReport" onclick="document.getElementById('modalExport').classList.remove('hidden')" class="hidden bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg text-sm transition shadow-sm flex items-center gap-1">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                         ส่งออกรายงาน
                     </button>
-                    <span class="text-sm font-medium text-gray-600">ตัวกรองวันที่:</span>
+                    <span class="text-sm font-medium text-gray-600 ml-2">ตัวกรองวันที่:</span>
                     <input type="date" id="adminDateFilter" class="border rounded-lg px-3 py-2 text-sm bg-gray-50 focus:ring-blue-500" onchange="document.getElementById('adminPeriodFilter').value=''; refreshAdminDashboard();">
                     <span class="text-sm font-medium text-gray-600 ml-2">หรือเลือกช่วง:</span>
                     <select id="adminPeriodFilter" class="border rounded-lg px-3 py-2 text-sm bg-gray-50 focus:ring-blue-500" onchange="document.getElementById('adminDateFilter').value=''; refreshAdminDashboard();">
@@ -623,6 +623,7 @@
                     <option value="CLEAR_DATABASE">ล้างฐานข้อมูลระบบ</option>
                     <option value="SEED_ADMINS">นำเข้าผู้ดูแลระบบ</option>
                     <option value="EXPORT_REPORT">ส่งออกรายงาน</option>
+                    <option value="REPAIR_DATABASE">ซ่อมแซมฐานข้อมูล</option>
                 </select>
             </div>
             <div class="overflow-x-auto border rounded-lg shadow-sm max-h-[600px] overflow-y-auto">
@@ -752,7 +753,8 @@
                 <div class="flex flex-col md:flex-row gap-2">
                     <button type="button" onclick="seedInitialAdmins()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-2.5 rounded-lg transition shadow text-sm">นำเข้าผู้ดูแลระบบเริ่มต้น (Seed Admins)</button>
                     <button type="button" onclick="generateMockData()" class="bg-green-600 hover:bg-green-700 text-white font-bold px-6 py-2.5 rounded-lg transition shadow text-sm">สร้างข้อมูลทดสอบ (25 รายการ)</button>
-                    <button type="button" onclick="clearDatabaseConfirm()" class="bg-gray-800 hover:bg-gray-900 text-white font-bold px-6 py-2.5 rounded-lg transition shadow text-sm">⚠️ ล้างฐานข้อมูล (Reset System)</button>
+                    <button type="button" onclick="clearDatabaseConfirm()" class="bg-gray-800 hover:bg-gray-900 text-white font-bold px-6 py-2.5 rounded-lg transition shadow text-sm">⚠️ ล้างฐานข้อมูล</button>
+                    <button type="button" onclick="repairDatabaseConfirm()" class="bg-orange-500 hover:bg-orange-600 text-white font-bold px-6 py-2.5 rounded-lg transition shadow text-sm">🔧 ซ่อมแซม/จัดเรียงฐานข้อมูล</button>
                 </div>
             </div>
         </div>
@@ -1037,7 +1039,8 @@
             'CANCEL_EDIT_REQUEST': 'ยกเลิกคำขอแก้ไข', 
             'VIEW_PERSONAL_DATA': 'เปิดดูข้อมูลส่วนบุคคล', 
             'DELETE_USER': 'ลบผู้ใช้งาน',
-            'EXPORT_REPORT': 'ส่งออกรายงาน'
+            'EXPORT_REPORT': 'ส่งออกรายงาน',
+            'REPAIR_DATABASE': 'ซ่อมแซมฐานข้อมูล'
         };
 
         const ROLE_TH_MAP = { 
@@ -1361,6 +1364,7 @@
             }
         }
 
+        // ================= PERSONAL SETTINGS (Email Toggle) =================
         function openPersonalSettings() {
             if (!appUser) {
                 return;
@@ -1807,6 +1811,7 @@
             }
         }
 
+        // ================= DRIVER & ADMIN SUBMIT & IMAGE COMPRESSION =================
         let inputEvidenceEl = document.getElementById('inputEvidence');
         if (inputEvidenceEl) {
             inputEvidenceEl.addEventListener('change', function(e) {
@@ -1817,12 +1822,13 @@
                 
                 const preview = document.getElementById('previewEvidence');
                 
+                // กระบวนการบีบอัดภาพ (Resize & Compress)
                 const reader = new FileReader();
                 reader.onload = function(event) {
                     const img = new Image();
                     img.onload = function() {
                         const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 800; 
+                        const MAX_WIDTH = 800; // ล็อกขนาดกว้างสุดที่ 800px เพื่อความไวในการอัปโหลด
                         const MAX_HEIGHT = 800;
                         let width = img.width;
                         let height = img.height;
@@ -1844,6 +1850,7 @@
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, width, height);
                         
+                        // แปลงรูปกลับเป็น Base64 แบบ JPEG Quality 70%
                         const dataUrl = canvas.toDataURL('image/jpeg', 0.7); 
                         
                         document.getElementById('inputEvidenceBase64').value = dataUrl.split(',')[1];
@@ -3064,7 +3071,7 @@
             tbody.innerHTML = html;
         }
 
-        // 💡 จัดการปุ่ม Export Report
+        // 💡 จัดการปุ่ม Export Report (ส่งออกรายงาน)
         let fExport = document.getElementById('formExport');
         if (fExport) {
             fExport.onsubmit = function(e) {
@@ -3080,7 +3087,6 @@
                 api.run('exportReport', { startDate: startDate, endDate: endDate }).then(res => {
                     hideLoader();
                     if (res.ok) {
-                        // สร้างและดาวน์โหลดไฟล์ CSV อัตโนมัติ
                         const blob = new Blob([res.csvData], { type: 'text/csv;charset=utf-8;' });
                         const link = document.createElement("a");
                         const url = URL.createObjectURL(blob);
@@ -3180,6 +3186,35 @@
                     }).catch(err => { 
                         hideLoader(); 
                         Swal.fire('ข้อผิดพลาด', err.message, 'error'); 
+                    });
+                }
+            });
+        }
+
+        // 💡 ผูกฟังก์ชันปุ่มซ่อมแซมฐานข้อมูล
+        function repairDatabaseConfirm() {
+            Swal.fire({
+                title: 'ยืนยันการซ่อมแซมฐานข้อมูล?',
+                text: "ระบบจะทำการล้างหน้าตารางชั่วคราว สร้างหัวคอลัมน์มาตรฐานใหม่ และจัดเรียงข้อมูลเก่าให้ตรงช่องอย่างแม่นยำ (ข้อมูลจะไม่สูญหาย)",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#f97316',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'ยืนยันซ่อมแซม',
+                cancelButtonText: 'ยกเลิก'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    showLoader("กำลังซ่อมแซมและจัดเรียงฐานข้อมูล...");
+                    api.run('repairDatabase').then(res => {
+                        hideLoader();
+                        if (res.ok) {
+                            Swal.fire('สำเร็จ', res.message, 'success');
+                        } else {
+                            Swal.fire('ข้อผิดพลาด', res.error, 'error');
+                        }
+                    }).catch(err => {
+                        hideLoader();
+                        Swal.fire('ข้อผิดพลาด', err.message, 'error');
                     });
                 }
             });
