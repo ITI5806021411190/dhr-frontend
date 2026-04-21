@@ -52,6 +52,7 @@
             -ms-overflow-style: none; 
             scrollbar-width: none; 
         }
+        /* 💡 กำหนดขนาดของ A4 แนวนอน เวลาเตรียมถ่ายรูประบบ Dashboard */
         .a4-wrapper {
             width: 1123px !important; 
             min-height: 794px !important; 
@@ -114,10 +115,17 @@
                 
                 <div class="flex flex-wrap items-center gap-2 w-full md:w-auto" id="dashboardControls">
                     <button onclick="downloadDashboardImage()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-lg text-sm transition shadow-sm mr-2 flex items-center gap-1 font-bold">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg> โหลดเป็นรูปภาพ
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                        โหลดเป็นรูปภาพ
                     </button>
-                    <button id="btnAdminSubmitCheck" onclick="openAdminSubmitCheck()" class="hidden bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-lg text-sm transition shadow-sm mr-2 flex items-center gap-1">ประเมินแทนผู้ขับขี่</button>
-                    <button id="btnExportReport" onclick="document.getElementById('modalExport').classList.remove('hidden')" class="hidden bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg text-sm transition shadow-sm flex items-center gap-1">ส่งออกรายงาน</button>
+
+                    <button id="btnAdminSubmitCheck" onclick="openAdminSubmitCheck()" class="hidden bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-lg text-sm transition shadow-sm mr-2 flex items-center gap-1">
+                        ประเมินแทนผู้ขับขี่
+                    </button>
+                    
+                    <button id="btnExportReport" onclick="document.getElementById('modalExport').classList.remove('hidden')" class="hidden bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg text-sm transition shadow-sm flex items-center gap-1">
+                        ส่งออกรายงาน
+                    </button>
                     
                     <div class="flex items-center gap-2 mt-2 md:mt-0 ml-auto border-l pl-4 border-gray-200">
                         <span class="text-sm font-medium text-gray-600">ตัวกรอง:</span>
@@ -145,12 +153,30 @@
             </div>
             
             <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8 w-full">
-                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center flex flex-col justify-center shadow-sm"><p class="text-blue-800 font-medium text-[11px] md:text-xs">พขร. ประจำ (ทั้งหมด)</p><h2 class="text-3xl font-bold text-blue-600 mt-2" id="statTotalDriver">-</h2></div>
-                <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4 text-center flex flex-col justify-center shadow-sm"><p class="text-indigo-800 font-medium text-[11px] md:text-xs">เจ้าหน้าที่ (ทั้งหมด)</p><h2 class="text-3xl font-bold text-indigo-600 mt-2" id="statTotalStaff">-</h2></div>
-                <div class="bg-green-50 border border-green-200 rounded-lg p-4 text-center flex flex-col justify-center shadow-sm"><p class="text-green-800 font-medium text-[11px] md:text-xs">พร้อม (GREEN)</p><h2 class="text-3xl font-bold text-green-600 mt-2" id="statGreen">-</h2></div>
-                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center flex flex-col justify-center shadow-sm"><p class="text-yellow-800 font-medium text-[11px] md:text-xs">เฝ้าระวัง (AMBER)</p><h2 class="text-3xl font-bold text-yellow-600 mt-2" id="statAmber">-</h2></div>
-                <div class="bg-red-50 border border-red-200 rounded-lg p-4 text-center flex flex-col justify-center shadow-sm"><p class="text-red-800 font-medium text-[11px] md:text-xs">งดปฏิบัติงาน (RED)</p><h2 class="text-3xl font-bold text-red-600 mt-2" id="statRed">-</h2></div>
-                <div class="bg-gray-100 border border-gray-200 rounded-lg p-4 text-center flex flex-col justify-center shadow-sm"><p class="text-gray-600 font-medium text-[11px] md:text-[11px]">ยังไม่ประเมิน (เฉพาะ พขร.)</p><h2 class="text-3xl font-bold text-gray-700 mt-2" id="statNoData">-</h2></div>
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center flex flex-col justify-center shadow-sm">
+                    <p class="text-blue-800 font-medium text-[11px] md:text-xs">พขร. ประจำ (ทั้งหมด)</p>
+                    <h2 class="text-3xl font-bold text-blue-600 mt-2" id="statTotalDriver">-</h2>
+                </div>
+                <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4 text-center flex flex-col justify-center shadow-sm">
+                    <p class="text-indigo-800 font-medium text-[11px] md:text-xs">เจ้าหน้าที่ (ทั้งหมด)</p>
+                    <h2 class="text-3xl font-bold text-indigo-600 mt-2" id="statTotalStaff">-</h2>
+                </div>
+                <div class="bg-green-50 border border-green-200 rounded-lg p-4 text-center flex flex-col justify-center shadow-sm">
+                    <p class="text-green-800 font-medium text-[11px] md:text-xs">พร้อม (GREEN)</p>
+                    <h2 class="text-3xl font-bold text-green-600 mt-2" id="statGreen">-</h2>
+                </div>
+                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center flex flex-col justify-center shadow-sm">
+                    <p class="text-yellow-800 font-medium text-[11px] md:text-xs">เฝ้าระวัง (AMBER)</p>
+                    <h2 class="text-3xl font-bold text-yellow-600 mt-2" id="statAmber">-</h2>
+                </div>
+                <div class="bg-red-50 border border-red-200 rounded-lg p-4 text-center flex flex-col justify-center shadow-sm">
+                    <p class="text-red-800 font-medium text-[11px] md:text-xs">งดปฏิบัติงาน (RED)</p>
+                    <h2 class="text-3xl font-bold text-red-600 mt-2" id="statRed">-</h2>
+                </div>
+                <div class="bg-gray-100 border border-gray-200 rounded-lg p-4 text-center flex flex-col justify-center shadow-sm">
+                    <p class="text-gray-600 font-medium text-[11px] md:text-[11px]">ยังไม่ประเมิน (เฉพาะ พขร.)</p>
+                    <h2 class="text-3xl font-bold text-gray-700 mt-2" id="statNoData">-</h2>
+                </div>
             </div>
 
             <div class="flex flex-col md:flex-row gap-6 mb-8">
@@ -158,7 +184,9 @@
                     <canvas id="dashChart"></canvas>
                 </div>
                 <div class="w-full md:w-2/3 bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                    <h4 class="font-bold text-gray-800 mb-4 flex items-center gap-2"><span class="w-2 h-6 bg-blue-500 rounded-full"></span>สถิติการประเมินแยกตามหน่วยงาน</h4>
+                    <h4 class="font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        <span class="w-2 h-6 bg-blue-500 rounded-full"></span>สถิติการประเมินแยกตามหน่วยงาน
+                    </h4>
                     <div class="h-[250px]"><canvas id="orgBarChart"></canvas></div>
                 </div>
             </div>
@@ -169,7 +197,14 @@
                     <div class="overflow-x-auto border rounded-lg shadow-sm">
                         <table class="w-full text-sm text-left">
                             <thead class="bg-red-600 text-white border-b-2 border-red-700">
-                                <tr><th class="px-4 py-3 w-16 text-center">ลำดับที่</th><th class="px-4 py-3">วัน/เวลาที่ประเมิน</th><th class="px-4 py-3">ชื่อพนักงาน</th><th class="px-4 py-3">เบอร์ติดต่อ</th><th class="px-4 py-3">สถานะ</th><th class="px-4 py-3">สาเหตุหลัก</th></tr>
+                                <tr>
+                                    <th class="px-4 py-3 w-16 text-center">ลำดับที่</th>
+                                    <th class="px-4 py-3">วัน/เวลาที่ประเมิน</th>
+                                    <th class="px-4 py-3">ชื่อพนักงาน</th>
+                                    <th class="px-4 py-3">เบอร์ติดต่อ</th>
+                                    <th class="px-4 py-3">สถานะ</th>
+                                    <th class="px-4 py-3">สาเหตุหลัก</th>
+                                </tr>
                             </thead>
                             <tbody id="adminActionListDriver" class="divide-y"></tbody>
                         </table>
@@ -180,7 +215,14 @@
                     <div class="overflow-x-auto border rounded-lg shadow-sm">
                         <table class="w-full text-sm text-left">
                             <thead class="bg-orange-500 text-white border-b-2 border-orange-600">
-                                <tr><th class="px-4 py-3 w-16 text-center">ลำดับที่</th><th class="px-4 py-3">วัน/เวลาที่ประเมิน</th><th class="px-4 py-3">ชื่อเจ้าหน้าที่</th><th class="px-4 py-3">เบอร์ติดต่อ</th><th class="px-4 py-3">สถานะ</th><th class="px-4 py-3">สาเหตุหลัก</th></tr>
+                                <tr>
+                                    <th class="px-4 py-3 w-16 text-center">ลำดับที่</th>
+                                    <th class="px-4 py-3">วัน/เวลาที่ประเมิน</th>
+                                    <th class="px-4 py-3">ชื่อเจ้าหน้าที่</th>
+                                    <th class="px-4 py-3">เบอร์ติดต่อ</th>
+                                    <th class="px-4 py-3">สถานะ</th>
+                                    <th class="px-4 py-3">สาเหตุหลัก</th>
+                                </tr>
                             </thead>
                             <tbody id="adminActionListStaff" class="divide-y"></tbody>
                         </table>
@@ -194,7 +236,14 @@
                     <div class="overflow-x-auto border rounded-lg shadow-sm">
                         <table class="w-full text-sm text-left">
                             <thead class="bg-green-600 text-white border-b-2 border-green-700">
-                                <tr><th class="px-4 py-3 w-16 text-center">ลำดับที่</th><th class="px-4 py-3">ชื่อพนักงาน</th><th class="px-4 py-3 text-center">อุณหภูมิ (°C)</th><th class="px-4 py-3 text-center">ความดัน (BP)</th><th class="px-4 py-3 text-center">ชีพจร</th><th class="px-4 py-3 text-center">เวลาประเมิน</th></tr>
+                                <tr>
+                                    <th class="px-4 py-3 w-16 text-center">ลำดับที่</th>
+                                    <th class="px-4 py-3">ชื่อพนักงาน</th>
+                                    <th class="px-4 py-3 text-center">อุณหภูมิ (°C)</th>
+                                    <th class="px-4 py-3 text-center">ความดัน (BP)</th>
+                                    <th class="px-4 py-3 text-center">ชีพจร</th>
+                                    <th class="px-4 py-3 text-center">เวลาประเมิน</th>
+                                </tr>
                             </thead>
                             <tbody id="adminGreenListDriver" class="divide-y"></tbody>
                         </table>
@@ -205,7 +254,14 @@
                     <div class="overflow-x-auto border rounded-lg shadow-sm">
                         <table class="w-full text-sm text-left">
                             <thead class="bg-teal-500 text-white border-b-2 border-teal-600">
-                                <tr><th class="px-4 py-3 w-16 text-center">ลำดับที่</th><th class="px-4 py-3">ชื่อเจ้าหน้าที่</th><th class="px-4 py-3 text-center">อุณหภูมิ (°C)</th><th class="px-4 py-3 text-center">ความดัน (BP)</th><th class="px-4 py-3 text-center">ชีพจร</th><th class="px-4 py-3 text-center">เวลาประเมิน</th></tr>
+                                <tr>
+                                    <th class="px-4 py-3 w-16 text-center">ลำดับที่</th>
+                                    <th class="px-4 py-3">ชื่อเจ้าหน้าที่</th>
+                                    <th class="px-4 py-3 text-center">อุณหภูมิ (°C)</th>
+                                    <th class="px-4 py-3 text-center">ความดัน (BP)</th>
+                                    <th class="px-4 py-3 text-center">ชีพจร</th>
+                                    <th class="px-4 py-3 text-center">เวลาประเมิน</th>
+                                </tr>
                             </thead>
                             <tbody id="adminGreenListStaff" class="divide-y"></tbody>
                         </table>
@@ -218,7 +274,12 @@
                 <div class="overflow-x-auto border rounded-lg shadow-sm">
                     <table class="w-full text-sm text-left">
                         <thead class="bg-gray-600 text-white border-b-2 border-gray-700">
-                            <tr><th class="px-4 py-3 w-16 text-center">ลำดับที่</th><th class="px-4 py-3">ชื่อพนักงานขับรถ</th><th class="px-4 py-3 text-center">เบอร์ติดต่อ</th><th class="px-4 py-3 text-center">สถานะ</th></tr>
+                            <tr>
+                                <th class="px-4 py-3 w-16 text-center">ลำดับที่</th>
+                                <th class="px-4 py-3">ชื่อพนักงานขับรถ</th>
+                                <th class="px-4 py-3 text-center">เบอร์ติดต่อ</th>
+                                <th class="px-4 py-3 text-center">สถานะ</th>
+                            </tr>
                         </thead>
                         <tbody id="adminNoDataList" class="divide-y"></tbody>
                     </table>
@@ -232,15 +293,25 @@
                 <p class="text-gray-500 text-sm mt-1">สำนักงานสาธารณสุขจังหวัดนครนายก</p>
             </div>
             <form id="loginForm" class="space-y-4">
-                <div><label class="block text-sm font-medium text-gray-700 mb-1">เบอร์โทรศัพท์ (10 หลัก)</label><input type="tel" id="inputPhone" maxlength="10" class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500" required></div>
-                <div><label class="block text-sm font-medium text-gray-700 mb-1">รหัส PIN (6 หลัก)</label><input type="password" id="inputPin" maxlength="6" class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500" required></div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">เบอร์โทรศัพท์ (10 หลัก)</label>
+                    <input type="tel" id="inputPhone" maxlength="10" class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">รหัส PIN (6 หลัก)</label>
+                    <input type="password" id="inputPin" maxlength="6" class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500" required>
+                </div>
                 <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg transition shadow-md">เข้าสู่ระบบ</button>
             </form>
+            
             <div class="mt-6 text-center border-t pt-4">
                 <p class="text-sm text-gray-500">ผู้ขับขี่ใหม่? <button type="button" onclick="switchView('viewRegister')" class="text-blue-600 font-medium hover:underline">ลงทะเบียนที่นี่</button></p>
+                
                 <div class="mt-4 pt-4 border-t border-dashed border-gray-300">
                     <button type="button" onclick="openPassengerMode()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-3 rounded-lg transition shadow-md flex justify-center items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" /></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
+                        </svg>
                         สำหรับผู้โดยสาร (ตรวจสอบคนขับ)
                     </button>
                 </div>
@@ -286,25 +357,47 @@
                 <div id="staffExtraFields" class="hidden p-4 bg-gray-50 border border-gray-200 rounded-lg space-y-4">
                     <p class="text-sm font-bold text-gray-800 border-b pb-2">ข้อมูลเฉพาะตำแหน่งเจ้าหน้าที่</p>
                     <div class="grid grid-cols-2 gap-4">
-                        <div><label class="block text-sm font-medium text-gray-700 mb-1">ตำแหน่ง</label><input type="text" id="regPosition" class="w-full px-3 py-2 border rounded-lg" placeholder="เช่น นักวิชาการสาธารณสุข"></div>
-                        <div><label class="block text-sm font-medium text-gray-700 mb-1">กลุ่มงาน</label><input type="text" id="regDepartment" class="w-full px-3 py-2 border rounded-lg" placeholder="เช่น กลุ่มงานบริหารทั่วไป"></div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">ตำแหน่ง</label>
+                            <input type="text" id="regPosition" class="w-full px-3 py-2 border rounded-lg" placeholder="เช่น นักวิชาการสาธารณสุข">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">กลุ่มงาน</label>
+                            <input type="text" id="regDepartment" class="w-full px-3 py-2 border rounded-lg" placeholder="เช่น กลุ่มงานบริหารทั่วไป">
+                        </div>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">อัปโหลดไฟล์คำสั่งผู้มีสิทธิ์ขับรถ (PDF) <span class="text-red-500">*</span></label>
                         <input type="file" id="regAuthFile" accept=".pdf,application/pdf" class="w-full px-3 py-2 border rounded-lg bg-white text-sm">
                         <p class="text-[10px] text-gray-500 mt-1">บังคับอัปโหลดเฉพาะไฟล์ .pdf ขนาดไม่เกิน 5MB</p>
-                        <input type="hidden" id="regAuthFileBase64"><input type="hidden" id="regAuthFileName">
+                        <input type="hidden" id="regAuthFileBase64">
+                        <input type="hidden" id="regAuthFileName">
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-4 mt-2">
-                    <div><label class="block text-sm font-medium text-gray-700 mb-1">ชื่อจริง <span class="text-red-500">*</span></label><input type="text" id="regFirstName" class="w-full px-3 py-2 border rounded-lg" required></div>
-                    <div><label class="block text-sm font-medium text-gray-700 mb-1">นามสกุล <span class="text-red-500">*</span></label><input type="text" id="regLastName" class="w-full px-3 py-2 border rounded-lg" required></div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อจริง <span class="text-red-500">*</span></label>
+                        <input type="text" id="regFirstName" class="w-full px-3 py-2 border rounded-lg" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">นามสกุล <span class="text-red-500">*</span></label>
+                        <input type="text" id="regLastName" class="w-full px-3 py-2 border rounded-lg" required>
+                    </div>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
-                    <div><label class="block text-sm font-medium text-gray-700 mb-1">เบอร์โทรศัพท์ <span class="text-red-500">*</span></label><input type="tel" id="regPhone" maxlength="10" class="w-full px-3 py-2 border rounded-lg" required></div>
-                    <div><label class="block text-sm font-medium text-gray-700 mb-1">อีเมล <span class="text-[10px] text-gray-400 font-normal">(ไม่บังคับ)</span></label><input type="email" id="regEmail" class="w-full px-3 py-2 border rounded-lg"></div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">เบอร์โทรศัพท์ <span class="text-red-500">*</span></label>
+                        <input type="tel" id="regPhone" maxlength="10" class="w-full px-3 py-2 border rounded-lg" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">อีเมล <span class="text-[10px] text-gray-400 font-normal">(ไม่บังคับ)</span></label>
+                        <input type="email" id="regEmail" class="w-full px-3 py-2 border rounded-lg">
+                    </div>
                 </div>
-                <div><label class="block text-sm font-medium text-gray-700 mb-1">วัน/เดือน/ปีเกิด <span class="text-red-500">*</span></label><input type="date" id="regDob" class="w-full px-3 py-2 border rounded-lg" required></div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">วัน/เดือน/ปีเกิด <span class="text-red-500">*</span></label>
+                    <input type="date" id="regDob" class="w-full px-3 py-2 border rounded-lg" required>
+                </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">หน่วยงานต้นสังกัด <span class="text-red-500">*</span></label>
                     <select id="regOrg" class="w-full px-3 py-2 border rounded-lg" required>
@@ -317,8 +410,14 @@
                     </select>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
-                    <div><label class="block text-sm font-medium text-gray-700 mb-1">โรคประจำตัว (ถ้ามี)</label><input type="text" id="regChronic" class="w-full px-3 py-2 border rounded-lg" placeholder="ถ้าไม่มีให้ใส่ -"></div>
-                    <div><label class="block text-sm font-medium text-gray-700 mb-1">ยาที่ใช้ประจำ (ถ้ามี)</label><input type="text" id="regMeds" class="w-full px-3 py-2 border rounded-lg" placeholder="ถ้าไม่มีให้ใส่ -"></div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">โรคประจำตัว (ถ้ามี)</label>
+                        <input type="text" id="regChronic" class="w-full px-3 py-2 border rounded-lg" placeholder="ถ้าไม่มีให้ใส่ -">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">ยาที่ใช้ประจำ (ถ้ามี)</label>
+                        <input type="text" id="regMeds" class="w-full px-3 py-2 border rounded-lg" placeholder="ถ้าไม่มีให้ใส่ -">
+                    </div>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
@@ -438,425 +537,7 @@
                 <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition shadow mt-4 text-lg">บันทึกผลการประเมิน</button>
              </form>
         </div>
-
-        <div id="viewEditDriverReq" class="hidden w-full max-w-md bg-white rounded-xl shadow-lg p-6 mt-4 flex-grow">
-            <div class="flex justify-between items-center border-b pb-3 mb-4">
-                <h3 class="text-xl font-bold text-gray-800">ขอแก้ไขข้อมูลส่วนตัว</h3>
-                <button type="button" onclick="switchView('viewDriver')" class="text-gray-400 hover:text-gray-600">ปิด</button>
-            </div>
-            <form id="editReqForm" class="space-y-4">
-                <div class="bg-yellow-50 text-yellow-800 text-sm p-3 rounded-lg border border-yellow-200"><b>หมายเหตุ:</b> การแก้ไขจะถูกส่งให้ <b>ผู้ดูแลระดับสูง</b> เป็นผู้อนุมัติ</div>
-                <div><label class="block text-sm font-medium text-gray-700 mb-1">อีเมล (ใหม่)</label><input type="email" id="reqEmailForm" class="w-full px-3 py-2 border rounded-lg bg-gray-50" placeholder="ระบุอีเมลใหม่ (ถ้ามี)"></div>
-                <div><label class="block text-sm font-medium text-gray-700 mb-1">เบอร์โทรศัพท์ใหม่</label><input type="tel" id="reqPhoneForm" maxlength="10" class="w-full px-3 py-2 border rounded-lg bg-gray-50" required></div>
-                <div id="driverOnlyReqFields">
-                    <div><label class="block text-sm font-medium text-gray-700 mb-1">โรคประจำตัว (ใหม่)</label><input type="text" id="reqChronicForm" class="w-full px-3 py-2 border rounded-lg bg-gray-50" placeholder="ถ้าไม่มีให้ใส่ -"></div>
-                    <div><label class="block text-sm font-medium text-gray-700 mb-1">ยาที่ใช้ประจำ (ใหม่)</label><input type="text" id="reqMedsForm" class="w-full px-3 py-2 border rounded-lg bg-gray-50" placeholder="ถ้าไม่มีให้ใส่ -"></div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">การสูบบุหรี่ (ใหม่)</label>
-                        <select id="reqSmokingForm" class="w-full px-3 py-2 border rounded-lg bg-gray-50">
-                            <option value="ไม่สูบ">ไม่สูบ</option>
-                            <option value="สูบเป็นครั้งคราว">สูบเป็นครั้งคราว</option>
-                            <option value="สูบเป็นประจำ">สูบเป็นประจำ</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">การดื่มแอลกอฮอล์ (ใหม่)</label>
-                        <select id="reqAlcoholForm" class="w-full px-3 py-2 border rounded-lg bg-gray-50">
-                            <option value="ไม่ดื่ม">ไม่ดื่ม</option>
-                            <option value="ดื่มสังสรรค์">ดื่มสังสรรค์บ้าง</option>
-                            <option value="ดื่มเป็นประจำ">ดื่มเป็นประจำ</option>
-                        </select>
-                    </div>
-                </div>
-                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg mt-4 shadow-md">ส่งคำขอแก้ไขข้อมูล</button>
-            </form>
-        </div>
-
-        <div id="viewAdminEditReq" class="hidden w-full bg-white rounded-xl shadow-lg p-6 mt-4 flex-grow">
-            <h3 class="text-2xl font-bold text-gray-800 mb-6">รายการขอแก้ไขข้อมูลส่วนตัว</h3>
-            <div class="flex flex-col md:flex-row gap-2 mb-4">
-                <input type="text" id="filterReqSearch" placeholder="ค้นหาชื่อ, เบอร์โทร..." class="border rounded-lg px-3 py-2 text-sm w-full md:w-1/3 focus:ring-blue-500" oninput="applyReqFilter()">
-                <select id="filterReqStatus" class="border rounded-lg px-3 py-2 text-sm w-full md:w-1/4 focus:ring-blue-500" onchange="applyReqFilter()">
-                    <option value="ALL">ทุกสถานะ</option>
-                    <option value="PENDING">รออนุมัติ</option>
-                    <option value="APPROVED">อนุมัติแล้ว</option>
-                    <option value="REJECTED">ไม่อนุมัติ</option>
-                    <option value="CANCELLED">ยกเลิกแล้ว</option>
-                </select>
-            </div>
-            <div class="overflow-x-auto border rounded-lg shadow-sm">
-                <table class="w-full text-sm text-left">
-                    <thead class="bg-gray-100 text-gray-700 border-b-2 border-gray-300">
-                        <tr><th class="px-4 py-3 w-16 text-center">ลำดับที่</th><th class="px-4 py-3">วันที่ขอ</th><th class="px-4 py-3">ผู้ขอแก้ไข / หน่วยงาน</th><th class="px-4 py-3">ข้อมูลติดต่อ (เบอร์ / อีเมล)</th><th class="px-4 py-3">สุขภาพ (โรค / ยา)</th><th class="px-4 py-3">พฤติกรรม (บุหรี่ / สุรา)</th><th class="px-4 py-3">สถานะ</th><th class="px-4 py-3 text-center">จัดการ</th></tr>
-                    </thead>
-                    <tbody id="adminEditReqList" class="divide-y"></tbody>
-                </table>
-            </div>
-        </div>
-
-        <div id="viewUserManagement" class="hidden w-full bg-white rounded-xl shadow-lg p-6 mt-4 flex-grow">
-            <div class="flex justify-between items-center border-b pb-4 mb-6">
-                <div><h3 class="text-2xl font-bold text-gray-800">จัดการผู้ใช้งานในระบบ</h3></div>
-                <div class="flex gap-2">
-                    <button id="btnOpenAddUser" class="hidden bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg text-sm transition shadow">+ เพิ่มผู้ใช้ใหม่</button>
-                    <button onclick="loadAdminUsers()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg transition border text-sm">รีเฟรช</button>
-                </div>
-            </div>
-            <div class="flex flex-col md:flex-row gap-2 mb-4">
-                <input type="text" id="filterUserSearch" placeholder="ค้นหาชื่อ, เบอร์โทร..." class="border rounded-lg px-3 py-2 text-sm w-full md:w-1/3 focus:ring-blue-500" oninput="applyUserFilter()">
-                <select id="filterUserRole" class="border rounded-lg px-3 py-2 text-sm w-full md:w-1/4 focus:ring-blue-500" onchange="applyUserFilter()">
-                    <option value="ALL">ทุกตำแหน่ง</option>
-                    <option value="provincial_admin">Admin จังหวัด</option>
-                    <option value="provincial_audit">Audit จังหวัด</option>
-                    <option value="hospital_admin">Admin รพ. / สสจ.</option>
-                    <option value="hospital_director">ผอ.รพ.</option>
-                    <option value="exec_ppho">ผู้บริหาร สสจ.</option>
-                    <option value="super_admin">Super Admin</option>
-                    <option value="driver">พนักงานขับรถประจำ</option>
-                    <option value="staff">เจ้าหน้าที่ (ขับรถจำเป็น)</option>
-                </select>
-                <select id="filterUserStatus" class="border rounded-lg px-3 py-2 text-sm w-full md:w-1/4 focus:ring-blue-500" onchange="applyUserFilter()">
-                    <option value="ALL">ทุกสถานะ</option>
-                    <option value="PENDING">รออนุมัติ (PENDING)</option>
-                    <option value="APPROVED">อนุมัติแล้ว (APPROVED)</option>
-                    <option value="REJECTED">ไม่อนุมัติ (REJECTED)</option>
-                    <option value="SUSPENDED">ระงับใช้งาน (SUSPENDED)</option>
-                </select>
-            </div>
-            <div class="overflow-x-auto rounded-lg">
-                <table class="w-full text-sm text-left shadow-sm border">
-                    <thead class="bg-gray-100 text-gray-700 border-b-2 border-gray-300">
-                        <tr><th class="px-4 py-3 w-16 text-center">ลำดับที่</th><th class="px-4 py-3">ชื่อ-สกุล</th><th class="px-4 py-3">เบอร์โทรศัพท์ / รหัส PIN</th><th class="px-4 py-3">Email</th><th class="px-4 py-3">สิทธิ์ระดับ</th><th class="px-4 py-3">สถานะ</th><th class="px-4 py-3 text-center">จัดการ</th></tr>
-                    </thead>
-                    <tbody id="adminUserList" class="divide-y bg-white"></tbody>
-                </table>
-            </div>
-        </div>
-
-        <div id="viewAuditLog" class="hidden w-full bg-white rounded-xl shadow-lg p-6 mt-4 flex-grow">
-            <div class="flex justify-between items-center border-b pb-4 mb-6">
-                <div>
-                    <h3 class="text-2xl font-bold text-gray-800">ประวัติการใช้งานระบบ (Audit Log)</h3>
-                    <p class="text-sm text-gray-500">บันทึกการดำเนินการที่สำคัญในระบบ (อ่านอย่างเดียว)</p>
-                </div>
-                <button onclick="loadAuditLogs()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg border text-sm transition">รีเฟรช</button>
-            </div>
-            <div class="flex flex-col md:flex-row gap-2 mb-4">
-                <input type="text" id="filterLogSearch" placeholder="ค้นหาผู้ดำเนินการ, เป้าหมาย..." class="border rounded-lg px-3 py-2 text-sm w-full md:w-1/3 focus:ring-blue-500" oninput="applyLogFilter()">
-                <select id="filterLogAction" class="border rounded-lg px-3 py-2 text-sm w-full md:w-1/4 focus:ring-blue-500" onchange="applyLogFilter()">
-                    <option value="ALL">ทุกการกระทำ</option>
-                    <option value="LOGIN_SUCCESS">เข้าสู่ระบบสำเร็จ</option>
-                    <option value="SUBMIT_HEALTH_CHECK">ส่งแบบประเมินสุขภาพ</option>
-                    <option value="REGISTER_USER">สมัครสมาชิกใหม่</option>
-                    <option value="ADD_USER">เพิ่มผู้ใช้งานระบบ</option>
-                    <option value="UPDATE_USER_STATUS">ปรับเปลี่ยนสถานะ</option>
-                    <option value="EDIT_USER">แก้ไขข้อมูลผู้ใช้</option>
-                    <option value="APPROVE_EDIT_REQUEST">อนุมัติแก้ไขข้อมูลส่วนตัว</option>
-                    <option value="REJECT_EDIT_REQUEST">ไม่อนุมัติคำขอแก้ไข</option>
-                    <option value="VIEW_PERSONAL_DATA">เปิดดูข้อมูลส่วนบุคคล</option>
-                    <option value="DELETE_USER">ลบผู้ใช้งาน</option>
-                    <option value="UPDATE_SETTINGS">แก้ไขตั้งค่าระบบ</option>
-                    <option value="CLEAR_DATABASE">ล้างฐานข้อมูลระบบ</option>
-                    <option value="SEED_ADMINS">นำเข้าผู้ดูแลระบบ</option>
-                    <option value="EXPORT_REPORT">ส่งออกรายงาน</option>
-                    <option value="REPAIR_DATABASE">ซ่อมแซมฐานข้อมูล</option>
-                </select>
-            </div>
-            <div class="overflow-x-auto border rounded-lg shadow-sm max-h-[600px] overflow-y-auto">
-                <table class="w-full text-sm text-left">
-                    <thead class="bg-gray-100 text-gray-700 sticky top-0 border-b-2 border-gray-300">
-                        <tr><th class="px-4 py-3 w-16 text-center">ลำดับที่</th><th class="px-4 py-3">วัน/เวลา</th><th class="px-4 py-3">ผู้ดำเนินการ</th><th class="px-4 py-3">ตำแหน่ง</th><th class="px-4 py-3">การกระทำ (Action)</th><th class="px-4 py-3">เป้าหมาย/ข้อมูล</th><th class="px-4 py-3">หน่วยงาน</th><th class="px-4 py-3">ผลลัพธ์</th></tr>
-                    </thead>
-                    <tbody id="auditLogList" class="divide-y bg-white"></tbody>
-                </table>
-            </div>
-        </div>
-
-        <div id="viewSettings" class="hidden w-full bg-white rounded-xl shadow-lg p-6 mt-4 flex-grow">
-            <h3 class="text-2xl font-bold text-gray-800 mb-6 border-b pb-4">ตั้งค่าระบบ</h3>
-            <form id="formSystemSettings" class="space-y-6 max-w-4xl">
-                <div class="bg-gray-50 p-4 rounded-lg border">
-                    <h4 class="font-bold text-blue-800 mb-4 border-b pb-2">ตั้งค่าแบบฟอร์มประเมิน</h4>
-                    <div class="mb-4">
-                        <label class="block text-sm font-bold text-gray-700 mb-1">ช่วงเวลาประเมิน (Time Slots)</label>
-                        <p class="text-xs text-gray-500 mb-2">คั่นด้วยเครื่องหมายจุลภาค (,)</p>
-                        <textarea id="set_timeSlots" rows="2" class="w-full border rounded-lg px-3 py-2 focus:ring-blue-500" required></textarea>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-bold text-gray-700 mb-1">หัวข้อความเสี่ยงร้ายแรง (RED)</label>
-                        <p class="text-xs text-gray-500 mb-2">คั่นด้วยเครื่องหมายจุลภาค (,)</p>
-                        <textarea id="set_criticalRisks" rows="3" class="w-full border rounded-lg px-3 py-2 focus:ring-blue-500" required></textarea>
-                    </div>
-                </div>
-                <div class="bg-yellow-50 p-5 rounded-lg border border-yellow-200 shadow-sm">
-                    <h4 class="font-bold text-yellow-800 mb-4 border-b border-yellow-300 pb-2">ตั้งค่าเกณฑ์ประเมินสุขภาพ (Scoring Criteria)</h4>
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">อุณหภูมิ มีไข้สูง (RED) >=</label><input type="number" step="0.1" id="sc_tempHigh" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
-                        <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">อุณหภูมิ มีไข้ต่ำ (AMBER) >=</label><input type="number" step="0.1" id="sc_tempLow" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
-                        <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">ความดัน Sys (RED) >=</label><input type="number" id="sc_sysRed" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
-                        <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">ความดัน Dia (RED) >=</label><input type="number" id="sc_diaRed" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
-                        <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">ความดัน Sys (AMBER) >=</label><input type="number" id="sc_sysAmber" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
-                        <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">ความดัน Dia (AMBER) >=</label><input type="number" id="sc_diaAmber" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
-                        <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">ชีพจรต่ำสุด (Min) <</label><input type="number" id="sc_pulseMin" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
-                        <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">ชีพจรสูงสุด (Max) ></label><input type="number" id="sc_pulseMax" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
-                        <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">ระดับอ่อนล้า (RED) >=</label><input type="number" id="sc_fatigueRed" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
-                        <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">ระดับอ่อนล้า (AMBER) >=</label><input type="number" id="sc_fatigueAmber" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
-                        <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">ชั่วโมงการนอนน้อยกว่า <</label><input type="number" step="0.5" id="sc_sleepMin" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
-                    </div>
-                </div>
-                <div class="bg-indigo-50 p-4 rounded-lg border border-indigo-100">
-                    <h4 class="font-bold text-indigo-800 mb-4 border-b border-indigo-200 pb-2">ตั้งค่าลิงก์คู่มือการใช้งาน (Manual URLs)</h4>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div><label class="block text-sm font-medium mb-1">พนักงานขับรถ / เจ้าหน้าที่</label><input type="url" id="set_url_driver" class="w-full border rounded px-3 py-2 text-sm"></div>
-                        <div><label class="block text-sm font-medium mb-1">Admin รพ. / สสจ.</label><input type="url" id="set_url_hospital_admin" class="w-full border rounded px-3 py-2 text-sm"></div>
-                        <div><label class="block text-sm font-medium mb-1">ผอ. โรงพยาบาล</label><input type="url" id="set_url_hospital_director" class="w-full border rounded px-3 py-2 text-sm"></div>
-                        <div><label class="block text-sm font-medium mb-1">ผู้บริหาร สสจ.</label><input type="url" id="set_url_exec_ppho" class="w-full border rounded px-3 py-2 text-sm"></div>
-                        <div><label class="block text-sm font-medium mb-1">Admin/Audit จังหวัด</label><input type="url" id="set_url_provincial_admin" class="w-full border rounded px-3 py-2 text-sm"></div>
-                        <div class="md:col-span-2"><label class="block text-sm font-medium mb-1">Super Admin</label><input type="url" id="set_url_super_admin" class="w-full border rounded px-3 py-2 text-sm"></div>
-                    </div>
-                </div>
-                <div class="bg-blue-50 p-5 rounded-lg border border-blue-200 shadow-sm mt-6">
-                    <h4 class="font-bold text-blue-800 mb-4 border-b border-blue-300 pb-2 flex items-center gap-2">ตั้งค่าการแจ้งเตือนผ่าน Telegram (แยกตามหน่วยงาน)</h4>
-                    <div class="mb-4">
-                        <label class="flex items-center cursor-pointer"><input type="checkbox" id="tg_enabled" class="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"><span class="ml-2 text-gray-800 font-bold">เปิดใช้งานระบบแจ้งเตือน Telegram</span></label>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="md:col-span-2"><label class="block text-sm font-bold text-gray-700 mb-1">Bot Token</label><input type="text" id="tg_botToken" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-blue-500"></div>
-                        <div class="md:col-span-2"><label class="block text-sm font-bold text-gray-700 mb-1">Global Chat ID</label><input type="text" id="tg_globalChatId" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-blue-500"></div>
-                        <div class="md:col-span-2 mt-2 border-t border-blue-200 pt-4"><p class="text-sm font-bold text-gray-800 mb-2">Chat ID แยกตามหน่วยงาน</p></div>
-                        <div><label class="block text-xs font-medium text-gray-700 mb-1">สสจ. นครนายก</label><input type="text" id="tg_org_1" class="w-full border rounded px-3 py-1.5 text-sm"></div>
-                        <div><label class="block text-xs font-medium text-gray-700 mb-1">รพ. นครนายก</label><input type="text" id="tg_org_2" class="w-full border rounded px-3 py-1.5 text-sm"></div>
-                        <div><label class="block text-xs font-medium text-gray-700 mb-1">รพ. ปากพลี</label><input type="text" id="tg_org_3" class="w-full border rounded px-3 py-1.5 text-sm"></div>
-                        <div><label class="block text-xs font-medium text-gray-700 mb-1">รพ. บ้านนา</label><input type="text" id="tg_org_4" class="w-full border rounded px-3 py-1.5 text-sm"></div>
-                        <div><label class="block text-xs font-medium text-gray-700 mb-1">รพ. องครักษ์</label><input type="text" id="tg_org_5" class="w-full border rounded px-3 py-1.5 text-sm"></div>
-                    </div>
-                </div>
-                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-8 py-3 rounded-lg transition shadow w-full md:w-auto mt-6">บันทึกการตั้งค่าระบบ</button>
-            </form>
-            <div class="bg-red-50 p-5 rounded-lg border border-red-200 mt-10 max-w-3xl">
-                <h4 class="font-bold text-red-800 mb-2 border-b border-red-200 pb-2 flex items-center gap-2">เครื่องมือสำหรับนักพัฒนา (Developer Tools)</h4>
-                <div class="flex flex-col md:flex-row gap-2">
-                    <button type="button" onclick="seedInitialAdmins()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-2.5 rounded-lg transition shadow text-sm">นำเข้าผู้ดูแลระบบเริ่มต้น</button>
-                    <button type="button" onclick="generateMockData()" class="bg-green-600 hover:bg-green-700 text-white font-bold px-6 py-2.5 rounded-lg transition shadow text-sm">สร้างข้อมูลทดสอบ (25 รายการ)</button>
-                    <button type="button" onclick="clearDatabaseConfirm()" class="bg-gray-800 hover:bg-gray-900 text-white font-bold px-6 py-2.5 rounded-lg transition shadow text-sm">⚠️ ล้างฐานข้อมูล</button>
-                    <button type="button" onclick="repairDatabaseConfirm()" class="bg-orange-500 hover:bg-orange-600 text-white font-bold px-6 py-2.5 rounded-lg transition shadow text-sm">🔧 ซ่อมแซม/จัดเรียงฐานข้อมูล</button>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <footer class="w-full bg-gray-100 text-center text-xs text-gray-500 py-4 border-t mt-auto">
-        พัฒนาและดูแลระบบโดย กลุ่มงานสุขภาพดิจิทัล สำนักงานสาธารณสุขจังหวัดนครนายก
-    </footer>
-    <div id="modalHealthAnalysis" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
-        <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <div class="flex justify-between items-center border-b pb-3 mb-4">
-                <h3 class="text-xl font-bold text-gray-800">วิเคราะห์สุขภาพ (15 วันย้อนหลัง)</h3>
-                <button type="button" onclick="document.getElementById('modalHealthAnalysis').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">ปิด</button>
-            </div>
-            <div id="healthAnalysisContent" class="space-y-4"></div>
-            <div class="mt-6 pt-4 border-t flex justify-end">
-                <button onclick="document.getElementById('modalHealthAnalysis').classList.add('hidden')" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-lg font-medium transition">ปิดหน้าต่าง</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="modalAdvice" class="fixed inset-0 bg-black bg-opacity-60 z-[9999] flex items-center justify-center hidden">
-        <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <div class="flex justify-between items-center border-b pb-3 mb-4">
-                <h3 class="text-lg font-bold text-gray-800">คำแนะนำปรับพฤติกรรมสุขภาพ</h3>
-                <button type="button" onclick="document.getElementById('modalAdvice').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">ปิด</button>
-            </div>
-            <div id="adviceInputSection">
-                <p class="text-sm text-gray-600 mb-4">กรุณาระบุน้ำหนักและส่วนสูง เพื่อให้ระบบประมวลผลคำแนะนำที่แม่นยำ</p>
-                <div class="grid grid-cols-2 gap-4 mb-4">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 mb-1">น้ำหนัก (กิโลกรัม)</label>
-                        <input type="number" id="advWeight" class="w-full border px-3 py-2 rounded focus:ring-blue-500" placeholder="เช่น 65">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 mb-1">ส่วนสูง (เซนติเมตร)</label>
-                        <input type="number" id="advHeight" class="w-full border px-3 py-2 rounded focus:ring-blue-500" placeholder="เช่น 170">
-                    </div>
-                </div>
-                <button onclick="calculateAdvice()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-lg transition shadow">วิเคราะห์ข้อมูล</button>
-            </div>
-            <div id="adviceResultSection" class="hidden mt-4 bg-blue-50 p-4 rounded-lg border border-blue-200 text-sm text-gray-800 leading-relaxed"></div>
-        </div>
-    </div>
-
-    <div id="modalPersonalSettings" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
-        <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
-            <h3 class="text-xl font-bold mb-4 text-gray-800">ตั้งค่าบัญชีส่วนตัว</h3>
-            <form id="formPersonalSettings" class="space-y-4">
-                <div class="bg-blue-50 p-4 rounded-lg border border-blue-100">
-                    <label class="flex items-center cursor-pointer">
-                        <input type="checkbox" id="userEmailNotif" class="w-5 h-5 text-blue-600 rounded focus:ring-blue-500">
-                        <span class="ml-2 text-gray-800 font-bold">รับการแจ้งเตือนผ่าน Email</span>
-                    </label>
-                    <p class="text-xs text-gray-500 mt-2 ml-7">หากเปิดใช้งาน ระบบจะส่งข้อความแจ้งเตือนต่างๆ (เช่น ผลการอนุมัติ หรือสถานะประเมิน) ไปยัง Email ที่ท่านได้ลงทะเบียนไว้</p>
-                </div>
-                <div class="flex justify-end gap-2 mt-4">
-                    <button type="button" onclick="document.getElementById('modalPersonalSettings').classList.add('hidden')" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded transition font-medium">ปิด</button>
-                    <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded shadow-sm transition font-medium">บันทึกการตั้งค่า</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div id="modalExport" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
-        <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
-            <h3 class="text-xl font-bold mb-4 text-gray-800 flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" /></svg>
-                ส่งออกรายงาน (Excel / CSV)
-            </h3>
-            <p class="text-sm text-gray-600 mb-4">ระบบจะทำการดึงข้อมูลประวัติการประเมินสุขภาพตามช่วงวันที่กำหนด เพื่อนำไปใช้งานต่อในโปรแกรม Excel</p>
-            <form id="formExport" class="space-y-4">
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-bold text-gray-700 mb-1">ตั้งแต่วันที่</label>
-                        <input type="date" id="exportStartDate" class="w-full px-3 py-2 border rounded-lg focus:ring-green-500" required>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-bold text-gray-700 mb-1">ถึงวันที่</label>
-                        <input type="date" id="exportEndDate" class="w-full px-3 py-2 border rounded-lg focus:ring-green-500" required>
-                    </div>
-                </div>
-                <div class="flex justify-end gap-2 mt-4 pt-4 border-t">
-                    <button type="button" onclick="document.getElementById('modalExport').classList.add('hidden')" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded transition font-medium">ยกเลิก</button>
-                    <button type="submit" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded shadow-sm transition font-medium flex items-center gap-1">ดาวน์โหลด</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div id="modalAddUser" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
-        <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <h3 class="text-xl font-bold mb-4">เพิ่มผู้ใช้งาน</h3>
-            <form id="formAddUser" class="space-y-3">
-                <div class="grid grid-cols-2 gap-3">
-                    <div><label class="block text-sm mb-1">ชื่อ</label><input type="text" id="addFirstName" class="w-full border px-3 py-2 rounded" required></div>
-                    <div><label class="block text-sm mb-1">นามสกุล</label><input type="text" id="addLastName" class="w-full border px-3 py-2 rounded" required></div>
-                </div>
-                <div><label class="block text-sm mb-1">เบอร์โทรศัพท์</label><input type="tel" id="addPhone" maxlength="10" class="w-full border px-3 py-2 rounded" required></div>
-                <div><label class="block text-sm mb-1 text-blue-700 font-bold" id="labelAddEmail">Email</label><input type="email" id="addEmail" class="w-full border px-3 py-2 rounded"></div>
-                <div>
-                    <label class="block text-sm mb-1">หน่วยงาน</label>
-                    <select id="addOrg" class="w-full border px-3 py-2 rounded" required>
-                        <option value="สำนักงานสาธารณสุขจังหวัดนครนายก (สสจ.)">สำนักงานสาธารณสุขจังหวัดนครนายก (สสจ.)</option>
-                        <option value="โรงพยาบาลนครนายก">โรงพยาบาลนครนายก</option>
-                        <option value="โรงพยาบาลปากพลี">โรงพยาบาลปากพลี</option>
-                        <option value="โรงพยาบาลบ้านนา">โรงพยาบาลบ้านนา</option>
-                        <option value="โรงพยาบาลองครักษ์">โรงพยาบาลองครักษ์</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm mb-1">Role (สิทธิ์เข้าถึง)</label>
-                    <select id="addRole" class="w-full border px-3 py-2 rounded bg-blue-50" required onchange="toggleAddDriverFields()">
-                        <option value="provincial_admin" id="optAddProvAdmin">Admin จังหวัด</option>
-                        <option value="provincial_audit" id="optAddProvAudit">Audit จังหวัด</option>
-                        <option value="exec_ppho" id="optAddExec">ผู้บริหาร สสจ.</option>
-                        <option value="super_admin" id="optAddSuper">Super Admin</option>
-                        <option value="hospital_director" id="optAddDir">ผอ.รพ.</option>
-                        <option value="hospital_admin" id="optAddAdmin">Admin รพ. / สสจ.</option>
-                        <option value="driver" id="optAddDriver">พนักงานขับรถประจำ</option>
-                        <option value="staff" id="optAddStaff">เจ้าหน้าที่ (ขับรถยามจำเป็น)</option>
-                    </select>
-                </div>
-                <div id="addDriverExtraFields" class="hidden space-y-3 border-t pt-3 mt-2 border-gray-200">
-                    <div><label class="block text-sm mb-1 text-blue-800 font-bold">ข้อมูลสุขภาพ (สำหรับผู้ขับขี่)</label></div>
-                    <div><label class="block text-sm mb-1">วัน/เดือน/ปีเกิด</label><input type="date" id="addDob" class="w-full px-3 py-2 border rounded"></div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div><label class="block text-sm mb-1">โรคประจำตัว</label><input type="text" id="addChronic" class="w-full border px-3 py-2 rounded" placeholder="-"></div>
-                        <div><label class="block text-sm mb-1">ยาที่ใช้ประจำ</label><input type="text" id="addMeds" class="w-full border px-3 py-2 rounded" placeholder="-"></div>
-                    </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-sm mb-1">การสูบบุหรี่</label>
-                            <select id="addSmoking" class="w-full border px-3 py-2 rounded">
-                                <option value="ไม่สูบ">ไม่สูบ</option>
-                                <option value="สูบเป็นครั้งคราว">สูบเป็นครั้งคราว</option>
-                                <option value="สูบเป็นประจำ">สูบเป็นประจำ</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm mb-1">การดื่มแอลกอฮอล์</label>
-                            <select id="addAlcohol" class="w-full border px-3 py-2 rounded">
-                                <option value="ไม่ดื่ม">ไม่ดื่ม</option>
-                                <option value="ดื่มสังสรรค์">ดื่มสังสรรค์บ้าง</option>
-                                <option value="ดื่มเป็นประจำ">ดื่มเป็นประจำ</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                <div class="flex justify-end gap-2 mt-4">
-                    <button type="button" onclick="document.getElementById('modalAddUser').classList.add('hidden')" class="px-4 py-2 bg-gray-200 rounded">ยกเลิก</button>
-                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded">บันทึกเพิ่มผู้ใช้</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div id="modalEditUser" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
-        <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
-            <h3 class="text-xl font-bold mb-4">แก้ไขข้อมูลผู้ใช้งาน</h3>
-             <form id="formEditUser" class="space-y-3">
-                <input type="hidden" id="editOldPhone">
-                <input type="hidden" id="editOldName">
-                <input type="hidden" id="editOldOrg">
-                <input type="hidden" id="editUserId">
-                
-                <div id="editSelfAlert" class="hidden bg-yellow-50 text-yellow-800 text-xs p-2 rounded border border-yellow-200 mb-2"><b>หมายเหตุ:</b> การแก้ไขชื่อ เบอร์โทร หรือหน่วยงาน จะต้องรอการอนุมัติ ส่วน Email จะมีผลทันที</div>
-                <div id="editOtherAlert" class="hidden bg-blue-50 text-blue-800 text-xs p-2 rounded border border-blue-200 mb-2"><b>จำกัดสิทธิ์:</b> คุณสามารถแก้ไขได้เฉพาะข้อมูล Email เท่านั้น</div>
-                
-                <div><label class="block text-sm mb-1">ชื่อ-สกุล</label><input type="text" id="editName" class="w-full border px-3 py-2 rounded font-medium" required></div>
-                <div><label class="block text-sm mb-1">เบอร์โทรศัพท์</label><input type="tel" id="editPhone" maxlength="10" class="w-full border px-3 py-2 rounded font-mono" required></div>
-                <div><label class="block text-sm mb-1 text-blue-700 font-bold">Email</label><input type="email" id="editEmail" class="w-full border px-3 py-2 rounded focus:ring-blue-500"></div>
-                <div>
-                    <label class="block text-sm mb-1">หน่วยงาน</label>
-                     <select id="editOrg" class="w-full border px-3 py-2 rounded" required>
-                        <option value="สำนักงานสาธารณสุขจังหวัดนครนายก (สสจ.)">สำนักงานสาธารณสุขจังหวัดนครนายก (สสจ.)</option>
-                        <option value="โรงพยาบาลนครนายก">โรงพยาบาลนครนายก</option>
-                        <option value="โรงพยาบาลปากพลี">โรงพยาบาลปากพลี</option>
-                        <option value="โรงพยาบาลบ้านนา">โรงพยาบาลบ้านนา</option>
-                        <option value="โรงพยาบาลองครักษ์">โรงพยาบาลองครักษ์</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm mb-1">Role</label>
-                    <select id="editRole" class="w-full border px-3 py-2 rounded bg-blue-50" required>
-                        <option value="provincial_admin" id="optEditProvAdmin">Admin จังหวัด</option>
-                        <option value="provincial_audit" id="optEditProvAudit">Audit จังหวัด</option>
-                        <option value="exec_ppho" id="optEditExec">ผู้บริหาร สสจ.</option>
-                        <option value="hospital_director" id="optEditDir">ผอ.รพ.</option>
-                        <option value="hospital_admin" id="optEditAdmin">Admin รพ. / สสจ.</option>
-                        <option value="driver" id="optEditDriver">พนักงานขับรถประจำ</option>
-                        <option value="staff" id="optEditStaff">เจ้าหน้าที่ (ขับรถจำเป็น)</option>
-                        <option value="super_admin" id="optEditSuper">Super Admin</option>
-                    </select>
-                </div>
-                <div class="flex justify-end gap-2 mt-4">
-                    <button type="button" onclick="document.getElementById('modalEditUser').classList.add('hidden')" class="px-4 py-2 bg-gray-200 rounded">ยกเลิก</button>
-                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded shadow-sm">บันทึกข้อมูล</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div id="modalViewProfile" class="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center hidden">
-        <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <div class="flex justify-between items-center border-b pb-3 mb-4">
-                <h3 class="text-xl font-bold text-gray-800">ข้อมูลส่วนบุคคล</h3>
-                <button type="button" onclick="document.getElementById('modalViewProfile').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">ปิด</button>
-            </div>
-            <div id="viewProfileContent" class="space-y-4"></div>
-            <div class="mt-6 pt-4 border-t flex justify-end">
-                <button onclick="document.getElementById('modalViewProfile').classList.add('hidden')" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-lg font-medium transition">ปิดหน้าต่าง</button>
-            </div>
-        </div>
-    </div>
-
-    <script>
+        <script>
         const API_URL = "https://script.google.com/macros/s/AKfycbzPsmOjoCyzsa459DgNpC6oupSyExXi3jV4y5F7Iochg53uN2qwPTzU1kwpZ82KCeqd/exec"; 
 
         const api = {
@@ -880,7 +561,7 @@
                     console.error("API Error:", err);
                     Swal.fire({
                         title: 'การเชื่อมต่อถูกปฏิเสธ',
-                        html: 'ระบบไม่สามารถดึงข้อมูลจากฐานข้อมูลได้<br><br><b>วิธีแก้ไข:</b><br>โปรดตรวจสอบการตั้งค่า Deploy ใน Google Apps Script ว่าเลือกเป็น "เวอร์ชันใหม่" หรือไม่',
+                        html: 'ระบบไม่สามารถดึงข้อมูลจากฐานข้อมูลได้<br><br><b>วิธีแก้ไข:</b><br>โปรดตรวจสอบการตั้งค่า Deploy ใน Google Apps Script ตรงช่อง <b>Who has access</b> ว่าได้ตั้งเป็น <b>"ทุกคน (Anyone)"</b> แล้วหรือไม่',
                         icon: 'error'
                     });
                     throw err;
@@ -973,9 +654,13 @@
         }
 
         function formatThaiDate(dateStr) {
-            if (!dateStr || dateStr === '-') return '-'; 
+            if (!dateStr || dateStr === '-') {
+                return '-'; 
+            }
             const d = new Date(dateStr); 
-            if (isNaN(d.getTime())) return dateStr;
+            if (isNaN(d.getTime())) {
+                return dateStr;
+            }
             const months = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
             return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear() + 543}`;
         }
@@ -983,33 +668,47 @@
         function switchView(viewId) {
             views.forEach(v => { 
                 let el = document.getElementById(v); 
-                if (el) el.classList.add('hidden'); 
+                if (el) {
+                    el.classList.add('hidden'); 
+                }
             }); 
             
             let targetView = document.getElementById(viewId); 
-            if (targetView) targetView.classList.remove('hidden');
+            if (targetView) {
+                targetView.classList.remove('hidden');
+            }
             
             let navBtns = ['btnNavDash', 'btnNavUsers', 'btnNavEditReq', 'btnNavAudit', 'btnNavSetting'];
             navBtns.forEach(b => { 
                 let btn = document.getElementById(b); 
-                if (btn) btn.classList.remove('text-white', 'underline'); 
+                if (btn) {
+                    btn.classList.remove('text-white', 'underline'); 
+                }
             });
 
             if (viewId === 'viewAdmin') { 
                 let b = document.getElementById('btnNavDash'); 
-                if (b) b.classList.add('text-white', 'underline'); 
+                if (b) {
+                    b.classList.add('text-white', 'underline'); 
+                }
             }
             if (viewId === 'viewUserManagement') { 
                 let b = document.getElementById('btnNavUsers'); 
-                if (b) b.classList.add('text-white', 'underline'); 
+                if (b) {
+                    b.classList.add('text-white', 'underline'); 
+                }
             }
             if (viewId === 'viewAdminEditReq') { 
                 let b = document.getElementById('btnNavEditReq'); 
-                if (b) b.classList.add('text-white', 'underline'); 
+                if (b) {
+                    b.classList.add('text-white', 'underline'); 
+                }
             }
             if (viewId === 'viewAuditLog') { 
                 let b = document.getElementById('btnNavAudit'); 
-                if (b) b.classList.add('text-white', 'underline'); 
+                if (b) {
+                    b.classList.add('text-white', 'underline'); 
+                }
                 if (appUser) { 
                     localStorage.setItem('localAuditCount_' + appUser.phone, localStorage.getItem('backendAuditCount') || '0'); 
                     updateAuditBadge(0); 
@@ -1017,7 +716,9 @@
             }
             if (viewId === 'viewSettings') { 
                 let b = document.getElementById('btnNavSetting'); 
-                if (b) b.classList.add('text-white', 'underline'); 
+                if (b) {
+                    b.classList.add('text-white', 'underline'); 
+                }
             }
         }
 
@@ -1036,7 +737,27 @@
             }
         }
 
+        function openManual() {
+            if (!appUser || !globalSettings.manualUrls) {
+                return;
+            }
+            let userRoleKey = appUser.role === 'provincial_audit' ? 'provincial_admin' : appUser.role;
+            if (userRoleKey === 'staff') {
+                userRoleKey = 'driver'; 
+            }
+            const url = globalSettings.manualUrls[userRoleKey];
+            if (url && url.trim() !== "") {
+                window.open(url, '_blank'); 
+            } else {
+                Swal.fire('แจ้งเตือน', `ยังไม่ได้ตั้งค่าลิงก์คู่มือสำหรับสิทธิ์ของท่าน`, 'info'); 
+            }
+        }
+
         window.onload = function() {
+            if (API_URL.includes("ใส่_URL")) {
+                return Swal.fire('ตั้งค่าไม่สมบูรณ์', 'กรุณานำลิงก์ /exec มาใส่ในตัวแปร API_URL ที่บรรทัดแรกของ Javascript ด้วยครับ', 'error');
+            }
+            
             switchView('viewAdmin');
             const token = localStorage.getItem('dhr_session');
             
@@ -1050,9 +771,13 @@
                         if (res.auditLogCount !== undefined) {
                             localStorage.setItem('backendAuditCount', res.auditLogCount);
                             let localCount = parseInt(localStorage.getItem('localAuditCount_' + res.currentUser.phone) || '0');
+                            
                             let diff = res.auditLogCount - localCount;
-                            if (diff > 0) updateAuditBadge(diff);
-                            else updateAuditBadge(0);
+                            if (diff > 0) {
+                                updateAuditBadge(diff);
+                            } else {
+                                updateAuditBadge(0);
+                            }
                         }
                         
                         renderDynamicHealthForm(); 
@@ -1061,267 +786,230 @@
                         localStorage.removeItem('dhr_session'); 
                         loadAdminDashboard(); 
                         let btnL = document.getElementById('btnNavLogin'); 
-                        if (btnL) btnL.classList.remove('hidden'); 
+                        if (btnL) {
+                            btnL.classList.remove('hidden'); 
+                        }
                     }
                 }).catch(err => { 
                     loadAdminDashboard(); 
                     let btnL = document.getElementById('btnNavLogin'); 
-                    if (btnL) btnL.classList.remove('hidden'); 
+                    if (btnL) {
+                        btnL.classList.remove('hidden'); 
+                    }
                 });
             } else { 
                 loadAdminDashboard(); 
                 let btnL = document.getElementById('btnNavLogin'); 
-                if (btnL) btnL.classList.remove('hidden'); 
+                if (btnL) {
+                    btnL.classList.remove('hidden'); 
+                }
             }
         };
 
         function updateEditReqBadge(count) { 
             const badge = document.getElementById('badgeEditReq'); 
-            if (!badge) return; 
-            if (count > 0) { badge.innerText = count; badge.classList.remove('hidden'); } 
-            else badge.classList.add('hidden'); 
+            if (!badge) {
+                return; 
+            }
+            if (count > 0) { 
+                badge.innerText = count; 
+                badge.classList.remove('hidden'); 
+            } else {
+                badge.classList.add('hidden'); 
+            }
         }
 
         function updateUsersBadge(count) { 
             const badge = document.getElementById('badgeUsers'); 
-            if (!badge) return; 
-            if (count > 0) { badge.innerText = count; badge.classList.remove('hidden'); } 
-            else badge.classList.add('hidden'); 
+            if (!badge) {
+                return; 
+            }
+            if (count > 0) { 
+                badge.innerText = count; 
+                badge.classList.remove('hidden'); 
+            } else {
+                badge.classList.add('hidden'); 
+            }
         }
 
         function updateAuditBadge(count) { 
             const badge = document.getElementById('badgeAudit'); 
-            if (!badge) return; 
-            if (count > 0) { badge.innerText = count; badge.classList.remove('hidden'); } 
-            else badge.classList.add('hidden'); 
-        }
-
-        // ================= AUTHENTICATION =================
-        let loginFormEl = document.getElementById('loginForm');
-        if (loginFormEl) {
-            loginFormEl.onsubmit = function(e) {
-                e.preventDefault(); 
-                let phone = document.getElementById('inputPhone').value; 
-                let pin = document.getElementById('inputPin').value;
-                
-                if (!phone || phone.length !== 10) return Swal.fire('แจ้งเตือน', 'กรุณากรอกเบอร์โทรศัพท์ 10 หลัก', 'warning');
-                if (!pin || pin.length !== 6) return Swal.fire('แจ้งเตือน', 'กรุณากรอกรหัส PIN 6 หลัก', 'warning');
-
-                showLoader("กำลังตรวจสอบข้อมูลและเข้าสู่ระบบ...");
-                
-                api.run('login', { phone: phone, pin: pin }).then(res => {
-                    if (res.ok) { 
-                        // 💡 แก้บัค: เพิ่ม Alert แจ้งเตือนเมื่อเข้าสู่ระบบสำเร็จ
-                        Swal.fire({
-                            title: 'เข้าสู่ระบบสำเร็จ!',
-                            icon: 'success',
-                            timer: 1500,
-                            showConfirmButton: false
-                        });
-
-                        localStorage.setItem('dhr_session', res.sessionToken); 
-                        showLoader("กำลังดึงข้อมูลส่วนบุคคล...");
-                        
-                        api.run('getInitialData').then(initRes => { 
-                            hideLoader();
-                            if (initRes.ok) { 
-                                globalSettings = initRes.settings; 
-                                renderDynamicHealthForm(); 
-                                updateEditReqBadge(initRes.pendingReqs); 
-                                updateUsersBadge(initRes.pendingUsers); 
-                                
-                                if (initRes.auditLogCount !== undefined) {
-                                    localStorage.setItem('backendAuditCount', initRes.auditLogCount);
-                                    let localCount = parseInt(localStorage.getItem('localAuditCount_' + res.user.phone) || '0');
-                                    let diff = initRes.auditLogCount - localCount;
-                                    if (diff > 0) updateAuditBadge(diff);
-                                    else updateAuditBadge(0);
-                                }
-                                handleLoginSuccess(initRes.currentUser);
-                            } 
-                        }).catch(err => { 
-                            hideLoader(); 
-                            Swal.fire('ข้อผิดพลาด', 'ดึงข้อมูลไม่สำเร็จ', 'error'); 
-                        });
-                    } else { 
-                        hideLoader(); 
-                        Swal.fire('ข้อมูลไม่ถูกต้อง', res.error, 'error'); 
-                    }
-                }).catch(err => { 
-                    hideLoader(); 
-                });
-                return false;
-            };
-        }
-
-        let btnNavLoginEl = document.getElementById('btnNavLogin');
-        if (btnNavLoginEl) { 
-            btnNavLoginEl.onclick = function() { 
-                let fLogin = document.getElementById('loginForm'); 
-                if (fLogin) fLogin.reset(); 
-                switchView('viewLogin'); 
-            }; 
-        }
-        
-        let btnLogoutEl = document.getElementById('btnLogout');
-        if (btnLogoutEl) {
-            btnLogoutEl.onclick = function() {
-                localStorage.removeItem('dhr_session'); 
-                appUser = null; 
-                
-                let fLogin = document.getElementById('loginForm'); 
-                if (fLogin) fLogin.reset();
-                let fHealth = document.getElementById('healthForm'); 
-                if (fHealth) fHealth.reset();
-                
-                let bLogout = document.getElementById('btnLogout'); 
-                if (bLogout) bLogout.classList.add('hidden'); 
-                let bLogin = document.getElementById('btnNavLogin'); 
-                if (bLogin) bLogin.classList.remove('hidden'); 
-                let bManual = document.getElementById('btnNavManual'); 
-                if (bManual) bManual.classList.add('hidden');
-                let bProfile = document.getElementById('btnNavProfile');
-                if (bProfile) bProfile.classList.add('hidden');
-                
-                let hideElements = ['btnNavDash', 'btnNavUsers', 'btnNavEditReq', 'btnNavAudit', 'btnNavSetting', 'navUserName'];
-                hideElements.forEach(id => { 
-                    let el = document.getElementById(id); 
-                    if (el) el.classList.add('hidden'); 
-                }); 
-
-                switchView('viewAdmin'); 
-                loadAdminDashboard();
-            };
-        }
-
-        function handleLoginSuccess(user) {
-            appUser = user; 
-            let bLogin = document.getElementById('btnNavLogin'); 
-            if (bLogin) bLogin.classList.add('hidden'); 
-            let bLogout = document.getElementById('btnLogout'); 
-            if (bLogout) bLogout.classList.remove('hidden'); 
-            let bManual = document.getElementById('btnNavManual'); 
-            if (bManual) bManual.classList.remove('hidden');
-            let bProfile = document.getElementById('btnNavProfile');
-            if (bProfile) bProfile.classList.remove('hidden');
-            
-            let nUser = document.getElementById('navUserName');
-            if (nUser) { 
-                nUser.innerText = `${user.displayName} (${getRoleTh(user.role, user.org)})`; 
-                nUser.classList.remove('hidden'); 
+            if (!badge) {
+                return; 
             }
-            
-            let btnExport = document.getElementById('btnExportReport');
-            if (btnExport) {
-                if (user.role === 'super_admin' || user.role === 'exec_ppho' || user.role === 'hospital_director' || user.role === 'hospital_admin' || user.role === 'provincial_admin' || user.role === 'provincial_audit') {
-                    btnExport.classList.remove('hidden');
-                } else {
-                    btnExport.classList.add('hidden');
+            if (count > 0) { 
+                badge.innerText = count; 
+                badge.classList.remove('hidden'); 
+            } else {
+                badge.classList.add('hidden'); 
+            }
+        }
+
+        function renderDynamicHealthForm() {
+            let elTS = document.getElementById('inputTimeSlot'); 
+            if (elTS) {
+                let optionsHtml = '<option value="">เลือกช่วงเวลา...</option>';
+                if (globalSettings.timeSlots) {
+                    globalSettings.timeSlots.forEach(t => {
+                        optionsHtml += `<option value="${t}">${t}</option>`;
+                    });
+                }
+                elTS.innerHTML = optionsHtml;
+            }
+
+            let elCR = document.getElementById('divCriticalRisks'); 
+            if (elCR) {
+                let risksHtml = '';
+                if (globalSettings.criticalRisks) {
+                    globalSettings.criticalRisks.forEach(r => {
+                        risksHtml += `<label class="flex items-center p-3 border border-red-200 bg-red-50 rounded-lg cursor-pointer"><input type="checkbox" name="criticalRiskItem" value="${r}" class="w-5 h-5 text-red-600 flex-shrink-0"><span class="ml-3 text-red-800 text-sm font-medium">${r}</span></label>`;
+                    });
+                }
+                elCR.innerHTML = risksHtml;
+            }
+
+            let setTS = document.getElementById('set_timeSlots'); 
+            if (setTS) {
+                if (globalSettings.timeSlots) {
+                    setTS.value = globalSettings.timeSlots.join(',');
                 }
             }
 
-            if (user.role === 'driver' || user.role === 'staff') {
-                let dName = document.getElementById('driverName'); 
-                if (dName) dName.innerText = user.displayName;
-
-                let dOrg = document.getElementById('driverOrg'); 
-                if (dOrg) {
-                    if (user.profile && user.profile.age) {
-                        dOrg.innerText = user.org + ` (อายุ ${user.profile.age} ปี)`;
-                    } else {
-                        dOrg.innerText = user.org;
-                    }
+            let setCR = document.getElementById('set_criticalRisks'); 
+            if (setCR) {
+                if (globalSettings.criticalRisks) {
+                    setCR.value = globalSettings.criticalRisks.join(',');
                 }
-                
-                let notice = document.getElementById('staffExemptNotice');
-                if (notice) { 
-                    if (user.role === 'staff') notice.classList.remove('hidden'); 
-                    else notice.classList.add('hidden'); 
-                }
+            }
 
-                const actionArea = document.getElementById('driverActionArea');
-                if (actionArea) {
-                    if (user.pendingEditReq) {
-                        actionArea.innerHTML = `
-                            <span class="text-xs text-orange-600 font-bold bg-orange-100 px-2 py-1 rounded mb-2 block border border-orange-200">⏳ รอ Admin อนุมัติข้อมูล</span>
-                            <button onclick="cancelDriverReq('${user.pendingEditReq.id}')" class="text-sm bg-red-50 hover:bg-red-100 text-red-600 px-3 py-1.5 rounded border border-red-200 transition shadow-sm font-medium">ยกเลิกคำขอแก้ไข</button>
-                        `;
-                    } else {
-                        actionArea.innerHTML = `<button onclick="switchView('viewEditDriverReq')" class="text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded border border-gray-300 transition shadow-sm font-medium">ขอแก้ไขข้อมูล</button>`;
-                        
-                        ['selfEditEmailGroup', 'selfEditNameGroup', 'selfEditOrgGroup'].forEach(id => {
-                            let el = document.getElementById(id);
-                            if(el) el.classList.add('hidden');
-                        });
-                        
-                        let elDriverOnly = document.getElementById('driverOnlyReqFields'); 
-                        if (elDriverOnly) elDriverOnly.classList.remove('hidden');
-
-                        if (user.profile) { 
-                            let elPhone = document.getElementById('reqPhoneForm'); 
-                            if (elPhone) elPhone.value = user.phone || ''; 
-                            let elEmail = document.getElementById('reqEmailForm'); 
-                            if (elEmail) elEmail.value = user.email || '';
-                            let elChr = document.getElementById('reqChronicForm'); 
-                            if (elChr) elChr.value = user.profile.chronicDisease || ''; 
-                            let elMed = document.getElementById('reqMedsForm'); 
-                            if (elMed) elMed.value = user.profile.regularMeds || ''; 
-                            let elSmo = document.getElementById('reqSmokingForm'); 
-                            if (elSmo) elSmo.value = user.profile.smoking || 'ไม่สูบ';
-                            let elAlc = document.getElementById('reqAlcoholForm'); 
-                            if (elAlc) elAlc.value = user.profile.alcohol || 'ไม่ดื่ม';
+            if (globalSettings.manualUrls) { 
+                let roles = ['driver','hospital_admin','hospital_director','exec_ppho','super_admin', 'provincial_admin'];
+                roles.forEach(r => { 
+                    let el = document.getElementById('set_url_' + r); 
+                    if (el) {
+                        if (globalSettings.manualUrls[r]) {
+                            el.value = globalSettings.manualUrls[r]; 
+                        } else {
+                            el.value = '';
                         }
                     }
-                }
-                switchView('viewDriver'); 
-                loadDriverHistory();
-            } else {
-                ['btnNavDash', 'btnNavUsers', 'btnNavEditReq'].forEach(id => {
-                    let el = document.getElementById(id);
-                    if(el) el.classList.remove('hidden');
-                });
-                
-                if (user.role === 'super_admin' || user.role === 'exec_ppho' || user.role === 'hospital_director' || user.role === 'provincial_admin' || user.role === 'provincial_audit') {
-                    let nAudit = document.getElementById('btnNavAudit'); 
-                    if (nAudit) nAudit.classList.remove('hidden');
-                }
-                
-                let btnAdd = document.getElementById('btnOpenAddUser'); 
-                let btnSet = document.getElementById('btnNavSetting');
-
-                if (user.role === 'super_admin') { 
-                    if (btnAdd) btnAdd.classList.remove('hidden'); 
-                    if (btnSet) btnSet.classList.remove('hidden'); 
-                } else if (user.role === 'hospital_admin' || user.role === 'provincial_admin') { 
-                    if (btnAdd) btnAdd.classList.remove('hidden'); 
-                    if (btnSet) btnSet.classList.add('hidden'); 
-                } else { 
-                    if (btnAdd) btnAdd.classList.add('hidden'); 
-                    if (btnSet) btnSet.classList.add('hidden'); 
-                }
-                
-                let orgFilter = document.getElementById('adminOrgFilter');
-                if (orgFilter) { 
-                    if (user.role === 'hospital_admin' || user.role === 'hospital_director') { 
-                        orgFilter.value = user.org; 
-                        orgFilter.disabled = true; 
-                    } else {
-                        orgFilter.disabled = false; 
-                    }
-                }
-                
-                let btnSubmitAdmin = document.getElementById('btnAdminSubmitCheck');
-                if (btnSubmitAdmin) { 
-                    if (user.role === 'super_admin' || user.role === 'hospital_admin' || user.role === 'provincial_admin') {
-                        btnSubmitAdmin.classList.remove('hidden'); 
-                    } else {
-                        btnSubmitAdmin.classList.add('hidden'); 
-                    }
-                }
-                
-                switchView('viewAdmin'); 
-                loadAdminDashboard();
+                }); 
             }
+
+            if (globalSettings.scoringCriteria) { 
+                const sc = globalSettings.scoringCriteria; 
+                let scFields = ['sc_tempHigh','sc_tempLow','sc_sysRed','sc_diaRed','sc_sysAmber','sc_diaAmber','sc_pulseMin','sc_pulseMax','sc_fatigueRed','sc_fatigueAmber','sc_sleepMin'];
+                scFields.forEach(id => { 
+                    let el = document.getElementById(id); 
+                    let key = id.replace('sc_', '');
+                    if (el && sc[key] !== undefined) {
+                        el.value = sc[key]; 
+                    }
+                }); 
+            }
+            
+            if (globalSettings.telegramConfig) {
+                const tg = globalSettings.telegramConfig;
+                let elEn = document.getElementById('tg_enabled'); 
+                if (elEn) {
+                    elEn.checked = tg.enabled;
+                }
+
+                let elBt = document.getElementById('tg_botToken'); 
+                if (elBt) {
+                    if (tg.botToken) {
+                        elBt.value = tg.botToken;
+                    } else {
+                        elBt.value = '';
+                    }
+                }
+
+                let elGl = document.getElementById('tg_globalChatId'); 
+                if (elGl) {
+                    if (tg.globalChatId) {
+                        elGl.value = tg.globalChatId;
+                    } else {
+                        elGl.value = '';
+                    }
+                }
+                
+                if (tg.orgChatIds) {
+                    let e1 = document.getElementById('tg_org_1'); 
+                    if (e1) {
+                        e1.value = tg.orgChatIds['สำนักงานสาธารณสุขจังหวัดนครนายก (สสจ.)'] || '';
+                    }
+                    
+                    let e2 = document.getElementById('tg_org_2'); 
+                    if (e2) {
+                        e2.value = tg.orgChatIds['โรงพยาบาลนครนายก'] || '';
+                    }
+                    
+                    let e3 = document.getElementById('tg_org_3'); 
+                    if (e3) {
+                        e3.value = tg.orgChatIds['โรงพยาบาลปากพลี'] || '';
+                    }
+                    
+                    let e4 = document.getElementById('tg_org_4'); 
+                    if (e4) {
+                        e4.value = tg.orgChatIds['โรงพยาบาลบ้านนา'] || '';
+                    }
+                    
+                    let e5 = document.getElementById('tg_org_5'); 
+                    if (e5) {
+                        e5.value = tg.orgChatIds['โรงพยาบาลองครักษ์'] || '';
+                    }
+                }
+            }
+        }
+
+        // ================= PERSONAL SETTINGS =================
+        function openPersonalSettings() {
+            if (!appUser) {
+                return;
+            }
+            
+            let elToggle = document.getElementById('userEmailNotif');
+            if (elToggle) {
+                if (appUser.emailNotif !== false) {
+                    elToggle.checked = true;
+                } else {
+                    elToggle.checked = false;
+                }
+            }
+            
+            let modal = document.getElementById('modalPersonalSettings');
+            if (modal) {
+                modal.classList.remove('hidden');
+            }
+        }
+
+        let fPersonal = document.getElementById('formPersonalSettings');
+        if (fPersonal) {
+            fPersonal.onsubmit = function(e) {
+                e.preventDefault();
+                const isEnabled = document.getElementById('userEmailNotif').checked;
+                
+                showLoader("กำลังบันทึกการตั้งค่า...");
+                api.run('updateEmailNotif', { isEnabled: isEnabled }).then(res => {
+                    hideLoader();
+                    if (res.ok) {
+                        if (appUser) {
+                            appUser.emailNotif = isEnabled;
+                        }
+                        Swal.fire('สำเร็จ', 'บันทึกการตั้งค่าส่วนตัวเรียบร้อยแล้ว', 'success');
+                        
+                        let modal = document.getElementById('modalPersonalSettings');
+                        if (modal) {
+                            modal.classList.add('hidden');
+                        }
+                    } else {
+                        Swal.fire('ข้อผิดพลาด', res.error, 'error');
+                    }
+                }).catch(err => {
+                    hideLoader();
+                    Swal.fire('ข้อผิดพลาด', err.message, 'error');
+                });
+            };
         }
 
         // ================= PASSENGER / OTP LOGIC =================
@@ -1340,7 +1028,9 @@
                     }
                     
                     let pinInput = document.getElementById('passengerPinInput');
-                    if (pinInput) pinInput.value = '';
+                    if (pinInput) {
+                        pinInput.value = '';
+                    }
                     
                     switchView('viewPassenger');
                 } else {
@@ -1359,7 +1049,9 @@
                 const driverId = document.getElementById('passengerDriverSelect').value;
                 const pin = document.getElementById('passengerPinInput').value;
                 
-                if (!driverId || !pin) return Swal.fire('แจ้งเตือน', 'กรุณาเลือกคนขับและกรอกรหัส PIN ให้ครบถ้วน', 'warning');
+                if (!driverId || !pin) {
+                    return Swal.fire('แจ้งเตือน', 'กรุณาเลือกคนขับและกรอกรหัส PIN ให้ครบถ้วน', 'warning');
+                }
                 
                 showLoader("กำลังตรวจสอบข้อมูลความพร้อม...");
                 api.run('verifyTempPin', { driverId: driverId, pin: pin }).then(res => {
@@ -1381,7 +1073,9 @@
                         }
                         
                         let reasonsHtml = 'ปกติ ไม่มีอาการผิดปกติ';
-                        if (d.reasons && d.reasons.length > 0) reasonsHtml = d.reasons.join(', ');
+                        if (d.reasons && d.reasons.length > 0) {
+                            reasonsHtml = d.reasons.join(', ');
+                        }
                         
                         Swal.fire({
                             title: 'ผลการประเมินล่าสุด',
@@ -1401,7 +1095,11 @@
                             confirmButtonText: 'ปิดหน้าต่าง',
                             confirmButtonColor: '#059669'
                         });
-                        document.getElementById('passengerPinInput').value = '';
+                        
+                        let pinInput = document.getElementById('passengerPinInput');
+                        if (pinInput) {
+                            pinInput.value = '';
+                        }
                     } else {
                         Swal.fire('ตรวจสอบไม่ผ่าน', res.error, 'error');
                     }
@@ -1413,7 +1111,10 @@
         }
         
         function requestDriverOTP() {
-            if (!appUser) return;
+            if (!appUser) {
+                return;
+            }
+            
             showLoader("กำลังสร้างรหัส OTP...");
             api.run('generateTempPin').then(res => {
                 hideLoader();
@@ -1439,6 +1140,133 @@
                 Swal.fire('ข้อผิดพลาด', err.message, 'error');
             });
         }
+
+        // ================= AUTHENTICATION =================
+        let btnNavLoginEl = document.getElementById('btnNavLogin');
+        if (btnNavLoginEl) { 
+            btnNavLoginEl.onclick = function() { 
+                let fLogin = document.getElementById('loginForm'); 
+                if (fLogin) {
+                    fLogin.reset(); 
+                }
+                switchView('viewLogin'); 
+            }; 
+        }
+        
+        let btnLogoutEl = document.getElementById('btnLogout');
+        if (btnLogoutEl) {
+            btnLogoutEl.onclick = function() {
+                localStorage.removeItem('dhr_session'); 
+                appUser = null; 
+                
+                let fLogin = document.getElementById('loginForm'); 
+                if (fLogin) {
+                    fLogin.reset();
+                }
+                
+                let fHealth = document.getElementById('healthForm'); 
+                if (fHealth) {
+                    fHealth.reset();
+                }
+                
+                let bLogout = document.getElementById('btnLogout'); 
+                if (bLogout) {
+                    bLogout.classList.add('hidden'); 
+                }
+                
+                let bLogin = document.getElementById('btnNavLogin'); 
+                if (bLogin) {
+                    bLogin.classList.remove('hidden'); 
+                }
+                
+                let bManual = document.getElementById('btnNavManual'); 
+                if (bManual) {
+                    bManual.classList.add('hidden');
+                }
+
+                let bProfile = document.getElementById('btnNavProfile');
+                if (bProfile) {
+                    bProfile.classList.add('hidden');
+                }
+                
+                let hideElements = ['btnNavDash', 'btnNavUsers', 'btnNavEditReq', 'btnNavAudit', 'btnNavSetting', 'navUserName'];
+                hideElements.forEach(id => { 
+                    let el = document.getElementById(id); 
+                    if (el) {
+                        el.classList.add('hidden'); 
+                    }
+                }); 
+
+                switchView('viewAdmin'); 
+                loadAdminDashboard();
+            };
+        }
+
+        let loginFormEl = document.getElementById('loginForm');
+        if (loginFormEl) {
+            loginFormEl.onsubmit = function(e) {
+                e.preventDefault(); 
+                let phone = document.getElementById('inputPhone').value; 
+                let pin = document.getElementById('inputPin').value;
+                
+                if (!phone || phone.length !== 10) {
+                    return Swal.fire('แจ้งเตือน', 'กรุณากรอกเบอร์โทรศัพท์ 10 หลัก', 'warning');
+                }
+                if (!pin || pin.length !== 6) {
+                    return Swal.fire('แจ้งเตือน', 'กรุณากรอกรหัส PIN 6 หลัก', 'warning');
+                }
+
+                showLoader("กำลังตรวจสอบข้อมูลและเข้าสู่ระบบ...");
+                
+                api.run('login', { phone: phone, pin: pin }).then(res => {
+                    if (res.ok) { 
+                        // 💡 เพิ่มการแจ้งเตือนเข้าสู่ระบบสำเร็จที่นี่
+                        Swal.fire({
+                            title: 'เข้าสู่ระบบสำเร็จ!',
+                            icon: 'success',
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
+
+                        localStorage.setItem('dhr_session', res.sessionToken); 
+                        showLoader("กำลังดึงข้อมูลส่วนบุคคล...");
+                        
+                        api.run('getInitialData').then(initRes => { 
+                            hideLoader();
+                            if (initRes.ok) { 
+                                globalSettings = initRes.settings; 
+                                renderDynamicHealthForm(); 
+                                updateEditReqBadge(initRes.pendingReqs); 
+                                updateUsersBadge(initRes.pendingUsers); 
+                                
+                                if (initRes.auditLogCount !== undefined) {
+                                    localStorage.setItem('backendAuditCount', initRes.auditLogCount);
+                                    let localCount = parseInt(localStorage.getItem('localAuditCount_' + res.user.phone) || '0');
+                                    let diff = initRes.auditLogCount - localCount;
+                                    
+                                    if (diff > 0) {
+                                        updateAuditBadge(diff);
+                                    } else {
+                                        updateAuditBadge(0);
+                                    }
+                                }
+                                handleLoginSuccess(initRes.currentUser);
+                            } 
+                        }).catch(err => { 
+                            hideLoader(); 
+                            Swal.fire('ข้อผิดพลาด', 'ดึงข้อมูลไม่สำเร็จ', 'error'); 
+                        });
+                    } else { 
+                        hideLoader(); 
+                        Swal.fire('ข้อมูลไม่ถูกต้อง', res.error, 'error'); 
+                    }
+                }).catch(err => { 
+                    hideLoader(); 
+                });
+                return false;
+            };
+        }
+
         function toggleRegFields() {
             const role = document.getElementById('regRole').value;
             const staffFields = document.getElementById('staffExtraFields');
@@ -1525,7 +1353,6 @@
                     }
                 }).catch(err => { 
                     hideLoader(); 
-                    Swal.fire('เกิดข้อผิดพลาด', err.message, 'error');
                 });
                 return false;
             };
@@ -4231,7 +4058,6 @@
             }
         }
         
-        // 💡 ฟังก์ชันใหม่: แคปภาพ Dashboard เป็นรูปภาพ A4
         function downloadDashboardImage() {
             showLoader("กำลังเตรียมรูปภาพ...");
             
