@@ -42,7 +42,7 @@
                 top: 0; 
                 width: 100%; 
                 background: white; 
-                padding: 20px;
+                padding: 20px; 
             } 
         }
         .no-scrollbar::-webkit-scrollbar { 
@@ -438,250 +438,212 @@
                 <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition shadow mt-4 text-lg">บันทึกผลการประเมิน</button>
              </form>
         </div>
-        <div id="modalHealthAnalysis" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
-        <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+
+        <div id="viewEditDriverReq" class="hidden w-full max-w-md bg-white rounded-xl shadow-lg p-6 mt-4 flex-grow">
             <div class="flex justify-between items-center border-b pb-3 mb-4">
-                <h3 class="text-xl font-bold text-gray-800">วิเคราะห์สุขภาพ (15 วันย้อนหลัง)</h3>
-                <button type="button" onclick="document.getElementById('modalHealthAnalysis').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">ปิด</button>
+                <h3 class="text-xl font-bold text-gray-800">ขอแก้ไขข้อมูลส่วนตัว</h3>
+                <button type="button" onclick="switchView('viewDriver')" class="text-gray-400 hover:text-gray-600">ปิด</button>
             </div>
-            <div id="healthAnalysisContent" class="space-y-4"></div>
-            <div class="mt-6 pt-4 border-t flex justify-end">
-                <button onclick="document.getElementById('modalHealthAnalysis').classList.add('hidden')" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-lg font-medium transition">ปิดหน้าต่าง</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="modalAdvice" class="fixed inset-0 bg-black bg-opacity-60 z-[9999] flex items-center justify-center hidden">
-        <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <div class="flex justify-between items-center border-b pb-3 mb-4">
-                <h3 class="text-lg font-bold text-gray-800">คำแนะนำปรับพฤติกรรมสุขภาพ</h3>
-                <button type="button" onclick="document.getElementById('modalAdvice').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">ปิด</button>
-            </div>
-            <div id="adviceInputSection">
-                <p class="text-sm text-gray-600 mb-4">กรุณาระบุน้ำหนักและส่วนสูง เพื่อให้ระบบประมวลผลคำแนะนำที่แม่นยำ</p>
-                <div class="grid grid-cols-2 gap-4 mb-4">
+            <form id="editReqForm" class="space-y-4">
+                <div class="bg-yellow-50 text-yellow-800 text-sm p-3 rounded-lg border border-yellow-200"><b>หมายเหตุ:</b> การแก้ไขจะถูกส่งให้ <b>ผู้ดูแลระดับสูง</b> เป็นผู้อนุมัติ</div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-1">อีเมล (ใหม่)</label><input type="email" id="reqEmailForm" class="w-full px-3 py-2 border rounded-lg bg-gray-50" placeholder="ระบุอีเมลใหม่ (ถ้ามี)"></div>
+                <div><label class="block text-sm font-medium text-gray-700 mb-1">เบอร์โทรศัพท์ใหม่</label><input type="tel" id="reqPhoneForm" maxlength="10" class="w-full px-3 py-2 border rounded-lg bg-gray-50" required></div>
+                <div id="driverOnlyReqFields">
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1">โรคประจำตัว (ใหม่)</label><input type="text" id="reqChronicForm" class="w-full px-3 py-2 border rounded-lg bg-gray-50" placeholder="ถ้าไม่มีให้ใส่ -"></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-1">ยาที่ใช้ประจำ (ใหม่)</label><input type="text" id="reqMedsForm" class="w-full px-3 py-2 border rounded-lg bg-gray-50" placeholder="ถ้าไม่มีให้ใส่ -"></div>
                     <div>
-                        <label class="block text-xs font-bold text-gray-700 mb-1">น้ำหนัก (กิโลกรัม)</label>
-                        <input type="number" id="advWeight" class="w-full border px-3 py-2 rounded focus:ring-blue-500" placeholder="เช่น 65">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">การสูบบุหรี่ (ใหม่)</label>
+                        <select id="reqSmokingForm" class="w-full px-3 py-2 border rounded-lg bg-gray-50">
+                            <option value="ไม่สูบ">ไม่สูบ</option>
+                            <option value="สูบเป็นครั้งคราว">สูบเป็นครั้งคราว</option>
+                            <option value="สูบเป็นประจำ">สูบเป็นประจำ</option>
+                        </select>
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-gray-700 mb-1">ส่วนสูง (เซนติเมตร)</label>
-                        <input type="number" id="advHeight" class="w-full border px-3 py-2 rounded focus:ring-blue-500" placeholder="เช่น 170">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">การดื่มแอลกอฮอล์ (ใหม่)</label>
+                        <select id="reqAlcoholForm" class="w-full px-3 py-2 border rounded-lg bg-gray-50">
+                            <option value="ไม่ดื่ม">ไม่ดื่ม</option>
+                            <option value="ดื่มสังสรรค์">ดื่มสังสรรค์บ้าง</option>
+                            <option value="ดื่มเป็นประจำ">ดื่มเป็นประจำ</option>
+                        </select>
                     </div>
                 </div>
-                <button onclick="calculateAdvice()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-lg transition shadow">วิเคราะห์ข้อมูล</button>
-            </div>
-            <div id="adviceResultSection" class="hidden mt-4 bg-blue-50 p-4 rounded-lg border border-blue-200 text-sm text-gray-800 leading-relaxed"></div>
-        </div>
-    </div>
-
-    <div id="modalPersonalSettings" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
-        <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
-            <h3 class="text-xl font-bold mb-4 text-gray-800">ตั้งค่าบัญชีส่วนตัว</h3>
-            <form id="formPersonalSettings" class="space-y-4">
-                <div class="bg-blue-50 p-4 rounded-lg border border-blue-100">
-                    <label class="flex items-center cursor-pointer">
-                        <input type="checkbox" id="userEmailNotif" class="w-5 h-5 text-blue-600 rounded focus:ring-blue-500">
-                        <span class="ml-2 text-gray-800 font-bold">รับการแจ้งเตือนผ่าน Email</span>
-                    </label>
-                    <p class="text-xs text-gray-500 mt-2 ml-7">หากเปิดใช้งาน ระบบจะส่งข้อความแจ้งเตือนต่างๆ (เช่น ผลการอนุมัติ หรือสถานะประเมิน) ไปยัง Email ที่ท่านได้ลงทะเบียนไว้</p>
-                </div>
-                <div class="flex justify-end gap-2 mt-4">
-                    <button type="button" onclick="document.getElementById('modalPersonalSettings').classList.add('hidden')" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded transition font-medium">ปิด</button>
-                    <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded shadow-sm transition font-medium">บันทึกการตั้งค่า</button>
-                </div>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg mt-4 shadow-md">ส่งคำขอแก้ไขข้อมูล</button>
             </form>
         </div>
-    </div>
 
-    <div id="modalExport" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
-        <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
-            <h3 class="text-xl font-bold mb-4 text-gray-800 flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" /></svg>
-                ส่งออกรายงาน (Excel / CSV)
-            </h3>
-            <p class="text-sm text-gray-600 mb-4">ระบบจะทำการดึงข้อมูลประวัติการประเมินสุขภาพตามช่วงวันที่กำหนด เพื่อนำไปใช้งานต่อในโปรแกรม Excel</p>
-            <form id="formExport" class="space-y-4">
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-bold text-gray-700 mb-1">ตั้งแต่วันที่</label>
-                        <input type="date" id="exportStartDate" class="w-full px-3 py-2 border rounded-lg focus:ring-green-500" required>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-bold text-gray-700 mb-1">ถึงวันที่</label>
-                        <input type="date" id="exportEndDate" class="w-full px-3 py-2 border rounded-lg focus:ring-green-500" required>
-                    </div>
-                </div>
-                <div class="flex justify-end gap-2 mt-4 pt-4 border-t">
-                    <button type="button" onclick="document.getElementById('modalExport').classList.add('hidden')" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded transition font-medium">ยกเลิก</button>
-                    <button type="submit" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded shadow-sm transition font-medium flex items-center gap-1">ดาวน์โหลด</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div id="modalAddUser" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
-        <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <h3 class="text-xl font-bold mb-4">เพิ่มผู้ใช้งาน</h3>
-            <form id="formAddUser" class="space-y-3">
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-sm mb-1">ชื่อ</label>
-                        <input type="text" id="addFirstName" class="w-full border px-3 py-2 rounded" required>
-                    </div>
-                    <div>
-                        <label class="block text-sm mb-1">นามสกุล</label>
-                        <input type="text" id="addLastName" class="w-full border px-3 py-2 rounded" required>
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-sm mb-1">เบอร์โทรศัพท์</label>
-                    <input type="tel" id="addPhone" maxlength="10" class="w-full border px-3 py-2 rounded" required>
-                </div>
-                <div>
-                    <label class="block text-sm mb-1 text-blue-700 font-bold" id="labelAddEmail">Email</label>
-                    <input type="email" id="addEmail" class="w-full border px-3 py-2 rounded">
-                </div>
-                <div>
-                    <label class="block text-sm mb-1">หน่วยงาน</label>
-                    <select id="addOrg" class="w-full border px-3 py-2 rounded" required>
-                        <option value="สำนักงานสาธารณสุขจังหวัดนครนายก (สสจ.)">สำนักงานสาธารณสุขจังหวัดนครนายก (สสจ.)</option>
-                        <option value="โรงพยาบาลนครนายก">โรงพยาบาลนครนายก</option>
-                        <option value="โรงพยาบาลปากพลี">โรงพยาบาลปากพลี</option>
-                        <option value="โรงพยาบาลบ้านนา">โรงพยาบาลบ้านนา</option>
-                        <option value="โรงพยาบาลองครักษ์">โรงพยาบาลองครักษ์</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm mb-1">Role (สิทธิ์เข้าถึง)</label>
-                    <select id="addRole" class="w-full border px-3 py-2 rounded bg-blue-50" required onchange="toggleAddDriverFields()">
-                        <option value="provincial_admin" id="optAddProvAdmin">Admin จังหวัด</option>
-                        <option value="provincial_audit" id="optAddProvAudit">Audit จังหวัด</option>
-                        <option value="exec_ppho" id="optAddExec">ผู้บริหาร สสจ.</option>
-                        <option value="super_admin" id="optAddSuper">Super Admin</option>
-                        <option value="hospital_director" id="optAddDir">ผอ.รพ.</option>
-                        <option value="hospital_admin" id="optAddAdmin">Admin รพ. / สสจ.</option>
-                        <option value="driver" id="optAddDriver">พนักงานขับรถประจำ</option>
-                        <option value="staff" id="optAddStaff">เจ้าหน้าที่ (ขับรถยามจำเป็น)</option>
-                    </select>
-                </div>
-                <div id="addDriverExtraFields" class="hidden space-y-3 border-t pt-3 mt-2 border-gray-200">
-                    <div>
-                        <label class="block text-sm mb-1 text-blue-800 font-bold">ข้อมูลสุขภาพ (สำหรับผู้ขับขี่)</label>
-                    </div>
-                    <div>
-                        <label class="block text-sm mb-1">วัน/เดือน/ปีเกิด</label>
-                        <input type="date" id="addDob" class="w-full px-3 py-2 border rounded">
-                    </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-sm mb-1">โรคประจำตัว</label>
-                            <input type="text" id="addChronic" class="w-full border px-3 py-2 rounded" placeholder="-">
-                        </div>
-                        <div>
-                            <label class="block text-sm mb-1">ยาที่ใช้ประจำ</label>
-                            <input type="text" id="addMeds" class="w-full border px-3 py-2 rounded" placeholder="-">
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-sm mb-1">การสูบบุหรี่</label>
-                            <select id="addSmoking" class="w-full border px-3 py-2 rounded">
-                                <option value="ไม่สูบ">ไม่สูบ</option>
-                                <option value="สูบเป็นครั้งคราว">สูบเป็นครั้งคราว</option>
-                                <option value="สูบเป็นประจำ">สูบเป็นประจำ</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm mb-1">การดื่มแอลกอฮอล์</label>
-                            <select id="addAlcohol" class="w-full border px-3 py-2 rounded">
-                                <option value="ไม่ดื่ม">ไม่ดื่ม</option>
-                                <option value="ดื่มสังสรรค์">ดื่มสังสรรค์บ้าง</option>
-                                <option value="ดื่มเป็นประจำ">ดื่มเป็นประจำ</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                <div class="flex justify-end gap-2 mt-4">
-                    <button type="button" onclick="document.getElementById('modalAddUser').classList.add('hidden')" class="px-4 py-2 bg-gray-200 rounded">ยกเลิก</button>
-                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded">บันทึกเพิ่มผู้ใช้</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div id="modalEditUser" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
-        <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
-            <h3 class="text-xl font-bold mb-4">แก้ไขข้อมูลผู้ใช้งาน</h3>
-             <form id="formEditUser" class="space-y-3">
-                <input type="hidden" id="editOldPhone">
-                <input type="hidden" id="editOldName">
-                <input type="hidden" id="editOldOrg">
-                <input type="hidden" id="editUserId">
-                
-                <div id="editSelfAlert" class="hidden bg-yellow-50 text-yellow-800 text-xs p-2 rounded border border-yellow-200 mb-2">
-                    <b>หมายเหตุ:</b> การแก้ไขชื่อ เบอร์โทร หรือหน่วยงาน จะต้องรอการอนุมัติ ส่วน Email จะมีผลทันที
-                </div>
-                <div id="editOtherAlert" class="hidden bg-blue-50 text-blue-800 text-xs p-2 rounded border border-blue-200 mb-2">
-                    <b>จำกัดสิทธิ์:</b> คุณสามารถแก้ไขได้เฉพาะข้อมูล Email เท่านั้น
-                </div>
-                
-                <div>
-                    <label class="block text-sm mb-1">ชื่อ-สกุล</label>
-                    <input type="text" id="editName" class="w-full border px-3 py-2 rounded font-medium" required>
-                </div>
-                <div>
-                    <label class="block text-sm mb-1">เบอร์โทรศัพท์</label>
-                    <input type="tel" id="editPhone" maxlength="10" class="w-full border px-3 py-2 rounded font-mono" required>
-                </div>
-                <div>
-                    <label class="block text-sm mb-1 text-blue-700 font-bold">Email</label>
-                    <input type="email" id="editEmail" class="w-full border px-3 py-2 rounded focus:ring-blue-500">
-                </div>
-                <div>
-                    <label class="block text-sm mb-1">หน่วยงาน</label>
-                     <select id="editOrg" class="w-full border px-3 py-2 rounded" required>
-                        <option value="สำนักงานสาธารณสุขจังหวัดนครนายก (สสจ.)">สำนักงานสาธารณสุขจังหวัดนครนายก (สสจ.)</option>
-                        <option value="โรงพยาบาลนครนายก">โรงพยาบาลนครนายก</option>
-                        <option value="โรงพยาบาลปากพลี">โรงพยาบาลปากพลี</option>
-                        <option value="โรงพยาบาลบ้านนา">โรงพยาบาลบ้านนา</option>
-                        <option value="โรงพยาบาลองครักษ์">โรงพยาบาลองครักษ์</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm mb-1">Role</label>
-                    <select id="editRole" class="w-full border px-3 py-2 rounded bg-blue-50" required>
-                        <option value="provincial_admin" id="optEditProvAdmin">Admin จังหวัด</option>
-                        <option value="provincial_audit" id="optEditProvAudit">Audit จังหวัด</option>
-                        <option value="exec_ppho" id="optEditExec">ผู้บริหาร สสจ.</option>
-                        <option value="hospital_director" id="optEditDir">ผอ.รพ.</option>
-                        <option value="hospital_admin" id="optEditAdmin">Admin รพ. / สสจ.</option>
-                        <option value="driver" id="optEditDriver">พนักงานขับรถประจำ</option>
-                        <option value="staff" id="optEditStaff">เจ้าหน้าที่ (ขับรถจำเป็น)</option>
-                        <option value="super_admin" id="optEditSuper">Super Admin</option>
-                    </select>
-                </div>
-                <div class="flex justify-end gap-2 mt-4">
-                    <button type="button" onclick="document.getElementById('modalEditUser').classList.add('hidden')" class="px-4 py-2 bg-gray-200 rounded">ยกเลิก</button>
-                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded shadow-sm">บันทึกข้อมูล</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div id="modalViewProfile" class="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center hidden">
-        <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <div class="flex justify-between items-center border-b pb-3 mb-4">
-                <h3 class="text-xl font-bold text-gray-800">ข้อมูลส่วนบุคคล</h3>
-                <button type="button" onclick="document.getElementById('modalViewProfile').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">ปิด</button>
+        <div id="viewAdminEditReq" class="hidden w-full bg-white rounded-xl shadow-lg p-6 mt-4 flex-grow">
+            <h3 class="text-2xl font-bold text-gray-800 mb-6">รายการขอแก้ไขข้อมูลส่วนตัว</h3>
+            <div class="flex flex-col md:flex-row gap-2 mb-4">
+                <input type="text" id="filterReqSearch" placeholder="ค้นหาชื่อ, เบอร์โทร..." class="border rounded-lg px-3 py-2 text-sm w-full md:w-1/3 focus:ring-blue-500" oninput="applyReqFilter()">
+                <select id="filterReqStatus" class="border rounded-lg px-3 py-2 text-sm w-full md:w-1/4 focus:ring-blue-500" onchange="applyReqFilter()">
+                    <option value="ALL">ทุกสถานะ</option>
+                    <option value="PENDING">รออนุมัติ</option>
+                    <option value="APPROVED">อนุมัติแล้ว</option>
+                    <option value="REJECTED">ไม่อนุมัติ</option>
+                    <option value="CANCELLED">ยกเลิกแล้ว</option>
+                </select>
             </div>
-            <div id="viewProfileContent" class="space-y-4"></div>
-            <div class="mt-6 pt-4 border-t flex justify-end">
-                <button onclick="document.getElementById('modalViewProfile').classList.add('hidden')" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-lg font-medium transition">ปิดหน้าต่าง</button>
+            <div class="overflow-x-auto border rounded-lg shadow-sm">
+                <table class="w-full text-sm text-left">
+                    <thead class="bg-gray-100 text-gray-700 border-b-2 border-gray-300">
+                        <tr><th class="px-4 py-3 w-16 text-center">ลำดับที่</th><th class="px-4 py-3">วันที่ขอ</th><th class="px-4 py-3">ผู้ขอแก้ไข / หน่วยงาน</th><th class="px-4 py-3">ข้อมูลติดต่อ (เบอร์ / อีเมล)</th><th class="px-4 py-3">สุขภาพ (โรค / ยา)</th><th class="px-4 py-3">พฤติกรรม (บุหรี่ / สุรา)</th><th class="px-4 py-3">สถานะ</th><th class="px-4 py-3 text-center">จัดการ</th></tr>
+                    </thead>
+                    <tbody id="adminEditReqList" class="divide-y"></tbody>
+                </table>
             </div>
         </div>
-    </div>
 
+        <div id="viewUserManagement" class="hidden w-full bg-white rounded-xl shadow-lg p-6 mt-4 flex-grow">
+            <div class="flex justify-between items-center border-b pb-4 mb-6">
+                <div><h3 class="text-2xl font-bold text-gray-800">จัดการผู้ใช้งานในระบบ</h3></div>
+                <div class="flex gap-2">
+                    <button id="btnOpenAddUser" class="hidden bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg text-sm transition shadow">+ เพิ่มผู้ใช้ใหม่</button>
+                    <button onclick="loadAdminUsers()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg transition border text-sm">รีเฟรช</button>
+                </div>
+            </div>
+            <div class="flex flex-col md:flex-row gap-2 mb-4">
+                <input type="text" id="filterUserSearch" placeholder="ค้นหาชื่อ, เบอร์โทร..." class="border rounded-lg px-3 py-2 text-sm w-full md:w-1/3 focus:ring-blue-500" oninput="applyUserFilter()">
+                <select id="filterUserRole" class="border rounded-lg px-3 py-2 text-sm w-full md:w-1/4 focus:ring-blue-500" onchange="applyUserFilter()">
+                    <option value="ALL">ทุกตำแหน่ง</option>
+                    <option value="provincial_admin">Admin จังหวัด</option>
+                    <option value="provincial_audit">Audit จังหวัด</option>
+                    <option value="hospital_admin">Admin รพ. / สสจ.</option>
+                    <option value="hospital_director">ผอ.รพ.</option>
+                    <option value="exec_ppho">ผู้บริหาร สสจ.</option>
+                    <option value="super_admin">Super Admin</option>
+                    <option value="driver">พนักงานขับรถประจำ</option>
+                    <option value="staff">เจ้าหน้าที่ (ขับรถจำเป็น)</option>
+                </select>
+                <select id="filterUserStatus" class="border rounded-lg px-3 py-2 text-sm w-full md:w-1/4 focus:ring-blue-500" onchange="applyUserFilter()">
+                    <option value="ALL">ทุกสถานะ</option>
+                    <option value="PENDING">รออนุมัติ (PENDING)</option>
+                    <option value="APPROVED">อนุมัติแล้ว (APPROVED)</option>
+                    <option value="REJECTED">ไม่อนุมัติ (REJECTED)</option>
+                    <option value="SUSPENDED">ระงับใช้งาน (SUSPENDED)</option>
+                </select>
+            </div>
+            <div class="overflow-x-auto rounded-lg">
+                <table class="w-full text-sm text-left shadow-sm border">
+                    <thead class="bg-gray-100 text-gray-700 border-b-2 border-gray-300">
+                        <tr><th class="px-4 py-3 w-16 text-center">ลำดับที่</th><th class="px-4 py-3">ชื่อ-สกุล</th><th class="px-4 py-3">เบอร์โทรศัพท์ / รหัส PIN</th><th class="px-4 py-3">Email</th><th class="px-4 py-3">สิทธิ์ระดับ</th><th class="px-4 py-3">สถานะ</th><th class="px-4 py-3 text-center">จัดการ</th></tr>
+                    </thead>
+                    <tbody id="adminUserList" class="divide-y bg-white"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="viewAuditLog" class="hidden w-full bg-white rounded-xl shadow-lg p-6 mt-4 flex-grow">
+            <div class="flex justify-between items-center border-b pb-4 mb-6">
+                <div>
+                    <h3 class="text-2xl font-bold text-gray-800">ประวัติการใช้งานระบบ (Audit Log)</h3>
+                    <p class="text-sm text-gray-500">บันทึกการดำเนินการที่สำคัญในระบบ (อ่านอย่างเดียว)</p>
+                </div>
+                <button onclick="loadAuditLogs()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg border text-sm transition">รีเฟรช</button>
+            </div>
+            <div class="flex flex-col md:flex-row gap-2 mb-4">
+                <input type="text" id="filterLogSearch" placeholder="ค้นหาผู้ดำเนินการ, เป้าหมาย..." class="border rounded-lg px-3 py-2 text-sm w-full md:w-1/3 focus:ring-blue-500" oninput="applyLogFilter()">
+                <select id="filterLogAction" class="border rounded-lg px-3 py-2 text-sm w-full md:w-1/4 focus:ring-blue-500" onchange="applyLogFilter()">
+                    <option value="ALL">ทุกการกระทำ</option>
+                    <option value="LOGIN_SUCCESS">เข้าสู่ระบบสำเร็จ</option>
+                    <option value="SUBMIT_HEALTH_CHECK">ส่งแบบประเมินสุขภาพ</option>
+                    <option value="REGISTER_USER">สมัครสมาชิกใหม่</option>
+                    <option value="ADD_USER">เพิ่มผู้ใช้งานระบบ</option>
+                    <option value="UPDATE_USER_STATUS">ปรับเปลี่ยนสถานะ</option>
+                    <option value="EDIT_USER">แก้ไขข้อมูลผู้ใช้</option>
+                    <option value="APPROVE_EDIT_REQUEST">อนุมัติแก้ไขข้อมูลส่วนตัว</option>
+                    <option value="REJECT_EDIT_REQUEST">ไม่อนุมัติคำขอแก้ไข</option>
+                    <option value="VIEW_PERSONAL_DATA">เปิดดูข้อมูลส่วนบุคคล</option>
+                    <option value="DELETE_USER">ลบผู้ใช้งาน</option>
+                    <option value="UPDATE_SETTINGS">แก้ไขตั้งค่าระบบ</option>
+                    <option value="CLEAR_DATABASE">ล้างฐานข้อมูลระบบ</option>
+                    <option value="SEED_ADMINS">นำเข้าผู้ดูแลระบบ</option>
+                    <option value="EXPORT_REPORT">ส่งออกรายงาน</option>
+                    <option value="REPAIR_DATABASE">ซ่อมแซมฐานข้อมูล</option>
+                </select>
+            </div>
+            <div class="overflow-x-auto border rounded-lg shadow-sm max-h-[600px] overflow-y-auto">
+                <table class="w-full text-sm text-left">
+                    <thead class="bg-gray-100 text-gray-700 sticky top-0 border-b-2 border-gray-300">
+                        <tr><th class="px-4 py-3 w-16 text-center">ลำดับที่</th><th class="px-4 py-3">วัน/เวลา</th><th class="px-4 py-3">ผู้ดำเนินการ</th><th class="px-4 py-3">ตำแหน่ง</th><th class="px-4 py-3">การกระทำ (Action)</th><th class="px-4 py-3">เป้าหมาย/ข้อมูล</th><th class="px-4 py-3">หน่วยงาน</th><th class="px-4 py-3">ผลลัพธ์</th></tr>
+                    </thead>
+                    <tbody id="auditLogList" class="divide-y bg-white"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="viewSettings" class="hidden w-full bg-white rounded-xl shadow-lg p-6 mt-4 flex-grow">
+            <h3 class="text-2xl font-bold text-gray-800 mb-6 border-b pb-4">ตั้งค่าระบบ</h3>
+            <form id="formSystemSettings" class="space-y-6 max-w-4xl">
+                <div class="bg-gray-50 p-4 rounded-lg border">
+                    <h4 class="font-bold text-blue-800 mb-4 border-b pb-2">ตั้งค่าแบบฟอร์มประเมิน</h4>
+                    <div class="mb-4">
+                        <label class="block text-sm font-bold text-gray-700 mb-1">ช่วงเวลาประเมิน (Time Slots)</label>
+                        <p class="text-xs text-gray-500 mb-2">คั่นด้วยเครื่องหมายจุลภาค (,)</p>
+                        <textarea id="set_timeSlots" rows="2" class="w-full border rounded-lg px-3 py-2 focus:ring-blue-500" required></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">หัวข้อความเสี่ยงร้ายแรง (RED)</label>
+                        <p class="text-xs text-gray-500 mb-2">คั่นด้วยเครื่องหมายจุลภาค (,)</p>
+                        <textarea id="set_criticalRisks" rows="3" class="w-full border rounded-lg px-3 py-2 focus:ring-blue-500" required></textarea>
+                    </div>
+                </div>
+                <div class="bg-yellow-50 p-5 rounded-lg border border-yellow-200 shadow-sm">
+                    <h4 class="font-bold text-yellow-800 mb-4 border-b border-yellow-300 pb-2">ตั้งค่าเกณฑ์ประเมินสุขภาพ (Scoring Criteria)</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">อุณหภูมิ มีไข้สูง (RED) >=</label><input type="number" step="0.1" id="sc_tempHigh" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
+                        <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">อุณหภูมิ มีไข้ต่ำ (AMBER) >=</label><input type="number" step="0.1" id="sc_tempLow" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
+                        <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">ความดัน Sys (RED) >=</label><input type="number" id="sc_sysRed" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
+                        <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">ความดัน Dia (RED) >=</label><input type="number" id="sc_diaRed" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
+                        <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">ความดัน Sys (AMBER) >=</label><input type="number" id="sc_sysAmber" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
+                        <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">ความดัน Dia (AMBER) >=</label><input type="number" id="sc_diaAmber" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
+                        <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">ชีพจรต่ำสุด (Min) <</label><input type="number" id="sc_pulseMin" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
+                        <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">ชีพจรสูงสุด (Max) ></label><input type="number" id="sc_pulseMax" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
+                        <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">ระดับอ่อนล้า (RED) >=</label><input type="number" id="sc_fatigueRed" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
+                        <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">ระดับอ่อนล้า (AMBER) >=</label><input type="number" id="sc_fatigueAmber" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
+                        <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">ชั่วโมงการนอนน้อยกว่า <</label><input type="number" step="0.5" id="sc_sleepMin" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
+                    </div>
+                </div>
+                <div class="bg-indigo-50 p-4 rounded-lg border border-indigo-100">
+                    <h4 class="font-bold text-indigo-800 mb-4 border-b border-indigo-200 pb-2">ตั้งค่าลิงก์คู่มือการใช้งาน (Manual URLs)</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div><label class="block text-sm font-medium mb-1">พนักงานขับรถ / เจ้าหน้าที่</label><input type="url" id="set_url_driver" class="w-full border rounded px-3 py-2 text-sm"></div>
+                        <div><label class="block text-sm font-medium mb-1">Admin รพ. / สสจ.</label><input type="url" id="set_url_hospital_admin" class="w-full border rounded px-3 py-2 text-sm"></div>
+                        <div><label class="block text-sm font-medium mb-1">ผอ. โรงพยาบาล</label><input type="url" id="set_url_hospital_director" class="w-full border rounded px-3 py-2 text-sm"></div>
+                        <div><label class="block text-sm font-medium mb-1">ผู้บริหาร สสจ.</label><input type="url" id="set_url_exec_ppho" class="w-full border rounded px-3 py-2 text-sm"></div>
+                        <div><label class="block text-sm font-medium mb-1">Admin/Audit จังหวัด</label><input type="url" id="set_url_provincial_admin" class="w-full border rounded px-3 py-2 text-sm"></div>
+                        <div class="md:col-span-2"><label class="block text-sm font-medium mb-1">Super Admin</label><input type="url" id="set_url_super_admin" class="w-full border rounded px-3 py-2 text-sm"></div>
+                    </div>
+                </div>
+                <div class="bg-blue-50 p-5 rounded-lg border border-blue-200 shadow-sm mt-6">
+                    <h4 class="font-bold text-blue-800 mb-4 border-b border-blue-300 pb-2 flex items-center gap-2">ตั้งค่าการแจ้งเตือนผ่าน Telegram (แยกตามหน่วยงาน)</h4>
+                    <div class="mb-4">
+                        <label class="flex items-center cursor-pointer"><input type="checkbox" id="tg_enabled" class="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"><span class="ml-2 text-gray-800 font-bold">เปิดใช้งานระบบแจ้งเตือน Telegram</span></label>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="md:col-span-2"><label class="block text-sm font-bold text-gray-700 mb-1">Bot Token</label><input type="text" id="tg_botToken" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-blue-500"></div>
+                        <div class="md:col-span-2"><label class="block text-sm font-bold text-gray-700 mb-1">Global Chat ID</label><input type="text" id="tg_globalChatId" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-blue-500"></div>
+                        <div class="md:col-span-2 mt-2 border-t border-blue-200 pt-4"><p class="text-sm font-bold text-gray-800 mb-2">Chat ID แยกตามหน่วยงาน</p></div>
+                        <div><label class="block text-xs font-medium text-gray-700 mb-1">สสจ. นครนายก</label><input type="text" id="tg_org_1" class="w-full border rounded px-3 py-1.5 text-sm"></div>
+                        <div><label class="block text-xs font-medium text-gray-700 mb-1">รพ. นครนายก</label><input type="text" id="tg_org_2" class="w-full border rounded px-3 py-1.5 text-sm"></div>
+                        <div><label class="block text-xs font-medium text-gray-700 mb-1">รพ. ปากพลี</label><input type="text" id="tg_org_3" class="w-full border rounded px-3 py-1.5 text-sm"></div>
+                        <div><label class="block text-xs font-medium text-gray-700 mb-1">รพ. บ้านนา</label><input type="text" id="tg_org_4" class="w-full border rounded px-3 py-1.5 text-sm"></div>
+                        <div><label class="block text-xs font-medium text-gray-700 mb-1">รพ. องครักษ์</label><input type="text" id="tg_org_5" class="w-full border rounded px-3 py-1.5 text-sm"></div>
+                    </div>
+                </div>
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-8 py-3 rounded-lg transition shadow w-full md:w-auto mt-6">บันทึกการตั้งค่าระบบ</button>
+            </form>
+            <div class="bg-red-50 p-5 rounded-lg border border-red-200 mt-10 max-w-3xl">
+                <h4 class="font-bold text-red-800 mb-2 border-b border-red-200 pb-2 flex items-center gap-2">เครื่องมือสำหรับนักพัฒนา (Developer Tools)</h4>
+                <div class="flex flex-col md:flex-row gap-2">
+                    <button type="button" onclick="seedInitialAdmins()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-2.5 rounded-lg transition shadow text-sm">นำเข้าผู้ดูแลระบบเริ่มต้น</button>
+                    <button type="button" onclick="generateMockData()" class="bg-green-600 hover:bg-green-700 text-white font-bold px-6 py-2.5 rounded-lg transition shadow text-sm">สร้างข้อมูลทดสอบ (25 รายการ)</button>
+                    <button type="button" onclick="clearDatabaseConfirm()" class="bg-gray-800 hover:bg-gray-900 text-white font-bold px-6 py-2.5 rounded-lg transition shadow text-sm">⚠️ ล้างฐานข้อมูล</button>
+                    <button type="button" onclick="repairDatabaseConfirm()" class="bg-orange-500 hover:bg-orange-600 text-white font-bold px-6 py-2.5 rounded-lg transition shadow text-sm">🔧 ซ่อมแซม/จัดเรียงฐานข้อมูล</button>
+                </div>
+            </div>
+        </div>
+    </main>
     <script>
         // 🚀 อัปเดตลิงก์ API ล่าสุดที่คุณเอิร์ทส่งมา
         const API_URL = "https://script.google.com/macros/s/AKfycbxnURSmrkk7KcMX9-ZLaX8FxG7L2shTkxaaC5QatqSohIXPvG7pFX7Ote3UKnV_Xhrr/exec"; 
@@ -1381,9 +1343,10 @@
                                 updateEditReqBadge(initRes.pendingReqs); 
                                 updateUsersBadge(initRes.pendingUsers); 
                                 
+                                // 💡 แก้ไขบัคเงียบ: ใช้ตัวแปร initRes.currentUser.phone แทน res.user.phone ป้องกัน undefined
                                 if (initRes.auditLogCount !== undefined) {
                                     localStorage.setItem('backendAuditCount', initRes.auditLogCount);
-                                    let localCount = parseInt(localStorage.getItem('localAuditCount_' + res.user.phone) || '0');
+                                    let localCount = parseInt(localStorage.getItem('localAuditCount_' + initRes.currentUser.phone) || '0');
                                     let diff = initRes.auditLogCount - localCount;
                                     
                                     if (diff > 0) {
@@ -4179,3 +4142,7 @@
     </script>
 </body>
 </html>
+
+    <footer class="w-full bg-gray-100 text-center text-xs text-gray-500 py-4 border-t mt-auto">
+        พัฒนาและดูแลระบบโดย กลุ่มงานสุขภาพดิจิทัล สำนักงานสาธารณสุขจังหวัดนครนายก
+    </footer>
