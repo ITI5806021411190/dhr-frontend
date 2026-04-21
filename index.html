@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -31,7 +32,9 @@
             100% { transform: rotate(360deg); } 
         }
         @media print { 
-            body > *:not(.print-only) { display: none !important; } 
+            body > *:not(.print-only) { 
+                display: none !important; 
+            } 
             .print-only { 
                 display: block !important; 
                 position: absolute; 
@@ -43,15 +46,20 @@
             } 
         }
         /* ซ่อน Scrollbar สำหรับเมนูแนวนอน */
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .no-scrollbar::-webkit-scrollbar { 
+            display: none; 
+        }
+        .no-scrollbar { 
+            -ms-overflow-style: none; 
+            scrollbar-width: none; 
+        }
         
-        /* 💡 กำหนดขนาดของ A4 แนวนอน เวลาเตรียมถ่ายรูป */
+        /* 💡 กำหนดขนาดของ A4 แนวนอน เวลาเตรียมถ่ายรูประบบ Dashboard */
         .a4-wrapper {
-            width: 1123px; /* ความกว้าง A4 แนวนอน 96DPI */
-            min-height: 794px; /* ความสูง A4 แนวนอน 96DPI */
+            width: 1123px !important; 
+            min-height: 794px !important; 
             padding: 20px;
-            background-color: #f3f4f6; /* สีพื้นหลังเหมือน body */
+            background-color: #f3f4f6; 
             margin: 0 auto;
         }
     </style>
@@ -106,6 +114,7 @@
                     <h3 class="text-2xl font-bold text-gray-800" id="dashTitle">ภาพรวมความพร้อมประจำวัน</h3>
                     <p class="text-sm text-gray-500 mt-1">ข้อมูลวันที่: <span id="adminDateNow" class="font-medium text-gray-700"></span></p>
                 </div>
+                
                 <div class="flex flex-wrap items-center gap-2 w-full md:w-auto" id="dashboardControls">
                     
                     <button onclick="downloadDashboardImage()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-lg text-sm transition shadow-sm mr-2 flex items-center gap-1 font-bold">
@@ -116,6 +125,7 @@
                     <button id="btnAdminSubmitCheck" onclick="openAdminSubmitCheck()" class="hidden bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-lg text-sm transition shadow-sm mr-2 flex items-center gap-1">
                         ประเมินแทนผู้ขับขี่
                     </button>
+                    
                     <button id="btnExportReport" onclick="document.getElementById('modalExport').classList.remove('hidden')" class="hidden bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg text-sm transition shadow-sm flex items-center gap-1">
                         ส่งออกรายงาน
                     </button>
@@ -991,8 +1001,161 @@
             </div>
         </div>
     </div>
+    <div id="modalExport" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
+            <h3 class="text-xl font-bold mb-4 text-gray-800 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" /></svg>
+                ส่งออกรายงาน (Excel / CSV)
+            </h3>
+            <p class="text-sm text-gray-600 mb-4">ระบบจะทำการดึงข้อมูลประวัติการประเมินสุขภาพตามช่วงวันที่กำหนด เพื่อนำไปใช้งานต่อในโปรแกรม Excel</p>
+            <form id="formExport" class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">ตั้งแต่วันที่</label>
+                        <input type="date" id="exportStartDate" class="w-full px-3 py-2 border rounded-lg focus:ring-green-500" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">ถึงวันที่</label>
+                        <input type="date" id="exportEndDate" class="w-full px-3 py-2 border rounded-lg focus:ring-green-500" required>
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2 mt-4 pt-4 border-t">
+                    <button type="button" onclick="document.getElementById('modalExport').classList.add('hidden')" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded transition font-medium">ยกเลิก</button>
+                    <button type="submit" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded shadow-sm transition font-medium flex items-center gap-1">
+                        ดาวน์โหลด
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="modalAddUser" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <h3 class="text-xl font-bold mb-4">เพิ่มผู้ใช้งาน</h3>
+            <form id="formAddUser" class="space-y-3">
+                <div class="grid grid-cols-2 gap-3">
+                    <div><label class="block text-sm mb-1">ชื่อ</label><input type="text" id="addFirstName" class="w-full border px-3 py-2 rounded" required></div>
+                    <div><label class="block text-sm mb-1">นามสกุล</label><input type="text" id="addLastName" class="w-full border px-3 py-2 rounded" required></div>
+                </div>
+                <div><label class="block text-sm mb-1">เบอร์โทรศัพท์</label><input type="tel" id="addPhone" maxlength="10" class="w-full border px-3 py-2 rounded" required></div>
+                <div><label class="block text-sm mb-1 text-blue-700 font-bold" id="labelAddEmail">Email</label><input type="email" id="addEmail" class="w-full border px-3 py-2 rounded"></div>
+                <div>
+                    <label class="block text-sm mb-1">หน่วยงาน</label>
+                    <select id="addOrg" class="w-full border px-3 py-2 rounded" required>
+                        <option value="สำนักงานสาธารณสุขจังหวัดนครนายก (สสจ.)">สำนักงานสาธารณสุขจังหวัดนครนายก (สสจ.)</option>
+                        <option value="โรงพยาบาลนครนายก">โรงพยาบาลนครนายก</option>
+                        <option value="โรงพยาบาลปากพลี">โรงพยาบาลปากพลี</option>
+                        <option value="โรงพยาบาลบ้านนา">โรงพยาบาลบ้านนา</option>
+                        <option value="โรงพยาบาลองครักษ์">โรงพยาบาลองครักษ์</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm mb-1">Role (สิทธิ์เข้าถึง)</label>
+                    <select id="addRole" class="w-full border px-3 py-2 rounded bg-blue-50" required onchange="toggleAddDriverFields()">
+                        <option value="provincial_admin" id="optAddProvAdmin">Admin จังหวัด</option>
+                        <option value="provincial_audit" id="optAddProvAudit">Audit จังหวัด</option>
+                        <option value="exec_ppho" id="optAddExec">ผู้บริหาร สสจ.</option>
+                        <option value="super_admin" id="optAddSuper">Super Admin</option>
+                        <option value="hospital_director" id="optAddDir">ผอ.รพ.</option>
+                        <option value="hospital_admin" id="optAddAdmin">Admin รพ. / สสจ.</option>
+                        <option value="driver" id="optAddDriver">พนักงานขับรถประจำ</option>
+                        <option value="staff" id="optAddStaff">เจ้าหน้าที่ (ขับรถยามจำเป็น)</option>
+                    </select>
+                </div>
+                <div id="addDriverExtraFields" class="hidden space-y-3 border-t pt-3 mt-2 border-gray-200">
+                    <div><label class="block text-sm mb-1 text-blue-800 font-bold">ข้อมูลสุขภาพ (สำหรับผู้ขับขี่)</label></div>
+                    <div><label class="block text-sm mb-1">วัน/เดือน/ปีเกิด</label><input type="date" id="addDob" class="w-full px-3 py-2 border rounded"></div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div><label class="block text-sm mb-1">โรคประจำตัว</label><input type="text" id="addChronic" class="w-full border px-3 py-2 rounded" placeholder="-"></div>
+                        <div><label class="block text-sm mb-1">ยาที่ใช้ประจำ</label><input type="text" id="addMeds" class="w-full border px-3 py-2 rounded" placeholder="-"></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-sm mb-1">การสูบบุหรี่</label>
+                            <select id="addSmoking" class="w-full border px-3 py-2 rounded">
+                                <option value="ไม่สูบ">ไม่สูบ</option>
+                                <option value="สูบเป็นครั้งคราว">สูบเป็นครั้งคราว</option>
+                                <option value="สูบเป็นประจำ">สูบเป็นประจำ</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm mb-1">การดื่มแอลกอฮอล์</label>
+                            <select id="addAlcohol" class="w-full border px-3 py-2 rounded">
+                                <option value="ไม่ดื่ม">ไม่ดื่ม</option>
+                                <option value="ดื่มสังสรรค์">ดื่มสังสรรค์บ้าง</option>
+                                <option value="ดื่มเป็นประจำ">ดื่มเป็นประจำ</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2 mt-4">
+                    <button type="button" onclick="document.getElementById('modalAddUser').classList.add('hidden')" class="px-4 py-2 bg-gray-200 rounded">ยกเลิก</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded">บันทึกเพิ่มผู้ใช้</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="modalEditUser" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
+            <h3 class="text-xl font-bold mb-4">แก้ไขข้อมูลผู้ใช้งาน</h3>
+             <form id="formEditUser" class="space-y-3">
+                <input type="hidden" id="editOldPhone">
+                <input type="hidden" id="editOldName">
+                <input type="hidden" id="editOldOrg">
+                <input type="hidden" id="editUserId">
+                
+                <div id="editSelfAlert" class="hidden bg-yellow-50 text-yellow-800 text-xs p-2 rounded border border-yellow-200 mb-2"><b>หมายเหตุ:</b> การแก้ไขชื่อ เบอร์โทร หรือหน่วยงาน จะต้องรอการอนุมัติ ส่วน Email จะมีผลทันที</div>
+                <div id="editOtherAlert" class="hidden bg-blue-50 text-blue-800 text-xs p-2 rounded border border-blue-200 mb-2"><b>จำกัดสิทธิ์:</b> คุณสามารถแก้ไขได้เฉพาะข้อมูล Email เท่านั้น</div>
+                
+                <div><label class="block text-sm mb-1">ชื่อ-สกุล</label><input type="text" id="editName" class="w-full border px-3 py-2 rounded font-medium" required></div>
+                <div><label class="block text-sm mb-1">เบอร์โทรศัพท์</label><input type="tel" id="editPhone" maxlength="10" class="w-full border px-3 py-2 rounded font-mono" required></div>
+                <div><label class="block text-sm mb-1 text-blue-700 font-bold">Email</label><input type="email" id="editEmail" class="w-full border px-3 py-2 rounded focus:ring-blue-500"></div>
+                <div>
+                    <label class="block text-sm mb-1">หน่วยงาน</label>
+                     <select id="editOrg" class="w-full border px-3 py-2 rounded" required>
+                        <option value="สำนักงานสาธารณสุขจังหวัดนครนายก (สสจ.)">สำนักงานสาธารณสุขจังหวัดนครนายก (สสจ.)</option>
+                        <option value="โรงพยาบาลนครนายก">โรงพยาบาลนครนายก</option>
+                        <option value="โรงพยาบาลปากพลี">โรงพยาบาลปากพลี</option>
+                        <option value="โรงพยาบาลบ้านนา">โรงพยาบาลบ้านนา</option>
+                        <option value="โรงพยาบาลองครักษ์">โรงพยาบาลองครักษ์</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm mb-1">Role</label>
+                    <select id="editRole" class="w-full border px-3 py-2 rounded bg-blue-50" required>
+                        <option value="provincial_admin" id="optEditProvAdmin">Admin จังหวัด</option>
+                        <option value="provincial_audit" id="optEditProvAudit">Audit จังหวัด</option>
+                        <option value="exec_ppho" id="optEditExec">ผู้บริหาร สสจ.</option>
+                        <option value="hospital_director" id="optEditDir">ผอ.รพ.</option>
+                        <option value="hospital_admin" id="optEditAdmin">Admin รพ. / สสจ.</option>
+                        <option value="driver" id="optEditDriver">พนักงานขับรถประจำ</option>
+                        <option value="staff" id="optEditStaff">เจ้าหน้าที่ (ขับรถจำเป็น)</option>
+                        <option value="super_admin" id="optEditSuper">Super Admin</option>
+                    </select>
+                </div>
+                <div class="flex justify-end gap-2 mt-4">
+                    <button type="button" onclick="document.getElementById('modalEditUser').classList.add('hidden')" class="px-4 py-2 bg-gray-200 rounded">ยกเลิก</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded shadow-sm">บันทึกข้อมูล</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="modalViewProfile" class="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center hidden">
+        <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b pb-3 mb-4">
+                <h3 class="text-xl font-bold text-gray-800">ข้อมูลส่วนบุคคล</h3>
+                <button type="button" onclick="document.getElementById('modalViewProfile').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">ปิด</button>
+            </div>
+            <div id="viewProfileContent" class="space-y-4"></div>
+            <div class="mt-6 pt-4 border-t flex justify-end">
+                <button onclick="document.getElementById('modalViewProfile').classList.add('hidden')" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-lg font-medium transition">ปิดหน้าต่าง</button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        // 🚀 ลิงก์ API เชื่อมต่อกับระบบหลังบ้าน
         const API_URL = "https://script.google.com/macros/s/AKfycbzPsmOjoCyzsa459DgNpC6oupSyExXi3jV4y5F7Iochg53uN2qwPTzU1kwpZ82KCeqd/exec"; 
 
         const api = {
@@ -1226,7 +1389,13 @@
                         if (res.auditLogCount !== undefined) {
                             localStorage.setItem('backendAuditCount', res.auditLogCount);
                             let localCount = parseInt(localStorage.getItem('localAuditCount_' + res.currentUser.phone) || '0');
-                            updateAuditBadge(res.auditLogCount - localCount > 0 ? res.auditLogCount - localCount : 0);
+                            
+                            let diff = res.auditLogCount - localCount;
+                            if (diff > 0) {
+                                updateAuditBadge(diff);
+                            } else {
+                                updateAuditBadge(0);
+                            }
                         }
                         
                         renderDynamicHealthForm(); 
@@ -1297,22 +1466,38 @@
         function renderDynamicHealthForm() {
             let elTS = document.getElementById('inputTimeSlot'); 
             if (elTS) {
-                elTS.innerHTML = '<option value="">เลือกช่วงเวลา...</option>' + (globalSettings.timeSlots || []).map(t => `<option value="${t}">${t}</option>`).join('');
+                let optionsHtml = '<option value="">เลือกช่วงเวลา...</option>';
+                if (globalSettings.timeSlots) {
+                    globalSettings.timeSlots.forEach(t => {
+                        optionsHtml += `<option value="${t}">${t}</option>`;
+                    });
+                }
+                elTS.innerHTML = optionsHtml;
             }
 
             let elCR = document.getElementById('divCriticalRisks'); 
             if (elCR) {
-                elCR.innerHTML = (globalSettings.criticalRisks || []).map(r => `<label class="flex items-center p-3 border border-red-200 bg-red-50 rounded-lg cursor-pointer"><input type="checkbox" name="criticalRiskItem" value="${r}" class="w-5 h-5 text-red-600 flex-shrink-0"><span class="ml-3 text-red-800 text-sm font-medium">${r}</span></label>`).join('');
+                let risksHtml = '';
+                if (globalSettings.criticalRisks) {
+                    globalSettings.criticalRisks.forEach(r => {
+                        risksHtml += `<label class="flex items-center p-3 border border-red-200 bg-red-50 rounded-lg cursor-pointer"><input type="checkbox" name="criticalRiskItem" value="${r}" class="w-5 h-5 text-red-600 flex-shrink-0"><span class="ml-3 text-red-800 text-sm font-medium">${r}</span></label>`;
+                    });
+                }
+                elCR.innerHTML = risksHtml;
             }
 
             let setTS = document.getElementById('set_timeSlots'); 
             if (setTS) {
-                setTS.value = (globalSettings.timeSlots || []).join(',');
+                if (globalSettings.timeSlots) {
+                    setTS.value = globalSettings.timeSlots.join(',');
+                }
             }
 
             let setCR = document.getElementById('set_criticalRisks'); 
             if (setCR) {
-                setCR.value = (globalSettings.criticalRisks || []).join(',');
+                if (globalSettings.criticalRisks) {
+                    setCR.value = globalSettings.criticalRisks.join(',');
+                }
             }
 
             if (globalSettings.manualUrls) { 
@@ -1320,7 +1505,11 @@
                 roles.forEach(r => { 
                     let el = document.getElementById('set_url_' + r); 
                     if (el) {
-                        el.value = globalSettings.manualUrls[r] || ''; 
+                        if (globalSettings.manualUrls[r]) {
+                            el.value = globalSettings.manualUrls[r]; 
+                        } else {
+                            el.value = '';
+                        }
                     }
                 }); 
             }
@@ -1330,8 +1519,9 @@
                 let scFields = ['sc_tempHigh','sc_tempLow','sc_sysRed','sc_diaRed','sc_sysAmber','sc_diaAmber','sc_pulseMin','sc_pulseMax','sc_fatigueRed','sc_fatigueAmber','sc_sleepMin'];
                 scFields.forEach(id => { 
                     let el = document.getElementById(id); 
-                    if (el && sc[id.replace('sc_', '')]) {
-                        el.value = sc[id.replace('sc_', '')]; 
+                    let key = id.replace('sc_', '');
+                    if (el && sc[key] !== undefined) {
+                        el.value = sc[key]; 
                     }
                 }); 
             }
@@ -1345,12 +1535,20 @@
 
                 let elBt = document.getElementById('tg_botToken'); 
                 if (elBt) {
-                    elBt.value = tg.botToken || '';
+                    if (tg.botToken) {
+                        elBt.value = tg.botToken;
+                    } else {
+                        elBt.value = '';
+                    }
                 }
 
                 let elGl = document.getElementById('tg_globalChatId'); 
                 if (elGl) {
-                    elGl.value = tg.globalChatId || '';
+                    if (tg.globalChatId) {
+                        elGl.value = tg.globalChatId;
+                    } else {
+                        elGl.value = '';
+                    }
                 }
                 
                 if (tg.orgChatIds) {
@@ -1382,7 +1580,6 @@
             }
         }
 
-        // ================= PERSONAL SETTINGS =================
         function openPersonalSettings() {
             if (!appUser) {
                 return;
@@ -1390,7 +1587,11 @@
             
             let elToggle = document.getElementById('userEmailNotif');
             if (elToggle) {
-                elToggle.checked = appUser.emailNotif !== false;
+                if (appUser.emailNotif !== false) {
+                    elToggle.checked = true;
+                } else {
+                    elToggle.checked = false;
+                }
             }
             
             let modal = document.getElementById('modalPersonalSettings');
@@ -1521,7 +1722,12 @@
                                     localStorage.setItem('backendAuditCount', initRes.auditLogCount);
                                     let localCount = parseInt(localStorage.getItem('localAuditCount_' + res.user.phone) || '0');
                                     let diff = initRes.auditLogCount - localCount;
-                                    updateAuditBadge(diff > 0 ? diff : 0);
+                                    
+                                    if (diff > 0) {
+                                        updateAuditBadge(diff);
+                                    } else {
+                                        updateAuditBadge(0);
+                                    }
                                 }
                                 handleLoginSuccess(initRes.currentUser);
                             } 
@@ -1661,7 +1867,7 @@
             
             let btnExport = document.getElementById('btnExportReport');
             if (btnExport) {
-                if (['super_admin', 'exec_ppho', 'hospital_director', 'hospital_admin', 'provincial_admin', 'provincial_audit'].includes(user.role)) {
+                if (user.role === 'super_admin' || user.role === 'exec_ppho' || user.role === 'hospital_director' || user.role === 'hospital_admin' || user.role === 'provincial_admin' || user.role === 'provincial_audit') {
                     btnExport.classList.remove('hidden');
                 } else {
                     btnExport.classList.add('hidden');
@@ -1678,7 +1884,11 @@
 
                 let dOrg = document.getElementById('driverOrg'); 
                 if (dOrg) {
-                    dOrg.innerText = user.org + (user.profile?.age ? ` (อายุ ${user.profile.age} ปี)` : '');
+                    if (user.profile && user.profile.age) {
+                        dOrg.innerText = user.org + ` (อายุ ${user.profile.age} ปี)`;
+                    } else {
+                        dOrg.innerText = user.org;
+                    }
                 }
                 
                 let notice = document.getElementById('staffExemptNotice');
@@ -1771,7 +1981,7 @@
                     nReq.classList.remove('hidden');
                 }
                 
-                if (['super_admin', 'exec_ppho', 'hospital_director', 'provincial_admin', 'provincial_audit'].includes(user.role)) {
+                if (user.role === 'super_admin' || user.role === 'exec_ppho' || user.role === 'hospital_director' || user.role === 'provincial_admin' || user.role === 'provincial_audit') {
                     let nAudit = document.getElementById('btnNavAudit'); 
                     if (nAudit) {
                         nAudit.classList.remove('hidden');
@@ -1788,7 +1998,7 @@
                     if (btnSet) {
                         btnSet.classList.remove('hidden'); 
                     }
-                } else if (['hospital_admin', 'provincial_admin'].includes(user.role)) { 
+                } else if (user.role === 'hospital_admin' || user.role === 'provincial_admin') { 
                     if (btnAdd) {
                         btnAdd.classList.remove('hidden'); 
                     }
@@ -1806,7 +2016,7 @@
                 
                 let orgFilter = document.getElementById('adminOrgFilter');
                 if (orgFilter) { 
-                    if (['hospital_admin', 'hospital_director'].includes(user.role)) { 
+                    if (user.role === 'hospital_admin' || user.role === 'hospital_director') { 
                         orgFilter.value = user.org; 
                         orgFilter.disabled = true; 
                     } else {
@@ -1816,7 +2026,7 @@
                 
                 let btnSubmitAdmin = document.getElementById('btnAdminSubmitCheck');
                 if (btnSubmitAdmin) { 
-                    if (['super_admin', 'hospital_admin', 'provincial_admin'].includes(user.role)) {
+                    if (user.role === 'super_admin' || user.role === 'hospital_admin' || user.role === 'provincial_admin') {
                         btnSubmitAdmin.classList.remove('hidden'); 
                     } else {
                         btnSubmitAdmin.classList.add('hidden'); 
@@ -1828,7 +2038,6 @@
             }
         }
 
-        // ================= IMAGE COMPRESSION & SUBMIT =================
         let inputEvidenceEl = document.getElementById('inputEvidence');
         if (inputEvidenceEl) {
             inputEvidenceEl.addEventListener('change', function(e) {
@@ -1889,7 +2098,11 @@
                 if (res.ok && res.drivers.length > 0) {
                     let targetSelect = document.getElementById('adminTargetDriver');
                     if (targetSelect) {
-                        targetSelect.innerHTML = '<option value="" data-name="" data-org="">-- กรุณาเลือกผู้ขับขี่ --</option>' + res.drivers.map(d => `<option value="${d.userId}" data-name="${d.name}" data-org="${d.org}">${d.name} (${d.org})</option>`).join('');
+                        let optionsHtml = '<option value="" data-name="" data-org="">-- กรุณาเลือกผู้ขับขี่ --</option>';
+                        res.drivers.forEach(d => {
+                            optionsHtml += `<option value="${d.userId}" data-name="${d.name}" data-org="${d.org}">${d.name} (${d.org})</option>`;
+                        });
+                        targetSelect.innerHTML = optionsHtml;
                     }
 
                     let tContainer = document.getElementById('adminTargetDriverContainer'); 
@@ -1947,9 +2160,11 @@
                 if (tContainer && !tContainer.classList.contains('hidden')) {
                     let selectEl = document.getElementById('adminTargetDriver'); 
                     targetUserId = selectEl.value;
+                    
                     if (!targetUserId) {
                         return Swal.fire('แจ้งเตือน', 'กรุณาเลือกผู้ที่ต้องการประเมินแทน', 'warning');
                     }
+                    
                     let selectedOption = selectEl.options[selectEl.selectedIndex]; 
                     tName = selectedOption.getAttribute('data-name'); 
                     tOrg = selectedOption.getAttribute('data-org');
@@ -1960,6 +2175,16 @@
                     const timeStr = new Date().toLocaleTimeString('th-TH', {hour: '2-digit', minute: '2-digit'}); 
                     tSlot = `เวลาปัจจุบัน (${timeStr} น.)`;
                 }
+                
+                const cRisksList = [];
+                document.querySelectorAll('input[name="criticalRiskItem"]:checked').forEach(cb => {
+                    cRisksList.push(cb.value);
+                });
+                
+                const sympList = [];
+                document.querySelectorAll('input[name="symptomItem"]:checked').forEach(cb => {
+                    sympList.push(cb.value);
+                });
 
                 const payload = {
                     targetUserId: targetUserId, 
@@ -1971,8 +2196,8 @@
                     diastolic: parseFloat(document.getElementById('inputDia').value), 
                     pulse: parseInt(document.getElementById('inputPulse').value), 
                     fatigue: parseInt(document.getElementById('inputFatigue').value), 
-                    criticalRisksSelected: Array.from(document.querySelectorAll('input[name="criticalRiskItem"]:checked')).map(cb => cb.value), 
-                    symptoms: Array.from(document.querySelectorAll('input[name="symptomItem"]:checked')).map(cb => cb.value),
+                    criticalRisksSelected: cRisksList, 
+                    symptoms: sympList,
                     evidenceBase64: document.getElementById('inputEvidenceBase64').value,
                     evidenceMimeType: document.getElementById('inputEvidenceMimeType').value
                 };
@@ -2015,11 +2240,21 @@
                             targetOrg: tOrg 
                         };
 
-                        let iconType = res.band === 'RED' ? 'error' : (res.band === 'AMBER' ? 'warning' : 'success');
+                        let iconType = 'success';
+                        if (res.band === 'RED') {
+                            iconType = 'error';
+                        } else if (res.band === 'AMBER') {
+                            iconType = 'warning';
+                        }
                         
                         let adviceBtnHtml = '';
                         if (res.band === 'RED' || res.band === 'AMBER') {
                             adviceBtnHtml = `<button onclick="executeAdvice()" class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded w-full transition">💡 ดูคำแนะนำสุขภาพ</button>`;
+                        }
+                        
+                        let reasonsText = 'ปกติ พร้อมปฏิบัติงาน';
+                        if (res.reasons && res.reasons.length > 0) {
+                            reasonsText = res.reasons.join(', ');
                         }
 
                         let buttonsHtml = `
@@ -2035,7 +2270,7 @@
                             icon: iconType, 
                             html: `
                                 <p class="mb-2">สถานะที่ได้คือ: <b>${res.band}</b></p>
-                                <p class="text-sm text-gray-500 mb-4">เหตุผล: ${res.reasons.join(', ') || 'ปกติ พร้อมปฏิบัติงาน'}</p>
+                                <p class="text-sm text-gray-500 mb-4">เหตุผล: ${reasonsText}</p>
                                 ${buttonsHtml}
                             `, 
                             showConfirmButton: false, 
@@ -2088,6 +2323,22 @@
             if (!printDiv) {
                 return;
             }
+            
+            let bandText = 'พร้อมปฏิบัติงาน (GREEN)';
+            let bandColor = '#16a34a';
+            
+            if (data.band === 'RED') {
+                bandText = 'งดปฏิบัติงาน (RED)';
+                bandColor = '#dc2626';
+            } else if (data.band === 'AMBER') {
+                bandText = 'เฝ้าระวัง (AMBER)';
+                bandColor = '#d97706';
+            }
+            
+            let reasonsText = 'ปกติ ไม่มีอาการผิดปกติ';
+            if (data.reasons && data.reasons.length > 0) {
+                reasonsText = data.reasons.join(', ');
+            }
 
             printDiv.innerHTML = `
                 <div style="font-family: 'Noto Sans Thai', sans-serif; color: #1f2937;">
@@ -2115,11 +2366,11 @@
                     
                     <h3 style="margin-top: 20px; background-color: #f3f4f6; padding: 10px;">สรุปผลการประเมิน</h3>
                     <p style="font-size: 18px;">ระดับความพร้อม: 
-                        <b style="color: ${data.band === 'RED' ? '#dc2626' : (data.band === 'AMBER' ? '#d97706' : '#16a34a')}">
-                            ${data.band === 'RED' ? 'งดปฏิบัติงาน (RED)' : (data.band === 'AMBER' ? 'เฝ้าระวัง (AMBER)' : 'พร้อมปฏิบัติงาน (GREEN)')}
+                        <b style="color: ${bandColor}">
+                            ${bandText}
                         </b>
                     </p>
-                    <p><b>ความเสี่ยง/สาเหตุที่พบ:</b> ${data.reasons.length > 0 ? data.reasons.join(', ') : 'ปกติ ไม่มีอาการผิดปกติ'}</p>
+                    <p><b>ความเสี่ยง/สาเหตุที่พบ:</b> ${reasonsText}</p>
                     <br><br><br><br>
                     <div style="display: flex; justify-content: space-between; text-align: center; margin-top: 50px;">
                         <div style="width: 45%;">
@@ -2183,9 +2434,25 @@
 
             let bmi = w / ((h / 100) * (h / 100)); 
             let bmiStr = bmi.toFixed(2); 
-            let bmiMeaning = bmi < 18.5 ? "น้ำหนักน้อย" : (bmi < 23 ? "ปกติ" : (bmi < 25 ? "ท้วม" : (bmi < 30 ? "อ้วน" : "อ้วนมาก")));
+            let bmiMeaning = "";
             
-            let p = appUser.profile || {}; 
+            if (bmi < 18.5) {
+                bmiMeaning = "น้ำหนักน้อย";
+            } else if (bmi < 23) {
+                bmiMeaning = "ปกติ";
+            } else if (bmi < 25) {
+                bmiMeaning = "ท้วม";
+            } else if (bmi < 30) {
+                bmiMeaning = "อ้วน";
+            } else {
+                bmiMeaning = "อ้วนมาก";
+            }
+            
+            let p = {};
+            if (appUser && appUser.profile) {
+                p = appUser.profile;
+            }
+            
             let advice = `
                 <p class="font-bold text-lg mb-2 border-b border-blue-200 pb-2">ผลวิเคราะห์ BMI: ${bmiStr} (${bmiMeaning})</p>
                 <ul class="text-left list-disc pl-5 space-y-2 mt-2">
@@ -2194,26 +2461,28 @@
             if (bmi >= 25) {
                 advice += `<li><b>คุมน้ำหนักด่วน:</b> คุณมีภาวะน้ำหนักเกิน เสี่ยงต่อโรคหัวใจและความดัน ควรลดอาหารหวานมันทอด และออกกำลังกาย 30 นาที/วัน</li>`;
             }
+            
             if (p.smoking && p.smoking !== 'ไม่สูบ') {
                 advice += `<li><b>ลดการสูบบุหรี่:</b> บุหรี่ทำให้หลอดเลือดตีบและเสี่ยงความดันพุ่งปรี๊ดระหว่างขับรถ ควรปรึกษาคลินิกเลิกบุหรี่</li>`;
             }
+            
             if (p.alcohol && p.alcohol !== 'ไม่ดื่ม') {
                 advice += `<li><b>งดแอลกอฮอล์ก่อนขับ:</b> ส่งผลต่อการตัดสินใจและทำให้ชีพจรเต้นผิดปกติ ควรงดดื่มอย่างน้อย 24 ชม. ก่อนเริ่มงาน</li>`;
             }
+            
             if (currentAssesmentForAdvice.sleepHours < 6) {
                 advice += `<li><b>จัดตารางการนอน:</b> การนอนน้อยกว่า 6 ชม. เพิ่มความเสี่ยง "หลับใน" สูงมาก ควรพักผ่อนให้เพียงพอ 7-8 ชม.</li>`;
             }
+            
             if (currentAssesmentForAdvice.systolic >= 140 || currentAssesmentForAdvice.diastolic >= 90) {
                 advice += `<li><b>เฝ้าระวังความดัน:</b> ความดันเริ่มสูง ควรหลีกเลี่ยงอาหารเค็ม, ผงชูรส และพักผ่อนให้เพียงพอ หากมีโรคประจำตัวควรทานยาอย่างเคร่งครัด</li>`;
             }
+            
             if (currentAssesmentForAdvice.fatigue >= 8) {
                 advice += `<li><b>ความอ่อนล้าสูง:</b> ร่างกายเตือนว่าต้องพัก ดื่มน้ำเปล่าเยอะๆ ล้างหน้า ยืดเส้นยืดสายก่อนกลับไปทำงาน</li>`;
             }
 
-            if (advice.endsWith('</ul>')) {
-                advice += `<li>ทานอาหารให้ตรงเวลา ดื่มน้ำวันละ 8 แก้ว และยึดหลักความปลอดภัยในการขับขี่เสมอ</li>`; 
-            }
-            
+            advice += `<li>ทานอาหารให้ตรงเวลา ดื่มน้ำวันละ 8 แก้ว และยึดหลักความปลอดภัยในการขับขี่เสมอ</li>`; 
             advice += `</ul>`;
             
             let aRes = document.getElementById('adviceResultSection'); 
@@ -2228,330 +2497,135 @@
             }
         }
 
-        // ================= ADMIN DASHBOARD & CHART =================
-        function refreshAdminDashboard() { 
-            let dFilter = document.getElementById('adminDateFilter'); 
-            let pFilter = document.getElementById('adminPeriodFilter');
-            const filterParam = (dFilter && dFilter.value) ? dFilter.value : (pFilter ? pFilter.value : 'today');
-            loadAdminDashboard(filterParam);
-        }
-        
-        function renderDonutChart(stats) {
-            let el = document.getElementById('dashChart'); 
-            if (!el) {
-                return;
+        function loadDriverHistory() {
+            let histEl = document.getElementById('driverHistory'); 
+            if (histEl) {
+                histEl.innerHTML = '<p class="text-sm text-gray-400">กำลังโหลดประวัติ...</p>';
             }
             
-            const ctx = el.getContext('2d'); 
-            if (dashChartInstance) {
-                dashChartInstance.destroy();
+            let btnAna = document.getElementById('btnHealthAnalysis'); 
+            if (btnAna) {
+                btnAna.classList.add('hidden');
             }
-
-            const total = stats.statGreen + stats.statAmber + stats.statRed + stats.statNoData;
             
-            let bgColors = [];
-            let dataValues = [];
-
-            if (total === 0) {
-                dataValues = [0, 0, 0, 1];
-                bgColors = ['#f3f4f6', '#f3f4f6', '#f3f4f6', '#e5e7eb'];
-            } else {
-                dataValues = [stats.statGreen, stats.statAmber, stats.statRed, stats.statNoData];
-                bgColors = ['#22c55e', '#eab308', '#ef4444', '#d1d5db'];
-            }
-
-            dashChartInstance = new Chart(ctx, { 
-                type: 'doughnut', 
-                data: { 
-                    labels: ['พร้อม (GREEN)', 'เฝ้าระวัง (AMBER)', 'งดขับ (RED)', 'ยังไม่ประเมิน'], 
-                    datasets: [{ 
-                        data: dataValues, 
-                        backgroundColor: bgColors, 
-                        borderWidth: 1 
-                    }] 
-                }, 
-                options: { 
-                    responsive: true, 
-                    maintainAspectRatio: false, 
-                    plugins: { 
-                        legend: { 
-                            position: 'bottom', 
-                            labels: { font: { family: "'Noto Sans Thai', sans-serif" } } 
-                        }, 
-                        tooltip: { 
-                            enabled: total > 0 
-                        } 
-                    }, 
-                    cutout: '65%' 
-                } 
-            });
-        }
-        
-        function renderBarChart(orgStats) {
-            let el = document.getElementById('orgBarChart'); 
-            if (!el) {
-                return;
-            }
-
-            const ctx = el.getContext('2d'); 
-            if (barChartInstance) {
-                barChartInstance.destroy();
-            }
-
-            const labels = Object.keys(orgStats);
-            
-            barChartInstance = new Chart(ctx, { 
-                type: 'bar', 
-                data: { 
-                    labels: labels, 
-                    datasets: [ 
-                        { 
-                            label: 'พร้อม', 
-                            data: labels.map(l => orgStats[l].green), 
-                            backgroundColor: '#22c55e' 
-                        }, 
-                        { 
-                            label: 'เฝ้าระวัง', 
-                            data: labels.map(l => orgStats[l].amber), 
-                            backgroundColor: '#eab308' 
-                        }, 
-                        { 
-                            label: 'งดขับ', 
-                            data: labels.map(l => orgStats[l].red), 
-                            backgroundColor: '#ef4444' 
-                        } 
-                    ] 
-                }, 
-                options: { 
-                    responsive: true, 
-                    maintainAspectRatio: false, 
-                    scales: { 
-                        x: { 
-                            stacked: true, 
-                            ticks: { font: { family: "'Noto Sans Thai', sans-serif" } } 
-                        }, 
-                        y: { 
-                            stacked: true, 
-                            beginAtZero: true 
-                        } 
-                    }, 
-                    plugins: { 
-                        legend: { 
-                            labels: { font: { family: "'Noto Sans Thai', sans-serif" } } 
-                        } 
-                    } 
-                } 
-            });
-        }
-        
-        function renderGroupedTable(tbodyId, dataArray, columnsRenderer, colspan) {
-            const tbody = document.getElementById(tbodyId); 
-            if (!tbody) {
-                return;
-            }
-
-            if (dataArray.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="${colspan}" class="py-6 text-center text-gray-500">ไม่มีข้อมูล</td></tr>`;
-                return;
-            }
-
-            const grouped = dataArray.reduce((acc, item) => { 
-                if (!acc[item.org]) {
-                    acc[item.org] = []; 
-                }
-                acc[item.org].push(item); 
-                return acc; 
-            }, {});
-            
-            let html = '';
-            Object.keys(grouped).sort().forEach(org => { 
-                html += `
-                    <tr class="bg-blue-50 border-t-2 border-blue-200">
-                        <td colspan="${colspan}" class="px-4 py-2 font-bold text-blue-900 border-l-4 border-l-blue-600">${org}</td>
-                    </tr>
-                `; 
-                grouped[org].forEach((item, index) => { 
-                    html += columnsRenderer(item, index + 1); 
-                }); 
-            });
-            
-            tbody.innerHTML = html;
-        }
-        
-        function loadAdminDashboard(periodOverride = null) {
-            showLoader("กำลังดึงข้อมูลสรุป...");
-            
-            let elOrg = document.getElementById('adminOrgFilter'); 
-            let org = elOrg ? elOrg.value : 'ALL';
-            
-            let dFilter = document.getElementById('adminDateFilter'); 
-            let pFilter = document.getElementById('adminPeriodFilter');
-            const filterPeriod = periodOverride || ((dFilter && dFilter.value) ? dFilter.value : ((pFilter && pFilter.value) ? pFilter.value : 'today'));
-
-            api.run('getAdminDashboard', { filters: { org: org, period: filterPeriod } }).then(res => {
-                hideLoader();
-                if (res.ok) {
-                    let dTitle = document.getElementById('dashTitle'); 
-                    if (dTitle) {
-                        dTitle.innerText = res.isPublicView ? "ภาพรวมความพร้อม (สาธารณะ)" : "แดชบอร์ดผู้ดูแลระบบ";
-                    }
-
-                    let pAlert = document.getElementById('publicAlert'); 
-                    if (pAlert) {
-                        if (!res.isPublicView) {
-                            pAlert.classList.add('hidden');
-                        } else {
-                            pAlert.classList.remove('hidden');
-                        }
+            api.run('getDriverHistory').then(res => {
+                if (res.ok && res.history.length > 0) { 
+                    cachedHistory = res.history; 
+                    
+                    if (btnAna) {
+                        btnAna.classList.remove('hidden');
                     }
                     
-                    let eTotalDriver = document.getElementById('statTotalDriver'); 
-                    if (eTotalDriver) eTotalDriver.innerText = res.totalDrivers;
-                    
-                    let eTotalStaff = document.getElementById('statTotalStaff'); 
-                    if (eTotalStaff) eTotalStaff.innerText = res.totalStaff;
-                    
-                    let eGreen = document.getElementById('statGreen'); 
-                    if (eGreen) eGreen.innerText = res.stats.statGreen;
-                    
-                    let eAmber = document.getElementById('statAmber'); 
-                    if (eAmber) eAmber.innerText = res.stats.statAmber;
-                    
-                    let eRed = document.getElementById('statRed'); 
-                    if (eRed) eRed.innerText = res.stats.statRed;
-                    
-                    let eNoData = document.getElementById('statNoData'); 
-                    if (eNoData) eNoData.innerText = res.stats.statNoData;
-                    
-                    renderDonutChart(res.stats); 
-                    
-                    if (res.orgStats) {
-                        renderBarChart(res.orgStats);
-                    }
-
-                    let isSpecificDay = filterPeriod === 'today' || filterPeriod.match(/^\d{4}-\d{2}-\d{2}$/);
-                    let lAction = document.getElementById('labelActionReq'); 
-                    if (lAction) {
-                        lAction.innerText = isSpecificDay ? 'รายชื่อผู้ที่ต้องเฝ้าระวัง / งดขับ (วันที่เลือก)' : `ประวัติการประเมินที่ต้องเฝ้าระวัง (ช่วง ${filterPeriod === '7d' ? '7 วัน' : '30 วัน'})`;
-                    }
-
-                    const actionRenderer = (i, no) => {
-                        let dParts = String(i.date).split('-'); 
-                        let thDate = `${dParts[2]}/${dParts[1]}/${parseInt(dParts[0]) + 543}`;
-                        let timeStr = i.createdAt ? new Date(i.createdAt).toLocaleTimeString('th-TH', {hour: '2-digit', minute: '2-digit'}) : '-';
-                        
-                        let bandClass = '';
-                        if (i.band === 'RED') {
-                            bandClass = 'bg-red-100 text-red-700';
-                        } else {
-                            bandClass = 'bg-yellow-100 text-yellow-700';
-                        }
-
-                        let evidenceHtml = '';
-                        if (i.evidenceUrl) {
-                            evidenceHtml = `
-                                <br><a href="${i.evidenceUrl}" target="_blank" class="text-[10px] text-blue-600 hover:underline">
-                                    📷 ดูรูปหลักฐาน
-                                </a>
-                            `;
-                        }
-
-                        return `
-                            <tr class="border-b hover:bg-gray-50 bg-white">
-                                <td class="px-4 py-3 text-center text-gray-500 font-bold">${no}</td>
-                                <td class="px-4 py-3 text-sm text-gray-700 font-medium">
-                                    ${thDate}<br>
-                                    <span class="text-[11px] text-gray-500">${timeStr} น.</span>
-                                </td>
-                                <td class="px-4 py-3 font-medium text-gray-700">
-                                    ${i.name}
-                                    ${evidenceHtml}
-                                </td>
-                                <td class="px-4 py-3 font-mono text-sm">${i.phone}</td>
-                                <td class="px-4 py-3">
-                                    <span class="px-2 py-1 rounded text-xs font-bold ${bandClass}">${i.band}</span>
-                                </td>
-                                <td class="px-4 py-3 text-xs text-red-600">${i.reasons.join(', ')}</td>
-                            </tr>
-                        `;
-                    };
-                    
-                    renderGroupedTable('adminActionListDriver', res.actionRequiredDriver || [], actionRenderer, 6);
-                    renderGroupedTable('adminActionListStaff', res.actionRequiredStaff || [], actionRenderer, 6);
-
-                    let dGreen = document.getElementById('divGreenListArea'); 
-                    let dNoData = document.getElementById('divNoDataList');
-                    
-                    if (!isSpecificDay) { 
-                        if (dGreen) dGreen.classList.add('hidden'); 
-                        if (dNoData) dNoData.classList.add('hidden'); 
-                    } else {
-                        if (dGreen) dGreen.classList.remove('hidden'); 
-                        if (dNoData) dNoData.classList.remove('hidden');
-                        
-                        const greenRenderer = (i, no) => {
-                            let timeStr = i.createdAt ? new Date(i.createdAt).toLocaleTimeString('th-TH', {hour: '2-digit', minute: '2-digit'}) : '-';
+                    if (histEl) {
+                        let htmlStr = '';
+                        res.history.forEach((i, index) => {
+                            let btnAddon = '';
+                            if (i.band === 'RED' || i.band === 'AMBER') {
+                                btnAddon = `
+                                    <div class="mt-2 pt-2 border-t border-gray-200 flex gap-2 justify-end">
+                                        <button onclick="printHistoryItem(${index})" class="text-[10px] bg-blue-100 hover:bg-blue-200 text-blue-700 px-2 py-1 rounded shadow-sm border border-blue-200 transition">🖨️ พิมพ์</button>
+                                        <button onclick="adviseHistoryItem(${index})" class="text-[10px] bg-yellow-100 hover:bg-yellow-200 text-yellow-700 px-2 py-1 rounded shadow-sm border border-yellow-200 transition">💡 คำแนะนำ</button>
+                                    </div>
+                                `;
+                            }
                             
-                            let evidenceHtml = '';
+                            let bandClass = '';
+                            if (i.band === 'RED') {
+                                bandClass = 'bg-red-100 text-red-700 border border-red-200';
+                            } else if (i.band === 'AMBER') {
+                                bandClass = 'bg-yellow-100 text-yellow-700 border border-yellow-200';
+                            } else {
+                                bandClass = 'bg-green-100 text-green-700 border border-green-200';
+                            }
+
+                            let evidenceBtnHtml = '';
                             if (i.evidenceUrl) {
-                                evidenceHtml = `
-                                    <br><a href="${i.evidenceUrl}" target="_blank" class="text-[10px] text-blue-600 hover:underline">
+                                evidenceBtnHtml = `
+                                    <a href="${i.evidenceUrl}" target="_blank" class="mt-2 inline-block text-[11px] text-blue-600 hover:underline font-medium">
                                         📷 ดูรูปหลักฐาน
                                     </a>
                                 `;
                             }
 
-                            return `
-                                <tr class="border-b hover:bg-green-50 bg-white">
-                                    <td class="px-4 py-3 text-center text-gray-500 font-bold">${no}</td>
-                                    <td class="px-4 py-3 font-medium text-gray-700">
-                                        ${i.name}
-                                        ${evidenceHtml}
-                                    </td>
-                                    <td class="px-4 py-3 text-center text-blue-600 font-medium">${i.temp}</td>
-                                    <td class="px-4 py-3 text-center font-mono">${i.bp}</td>
-                                    <td class="px-4 py-3 text-center font-mono">${i.pulse}</td>
-                                    <td class="px-4 py-3 text-center text-green-700 font-medium">${timeStr} น.</td>
-                                </tr>
+                            htmlStr += `
+                                <div class="p-3 border rounded-lg flex flex-col bg-gray-50">
+                                    <div class="flex justify-between items-start">
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-800">${i.date} <span class="text-xs text-gray-500">(${i.timeSlot})</span></p>
+                                            <p class="text-xs text-gray-500">BP: ${i.sys}/${i.dia} | HR: ${i.pulse} | นอน ${i.sleepHours}ชม.</p>
+                                            ${evidenceBtnHtml}
+                                        </div>
+                                        <span class="px-2 py-1 text-xs font-bold rounded shadow-sm ${bandClass}">${i.band}</span>
+                                    </div>
+                                    ${btnAddon}
+                                </div>
                             `;
-                        };
-                        
-                        let areaGD = document.getElementById('divGreenListDriver');
-                        let areaGS = document.getElementById('divGreenListStaff');
-                        
-                        if (res.greenListDriver && res.greenListDriver.length > 0) { 
-                            if (areaGD) areaGD.classList.remove('hidden'); 
-                            renderGroupedTable('adminGreenListDriver', res.greenListDriver, greenRenderer, 6); 
-                        } else { 
-                            if (areaGD) areaGD.classList.add('hidden'); 
-                        }
-
-                        if (res.greenListStaff && res.greenListStaff.length > 0) { 
-                            if (areaGS) areaGS.classList.remove('hidden'); 
-                            renderGroupedTable('adminGreenListStaff', res.greenListStaff, greenRenderer, 6); 
-                        } else { 
-                            if (areaGS) areaGS.classList.add('hidden'); 
-                        }
-                        
-                        renderGroupedTable('adminNoDataList', res.noDataList, (i, no) => { 
-                            return `
-                                <tr class="border-b bg-white">
-                                    <td class="px-4 py-3 text-center text-gray-500 font-bold">${no}</td>
-                                    <td class="px-4 py-3 font-medium text-gray-700">${i.name}</td>
-                                    <td class="px-4 py-3 text-center font-mono text-sm">${i.phone}</td>
-                                    <td class="px-4 py-3 text-center">
-                                        <span class="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">ยังไม่ประเมิน</span>
-                                    </td>
-                                </tr>
-                            `; 
-                        }, 4);
+                        });
+                        histEl.innerHTML = htmlStr;
                     }
                 } else { 
-                    Swal.fire('ข้อผิดพลาด', res.error, 'error'); 
+                    if (histEl) {
+                        histEl.innerHTML = '<p class="text-sm text-gray-400">ยังไม่มีประวัติการประเมิน</p>'; 
+                    }
+                }
+            }).catch(err => {
+                console.error(err);
+            });
+        }
+        
+        function openHealthAnalysis() {
+            showLoader("กำลังวิเคราะห์ข้อมูล 15 วัน...");
+            api.run('getHealthAnalysis15Days').then(res => {
+                hideLoader();
+                if (res.ok && res.hasData) {
+                    let st = res.stats;
+                    
+                    let issuesCount = st.red + st.amber;
+                    
+                    let html = `
+                        <div class="grid grid-cols-2 gap-3 mb-4 text-center">
+                            <div class="bg-gray-50 border rounded p-3">
+                                <p class="text-xs text-gray-500">ประเมินทั้งหมด</p>
+                                <p class="text-2xl font-bold text-gray-800">${st.count} <span class="text-sm">ครั้ง</span></p>
+                            </div>
+                            <div class="bg-red-50 border border-red-100 rounded p-3">
+                                <p class="text-xs text-red-600 font-bold">เฝ้าระวัง / งดขับ</p>
+                                <p class="text-2xl font-bold text-red-700">${issuesCount} <span class="text-sm">ครั้ง</span></p>
+                            </div>
+                        </div>
+                        <p class="font-bold text-indigo-800 mb-2">ค่าเฉลี่ยสุขภาพของคุณ</p>
+                        <ul class="text-sm text-gray-700 space-y-1 mb-4 border-l-2 border-indigo-400 pl-3">
+                            <li>ความดันโลหิตเฉลี่ย: <b>${st.avgSys} / ${st.avgDia}</b></li>
+                            <li>ชั่วโมงการนอนเฉลี่ย: <b>${st.avgSleep} ชม.</b></li>
+                            <li>ระดับความอ่อนล้าเฉลี่ย: <b>${st.avgFatigue} / 10</b></li>
+                        </ul>
+                    `;
+
+                    if (st.issues && st.issues.length > 0) { 
+                        html += `<p class="font-bold text-orange-700 mb-2">ปัญหาที่พบบ่อย (15 วันที่ผ่านมา)</p><ul class="text-sm text-gray-600 list-disc pl-5">`; 
+                        st.issues.forEach(iss => {
+                            html += `<li>${iss}</li>`;
+                        }); 
+                        html += `</ul>`; 
+                    } else { 
+                        html += `<p class="text-sm text-green-600 font-bold">สุขภาพโดยรวมของคุณอยู่ในเกณฑ์ดีเยี่ยม เยี่ยมมากครับ! 👏</p>`; 
+                    }
+                    
+                    let hContent = document.getElementById('healthAnalysisContent'); 
+                    if (hContent) {
+                        hContent.innerHTML = html;
+                    }
+                    
+                    let mAna = document.getElementById('modalHealthAnalysis'); 
+                    if (mAna) {
+                        mAna.classList.remove('hidden');
+                    }
+                } else { 
+                    Swal.fire('ข้อมูลไม่เพียงพอ', 'ไม่พบประวัติการประเมินใน 15 วันที่ผ่านมาครับ', 'info'); 
                 }
             }).catch(err => { 
                 hideLoader(); 
-                console.error(err); 
+                Swal.fire('ข้อผิดพลาด', err.message, 'error'); 
             });
         }
 
@@ -2625,7 +2699,7 @@
         
         let btnEditReq = document.getElementById('btnNavEditReq');
         if (btnEditReq) {
-            btnEditReq.onclick = () => { 
+            btnEditReq.onclick = function() { 
                 switchView('viewAdminEditReq'); 
                 loadAdminEditReqs(); 
             };
@@ -2658,8 +2732,16 @@
             const status = elStatus.value;
             
             let filtered = cachedReqs.filter(r => { 
-                const matchSearch = r.driverName.toLowerCase().includes(search) || r.phone.includes(search); 
-                const matchStatus = status === 'ALL' || r.status === status; 
+                let matchSearch = false;
+                if (r.driverName.toLowerCase().includes(search) || r.phone.includes(search)) {
+                    matchSearch = true;
+                }
+                
+                let matchStatus = false;
+                if (status === 'ALL' || r.status === status) {
+                    matchStatus = true;
+                }
+                
                 return matchSearch && matchStatus; 
             });
 
@@ -2677,25 +2759,38 @@
                 return;
             }
             
-            const grouped = dataArray.reduce((acc, r) => { 
-                if (!acc[r.org]) {
-                    acc[r.org] = []; 
+            const grouped = {};
+            dataArray.forEach(r => {
+                if (!grouped[r.org]) {
+                    grouped[r.org] = [];
                 }
-                acc[r.org].push(r); 
-                return acc; 
-            }, {});
+                grouped[r.org].push(r);
+            });
             
             let html = '';
-            Object.keys(grouped).sort().forEach(org => {
+            let sortedOrgs = Object.keys(grouped).sort();
+            
+            sortedOrgs.forEach(org => {
                 html += `
                     <tr class="bg-blue-50 border-t-2 border-blue-200">
                         <td colspan="8" class="px-4 py-2 font-bold text-blue-900 border-l-4 border-l-blue-600">${org}</td>
                     </tr>
                 `;
+                
                 grouped[org].forEach((r, index) => {
                     let actionBtn = '-';
                     if (r.status === 'PENDING') {
-                        if (['super_admin','provincial_admin'].includes(appUser?.role) || (appUser?.role === 'hospital_admin' && ['driver','staff'].includes(r.reqUserRole))) {
+                        let canApprove = false;
+                        
+                        if (appUser && (appUser.role === 'super_admin' || appUser.role === 'provincial_admin')) {
+                            canApprove = true;
+                        } else if (appUser && appUser.role === 'hospital_admin') {
+                            if (r.reqUserRole === 'driver' || r.reqUserRole === 'staff') {
+                                canApprove = true;
+                            }
+                        }
+                        
+                        if (canApprove) {
                             actionBtn = `
                                 <div class="flex gap-1 justify-center">
                                     <button onclick="approveReq('${r.id}')" class="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded text-[10px] shadow-sm transition font-medium">อนุมัติ</button>
@@ -2712,12 +2807,20 @@
                         let ne = n || '-'; 
                         if (ol === ne || ne === '-') {
                             return `<span class="text-gray-500">${ol}</span>`; 
+                        } else {
+                            return `<s class="text-gray-400 mr-1">${ol}</s><span class="text-green-600 font-bold">➜ ${ne}</span>`; 
                         }
-                        return `<s class="text-gray-400 mr-1">${ol}</s><span class="text-green-600 font-bold">➜ ${ne}</span>`; 
                     };
                     
-                    let targetNameStr = r.reqName ? formatCmp(r.driverName, r.reqName) : r.driverName;
-                    let targetOrgStr = r.reqOrg ? formatCmp(r.oldOrg, r.reqOrg) : "";
+                    let targetNameStr = r.driverName;
+                    if (r.reqName) {
+                        targetNameStr = formatCmp(r.driverName, r.reqName);
+                    }
+                    
+                    let targetOrgStr = "";
+                    if (r.reqOrg) {
+                        targetOrgStr = formatCmp(r.oldOrg, r.reqOrg);
+                    }
                     
                     let contactInfoHtml = `
                         <div class="mb-1 text-[11px]">
@@ -2754,14 +2857,24 @@
                     } else {
                         statusClass = 'bg-green-100 text-green-700';
                     }
+                    
+                    let dateDisplay = "";
+                    if (r.createdAt) {
+                        dateDisplay = String(r.createdAt).substring(0, 10);
+                    }
+
+                    let targetOrgDisplay = "";
+                    if (targetOrgStr) {
+                        targetOrgDisplay = `<br><span class="text-[10px] text-gray-500">${targetOrgStr}</span>`;
+                    }
 
                     html += `
                         <tr class="hover:bg-gray-50 bg-white border-b border-gray-100">
                             <td class="px-4 py-3 text-center text-gray-500 font-bold">${index + 1}</td>
-                            <td class="px-4 py-3 text-xs text-gray-500">${String(r.createdAt).substring(0, 10)}</td>
+                            <td class="px-4 py-3 text-xs text-gray-500">${dateDisplay}</td>
                             <td class="px-4 py-3">
                                 <span class="font-bold text-gray-800">${targetNameStr}</span>
-                                ${targetOrgStr ? `<br><span class="text-[10px] text-gray-500">${targetOrgStr}</span>` : ''}
+                                ${targetOrgDisplay}
                             </td>
                             <td class="px-4 py-3 font-mono align-middle">${contactInfoHtml}</td>
                             ${healthInfo}
@@ -2829,10 +2942,395 @@
             });
         }
 
+        // ================= ADMIN DASHBOARD & CHART =================
+        function refreshAdminDashboard() { 
+            let dFilter = document.getElementById('adminDateFilter'); 
+            let pFilter = document.getElementById('adminPeriodFilter');
+            
+            let filterParam = 'today';
+            if (dFilter && dFilter.value) {
+                filterParam = dFilter.value;
+            } else if (pFilter && pFilter.value) {
+                filterParam = pFilter.value;
+            }
+            
+            loadAdminDashboard(filterParam);
+        }
+        
+        function renderDonutChart(stats) {
+            let el = document.getElementById('dashChart'); 
+            if (!el) {
+                return;
+            }
+            
+            const ctx = el.getContext('2d'); 
+            if (dashChartInstance) {
+                dashChartInstance.destroy();
+            }
+
+            const total = stats.statGreen + stats.statAmber + stats.statRed + stats.statNoData;
+            
+            let bgColors = [];
+            let dataValues = [];
+
+            if (total === 0) {
+                dataValues = [0, 0, 0, 1];
+                bgColors = ['#f3f4f6', '#f3f4f6', '#f3f4f6', '#e5e7eb'];
+            } else {
+                dataValues = [stats.statGreen, stats.statAmber, stats.statRed, stats.statNoData];
+                bgColors = ['#22c55e', '#eab308', '#ef4444', '#d1d5db'];
+            }
+
+            dashChartInstance = new Chart(ctx, { 
+                type: 'doughnut', 
+                data: { 
+                    labels: ['พร้อม (GREEN)', 'เฝ้าระวัง (AMBER)', 'งดขับ (RED)', 'ยังไม่ประเมิน'], 
+                    datasets: [{ 
+                        data: dataValues, 
+                        backgroundColor: bgColors, 
+                        borderWidth: 1 
+                    }] 
+                }, 
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    plugins: { 
+                        legend: { 
+                            position: 'bottom', 
+                            labels: { font: { family: "'Noto Sans Thai', sans-serif" } } 
+                        }, 
+                        tooltip: { 
+                            enabled: total > 0 
+                        } 
+                    }, 
+                    cutout: '65%' 
+                } 
+            });
+        }
+        
+        function renderBarChart(orgStats) {
+            let el = document.getElementById('orgBarChart'); 
+            if (!el) {
+                return;
+            }
+
+            const ctx = el.getContext('2d'); 
+            if (barChartInstance) {
+                barChartInstance.destroy();
+            }
+
+            const labels = Object.keys(orgStats);
+            
+            let greenData = [];
+            let amberData = [];
+            let redData = [];
+            
+            labels.forEach(l => {
+                greenData.push(orgStats[l].green);
+                amberData.push(orgStats[l].amber);
+                redData.push(orgStats[l].red);
+            });
+            
+            barChartInstance = new Chart(ctx, { 
+                type: 'bar', 
+                data: { 
+                    labels: labels, 
+                    datasets: [ 
+                        { 
+                            label: 'พร้อม', 
+                            data: greenData, 
+                            backgroundColor: '#22c55e' 
+                        }, 
+                        { 
+                            label: 'เฝ้าระวัง', 
+                            data: amberData, 
+                            backgroundColor: '#eab308' 
+                        }, 
+                        { 
+                            label: 'งดขับ', 
+                            data: redData, 
+                            backgroundColor: '#ef4444' 
+                        } 
+                    ] 
+                }, 
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    scales: { 
+                        x: { 
+                            stacked: true, 
+                            ticks: { font: { family: "'Noto Sans Thai', sans-serif" } } 
+                        }, 
+                        y: { 
+                            stacked: true, 
+                            beginAtZero: true 
+                        } 
+                    }, 
+                    plugins: { 
+                        legend: { 
+                            labels: { font: { family: "'Noto Sans Thai', sans-serif" } } 
+                        } 
+                    } 
+                } 
+            });
+        }
+        
+        function renderGroupedTable(tbodyId, dataArray, columnsRenderer, colspan) {
+            const tbody = document.getElementById(tbodyId); 
+            if (!tbody) {
+                return;
+            }
+
+            if (dataArray.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="${colspan}" class="py-6 text-center text-gray-500">ไม่มีข้อมูล</td></tr>`;
+                return;
+            }
+
+            const grouped = {};
+            dataArray.forEach(item => {
+                if (!grouped[item.org]) {
+                    grouped[item.org] = [];
+                }
+                grouped[item.org].push(item);
+            });
+            
+            let html = '';
+            let sortedOrgs = Object.keys(grouped).sort();
+            
+            sortedOrgs.forEach(org => { 
+                html += `
+                    <tr class="bg-blue-50 border-t-2 border-blue-200">
+                        <td colspan="${colspan}" class="px-4 py-2 font-bold text-blue-900 border-l-4 border-l-blue-600">${org}</td>
+                    </tr>
+                `; 
+                grouped[org].forEach((item, index) => { 
+                    html += columnsRenderer(item, index + 1); 
+                }); 
+            });
+            
+            tbody.innerHTML = html;
+        }
+        
+        function loadAdminDashboard(periodOverride = null) {
+            showLoader("กำลังดึงข้อมูลสรุป...");
+            
+            let elOrg = document.getElementById('adminOrgFilter'); 
+            let org = 'ALL';
+            if (elOrg) {
+                org = elOrg.value;
+            }
+            
+            let dFilter = document.getElementById('adminDateFilter'); 
+            let pFilter = document.getElementById('adminPeriodFilter');
+            
+            let filterPeriod = 'today';
+            if (periodOverride) {
+                filterPeriod = periodOverride;
+            } else if (dFilter && dFilter.value) {
+                filterPeriod = dFilter.value;
+            } else if (pFilter && pFilter.value) {
+                filterPeriod = pFilter.value;
+            }
+
+            api.run('getAdminDashboard', { filters: { org: org, period: filterPeriod } }).then(res => {
+                hideLoader();
+                if (res.ok) {
+                    let dTitle = document.getElementById('dashTitle'); 
+                    if (dTitle) {
+                        if (res.isPublicView) {
+                            dTitle.innerText = "ภาพรวมความพร้อม (สาธารณะ)";
+                        } else {
+                            dTitle.innerText = "แดชบอร์ดผู้ดูแลระบบ";
+                        }
+                    }
+
+                    let pAlert = document.getElementById('publicAlert'); 
+                    if (pAlert) {
+                        if (!res.isPublicView) {
+                            pAlert.classList.add('hidden');
+                        } else {
+                            pAlert.classList.remove('hidden');
+                        }
+                    }
+                    
+                    let eTotalDriver = document.getElementById('statTotalDriver'); 
+                    if (eTotalDriver) eTotalDriver.innerText = res.totalDrivers;
+                    
+                    let eTotalStaff = document.getElementById('statTotalStaff'); 
+                    if (eTotalStaff) eTotalStaff.innerText = res.totalStaff;
+                    
+                    let eGreen = document.getElementById('statGreen'); 
+                    if (eGreen) eGreen.innerText = res.stats.statGreen;
+                    
+                    let eAmber = document.getElementById('statAmber'); 
+                    if (eAmber) eAmber.innerText = res.stats.statAmber;
+                    
+                    let eRed = document.getElementById('statRed'); 
+                    if (eRed) eRed.innerText = res.stats.statRed;
+                    
+                    let eNoData = document.getElementById('statNoData'); 
+                    if (eNoData) eNoData.innerText = res.stats.statNoData;
+                    
+                    renderDonutChart(res.stats); 
+                    
+                    if (res.orgStats) {
+                        renderBarChart(res.orgStats);
+                    }
+
+                    let isSpecificDay = false;
+                    if (filterPeriod === 'today' || filterPeriod.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                        isSpecificDay = true;
+                    }
+                    
+                    let lAction = document.getElementById('labelActionReq'); 
+                    if (lAction) {
+                        if (isSpecificDay) {
+                            lAction.innerText = 'รายชื่อผู้ที่ต้องเฝ้าระวัง / งดขับ (วันที่เลือก)';
+                        } else {
+                            let rangeText = '30 วัน';
+                            if (filterPeriod === '7d') {
+                                rangeText = '7 วัน';
+                            }
+                            lAction.innerText = `ประวัติการประเมินที่ต้องเฝ้าระวัง (ช่วง ${rangeText})`;
+                        }
+                    }
+
+                    const actionRenderer = (i, no) => {
+                        let dParts = String(i.date).split('-'); 
+                        let thDate = `${dParts[2]}/${dParts[1]}/${parseInt(dParts[0]) + 543}`;
+                        
+                        let timeStr = '-';
+                        if (i.createdAt) {
+                            timeStr = new Date(i.createdAt).toLocaleTimeString('th-TH', {hour: '2-digit', minute: '2-digit'});
+                        }
+                        
+                        let bandClass = '';
+                        if (i.band === 'RED') {
+                            bandClass = 'bg-red-100 text-red-700';
+                        } else {
+                            bandClass = 'bg-yellow-100 text-yellow-700';
+                        }
+
+                        let evidenceHtml = '';
+                        if (i.evidenceUrl) {
+                            evidenceHtml = `
+                                <br><a href="${i.evidenceUrl}" target="_blank" class="text-[10px] text-blue-600 hover:underline">
+                                    📷 ดูรูปหลักฐาน
+                                </a>
+                            `;
+                        }
+                        
+                        let reasonsTxt = '';
+                        if (i.reasons && i.reasons.length > 0) {
+                            reasonsTxt = i.reasons.join(', ');
+                        }
+
+                        return `
+                            <tr class="border-b hover:bg-gray-50 bg-white">
+                                <td class="px-4 py-3 text-center text-gray-500 font-bold">${no}</td>
+                                <td class="px-4 py-3 text-sm text-gray-700 font-medium">
+                                    ${thDate}<br>
+                                    <span class="text-[11px] text-gray-500">${timeStr} น.</span>
+                                </td>
+                                <td class="px-4 py-3 font-medium text-gray-700">
+                                    ${i.name}
+                                    ${evidenceHtml}
+                                </td>
+                                <td class="px-4 py-3 font-mono text-sm">${i.phone}</td>
+                                <td class="px-4 py-3">
+                                    <span class="px-2 py-1 rounded text-xs font-bold ${bandClass}">${i.band}</span>
+                                </td>
+                                <td class="px-4 py-3 text-xs text-red-600">${reasonsTxt}</td>
+                            </tr>
+                        `;
+                    };
+                    
+                    renderGroupedTable('adminActionListDriver', res.actionRequiredDriver || [], actionRenderer, 6);
+                    renderGroupedTable('adminActionListStaff', res.actionRequiredStaff || [], actionRenderer, 6);
+
+                    let dGreen = document.getElementById('divGreenListArea'); 
+                    let dNoData = document.getElementById('divNoDataList');
+                    
+                    if (!isSpecificDay) { 
+                        if (dGreen) dGreen.classList.add('hidden'); 
+                        if (dNoData) dNoData.classList.add('hidden'); 
+                    } else {
+                        if (dGreen) dGreen.classList.remove('hidden'); 
+                        if (dNoData) dNoData.classList.remove('hidden');
+                        
+                        const greenRenderer = (i, no) => {
+                            let timeStr = '-';
+                            if (i.createdAt) {
+                                timeStr = new Date(i.createdAt).toLocaleTimeString('th-TH', {hour: '2-digit', minute: '2-digit'});
+                            }
+                            
+                            let evidenceHtml = '';
+                            if (i.evidenceUrl) {
+                                evidenceHtml = `
+                                    <br><a href="${i.evidenceUrl}" target="_blank" class="text-[10px] text-blue-600 hover:underline">
+                                        📷 ดูรูปหลักฐาน
+                                    </a>
+                                `;
+                            }
+
+                            return `
+                                <tr class="border-b hover:bg-green-50 bg-white">
+                                    <td class="px-4 py-3 text-center text-gray-500 font-bold">${no}</td>
+                                    <td class="px-4 py-3 font-medium text-gray-700">
+                                        ${i.name}
+                                        ${evidenceHtml}
+                                    </td>
+                                    <td class="px-4 py-3 text-center text-blue-600 font-medium">${i.temp}</td>
+                                    <td class="px-4 py-3 text-center font-mono">${i.bp}</td>
+                                    <td class="px-4 py-3 text-center font-mono">${i.pulse}</td>
+                                    <td class="px-4 py-3 text-center text-green-700 font-medium">${timeStr} น.</td>
+                                </tr>
+                            `;
+                        };
+                        
+                        let areaGD = document.getElementById('divGreenListDriver');
+                        let areaGS = document.getElementById('divGreenListStaff');
+                        
+                        if (res.greenListDriver && res.greenListDriver.length > 0) { 
+                            if (areaGD) areaGD.classList.remove('hidden'); 
+                            renderGroupedTable('adminGreenListDriver', res.greenListDriver, greenRenderer, 6); 
+                        } else { 
+                            if (areaGD) areaGD.classList.add('hidden'); 
+                        }
+
+                        if (res.greenListStaff && res.greenListStaff.length > 0) { 
+                            if (areaGS) areaGS.classList.remove('hidden'); 
+                            renderGroupedTable('adminGreenListStaff', res.greenListStaff, greenRenderer, 6); 
+                        } else { 
+                            if (areaGS) areaGS.classList.add('hidden'); 
+                        }
+                        
+                        renderGroupedTable('adminNoDataList', res.noDataList, (i, no) => { 
+                            return `
+                                <tr class="border-b bg-white">
+                                    <td class="px-4 py-3 text-center text-gray-500 font-bold">${no}</td>
+                                    <td class="px-4 py-3 font-medium text-gray-700">${i.name}</td>
+                                    <td class="px-4 py-3 text-center font-mono text-sm">${i.phone}</td>
+                                    <td class="px-4 py-3 text-center">
+                                        <span class="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">ยังไม่ประเมิน</span>
+                                    </td>
+                                </tr>
+                            `; 
+                        }, 4);
+                    }
+                } else { 
+                    Swal.fire('ข้อผิดพลาด', res.error, 'error'); 
+                }
+            }).catch(err => { 
+                hideLoader(); 
+                console.error(err); 
+            });
+        }
+
         // ================= SUPER ADMIN & LOGS =================
         let bDash = document.getElementById('btnNavDash'); 
         if (bDash) {
-            bDash.onclick = () => { 
+            bDash.onclick = function() { 
                 switchView('viewAdmin'); 
                 loadAdminDashboard(); 
             };
@@ -2840,7 +3338,7 @@
 
         let bUser = document.getElementById('btnNavUsers'); 
         if (bUser) {
-            bUser.onclick = () => { 
+            bUser.onclick = function() { 
                 switchView('viewUserManagement'); 
                 loadAdminUsers(); 
             };
@@ -2848,14 +3346,14 @@
 
         let bSet = document.getElementById('btnNavSetting'); 
         if (bSet) {
-            bSet.onclick = () => { 
+            bSet.onclick = function() { 
                 switchView('viewSettings'); 
             };
         }
 
         let bAud = document.getElementById('btnNavAudit'); 
         if (bAud) {
-            bAud.onclick = () => { 
+            bAud.onclick = function() { 
                 switchView('viewAuditLog'); 
                 loadAuditLogs(); 
             };
@@ -2887,8 +3385,16 @@
             const action = elA.value;
             
             let filtered = cachedLogs.filter(l => { 
-                const matchSearch = l.actorName.toLowerCase().includes(search) || l.targetName.toLowerCase().includes(search) || l.actorPhone.includes(search); 
-                const matchAction = action === 'ALL' || l.action === action; 
+                let matchSearch = false;
+                if (l.actorName.toLowerCase().includes(search) || l.targetName.toLowerCase().includes(search) || l.actorPhone.includes(search)) {
+                    matchSearch = true;
+                }
+                
+                let matchAction = false;
+                if (action === 'ALL' || l.action === action) {
+                    matchAction = true;
+                }
+                
                 return matchSearch && matchAction; 
             });
 
@@ -2906,26 +3412,36 @@
                 return;
             }
 
-            const grouped = dataArray.reduce((acc, l) => { 
-                if (!acc[l.org]) {
-                    acc[l.org] = []; 
+            const grouped = {};
+            dataArray.forEach(l => {
+                if (!grouped[l.org]) {
+                    grouped[l.org] = [];
                 }
-                acc[l.org].push(l); 
-                return acc; 
-            }, {});
+                grouped[l.org].push(l);
+            });
 
             let html = '';
-            Object.keys(grouped).sort().forEach(org => {
+            let sortedOrgs = Object.keys(grouped).sort();
+            
+            sortedOrgs.forEach(org => {
                 html += `
                     <tr class="bg-blue-50 border-t-2 border-blue-200">
                         <td colspan="8" class="px-4 py-2 font-bold text-blue-900 border-l-4 border-l-blue-600">${org}</td>
                     </tr>
                 `;
+                
                 grouped[org].forEach((l, index) => {
                     let d = new Date(l.createdAt); 
-                    let dateStr = `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()+543} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
                     
-                    let actionText = ACTION_TH[l.action] || l.action; 
+                    let hStr = String(d.getHours()).padStart(2, '0');
+                    let mStr = String(d.getMinutes()).padStart(2, '0');
+                    let dateStr = `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()+543} ${hStr}:${mStr}`;
+                    
+                    let actionText = l.action;
+                    if (ACTION_TH[l.action]) {
+                        actionText = ACTION_TH[l.action];
+                    }
+                    
                     let logRoleTh = getRoleTh(l.actorRole, l.org);
                     
                     let targetText = '';
@@ -2978,15 +3494,19 @@
                         const blob = new Blob([res.csvData], { type: 'text/csv;charset=utf-8;' });
                         const link = document.createElement("a");
                         const url = URL.createObjectURL(blob);
+                        
                         link.setAttribute("href", url);
                         link.setAttribute("download", `DHR_Report_${startDate}_to_${endDate}.csv`);
                         link.style.visibility = 'hidden';
+                        
                         document.body.appendChild(link);
                         link.click();
                         document.body.removeChild(link);
 
                         let modExport = document.getElementById('modalExport');
-                        if (modExport) modExport.classList.add('hidden');
+                        if (modExport) {
+                            modExport.classList.add('hidden');
+                        }
 
                         Swal.fire('สำเร็จ', 'ดาวน์โหลดรายงานเรียบร้อยแล้ว', 'success');
                     } else {
@@ -3155,7 +3675,15 @@
                 if (res.ok) { 
                     cachedUsers = res.users; 
                     cachedMyRole = res.myRole; 
-                    updateUsersBadge(res.users.filter(u => u.status === 'PENDING').length); 
+                    
+                    let pCount = 0;
+                    res.users.forEach(u => {
+                        if (u.status === 'PENDING') {
+                            pCount++;
+                        }
+                    });
+                    
+                    updateUsersBadge(pCount); 
                     applyUserFilter(); 
                 }
             }).catch(err => { 
@@ -3178,9 +3706,21 @@
             const status = elSt.value;
             
             let filtered = cachedUsers.filter(u => { 
-                const matchSearch = u.displayName.toLowerCase().includes(search) || u.phone.includes(search); 
-                const matchRole = role === 'ALL' || u.role === role; 
-                const matchStatus = status === 'ALL' || u.status === status; 
+                let matchSearch = false;
+                if (u.displayName.toLowerCase().includes(search) || u.phone.includes(search)) {
+                    matchSearch = true;
+                }
+                
+                let matchRole = false;
+                if (role === 'ALL' || u.role === role) {
+                    matchRole = true;
+                }
+                
+                let matchStatus = false;
+                if (status === 'ALL' || u.status === status) {
+                    matchStatus = true;
+                }
+                
                 return matchSearch && matchRole && matchStatus; 
             });
 
@@ -3193,15 +3733,18 @@
                 return;
             }
 
-            const myId = appUser ? appUser.userId : '';
+            let myId = '';
+            if (appUser) {
+                myId = appUser.userId;
+            }
             
-            const grouped = dataArray.reduce((acc, u) => { 
-                if (!acc[u.org]) {
-                    acc[u.org] = []; 
+            const grouped = {};
+            dataArray.forEach(u => {
+                if (!grouped[u.org]) {
+                    grouped[u.org] = [];
                 }
-                acc[u.org].push(u); 
-                return acc; 
-            }, {});
+                grouped[u.org].push(u);
+            });
             
             let html = '';
             
@@ -3210,19 +3753,46 @@
                 return;
             }
             
-            Object.keys(grouped).sort().forEach(org => {
+            let sortedOrgs = Object.keys(grouped).sort();
+            
+            sortedOrgs.forEach(org => {
                 html += `
                     <tr class="bg-blue-50 border-t-2 border-blue-200">
                         <td colspan="7" class="px-4 py-2 font-bold text-blue-900 border-l-4 border-l-blue-600">${org}</td>
                     </tr>
                 `;
-                grouped[org].sort((a,b) => a.role.localeCompare(b.role)).forEach((u, index) => {
+                
+                let usersInOrg = grouped[org];
+                usersInOrg.sort((a,b) => {
+                    return a.role.localeCompare(b.role);
+                });
+                
+                usersInOrg.forEach((u, index) => {
                     let roleThText = getRoleTh(u.role, u.org); 
-                    let isSelf = (u.userId === myId); 
+                    
+                    let isSelf = false;
+                    if (u.userId === myId) {
+                        isSelf = true;
+                    }
+                    
                     let btnStatus = '';
                     
                     if (u.status !== 'APPROVED') {
-                        if (myRole === 'super_admin' || (myRole === 'provincial_admin' && !['super_admin', 'provincial_admin', 'provincial_audit'].includes(u.role)) || (myRole === 'hospital_admin' && ['driver','staff'].includes(u.role))) {
+                        let canApprove = false;
+                        
+                        if (myRole === 'super_admin') {
+                            canApprove = true;
+                        } else if (myRole === 'provincial_admin') {
+                            if (u.role !== 'super_admin' && u.role !== 'provincial_admin' && u.role !== 'provincial_audit') {
+                                canApprove = true;
+                            }
+                        } else if (myRole === 'hospital_admin') {
+                            if (u.role === 'driver' || u.role === 'staff') {
+                                canApprove = true;
+                            }
+                        }
+                        
+                        if (canApprove) {
                             btnStatus = `
                                 <div class="flex gap-1 justify-center mb-1">
                                     <button onclick="updStatus('${u.userId}', '${u.displayName}', 'APPROVED')" class="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded text-[10px] font-medium shadow-sm transition">อนุมัติ</button>
@@ -3233,11 +3803,23 @@
                             btnStatus = `<span class="text-[10px] text-orange-500 font-medium mr-1 bg-orange-50 px-1 rounded border border-orange-200">รอระดับสูงอนุมัติ</span>`; 
                         }
                     } else {
-                        if (myRole === 'super_admin' && !['super_admin', 'exec_ppho'].includes(u.role)) {
-                            btnStatus = `<button onclick="updStatus('${u.userId}', '${u.displayName}', 'SUSPENDED')" class="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-[10px] font-medium mr-1 shadow-sm transition">ระงับ</button>`;
-                        } else if (myRole === 'provincial_admin' && !['super_admin', 'exec_ppho', 'provincial_admin', 'provincial_audit'].includes(u.role)) {
-                            btnStatus = `<button onclick="updStatus('${u.userId}', '${u.displayName}', 'SUSPENDED')" class="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-[10px] font-medium mr-1 shadow-sm transition">ระงับ</button>`;
-                        } else if (myRole === 'hospital_admin' && ['driver','staff'].includes(u.role)) {
+                        let canSuspend = false;
+                        
+                        if (myRole === 'super_admin') {
+                            if (u.role !== 'super_admin' && u.role !== 'exec_ppho') {
+                                canSuspend = true;
+                            }
+                        } else if (myRole === 'provincial_admin') {
+                            if (u.role !== 'super_admin' && u.role !== 'exec_ppho' && u.role !== 'provincial_admin' && u.role !== 'provincial_audit') {
+                                canSuspend = true;
+                            }
+                        } else if (myRole === 'hospital_admin') {
+                            if (u.role === 'driver' || u.role === 'staff') {
+                                canSuspend = true;
+                            }
+                        }
+                        
+                        if (canSuspend) {
                             btnStatus = `<button onclick="updStatus('${u.userId}', '${u.displayName}', 'SUSPENDED')" class="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-[10px] font-medium mr-1 shadow-sm transition">ระงับ</button>`;
                         }
                     }
@@ -3249,24 +3831,45 @@
                     if (myRole === 'super_admin') { 
                         canEdit = true; 
                         canViewPin = true; 
-                        canDelete = (u.role !== 'super_admin'); 
+                        if (u.role !== 'super_admin') {
+                            canDelete = true;
+                        }
                     } else if (myRole === 'provincial_admin') { 
-                        canEdit = (!['super_admin', 'provincial_admin', 'provincial_audit'].includes(u.role) || isSelf); 
-                        canViewPin = (!['super_admin', 'provincial_admin', 'provincial_audit', 'exec_ppho'].includes(u.role) || isSelf); 
-                        canDelete = !['super_admin', 'provincial_admin', 'provincial_audit', 'exec_ppho'].includes(u.role); 
+                        if (u.role !== 'super_admin' && u.role !== 'provincial_admin' && u.role !== 'provincial_audit') {
+                            canEdit = true;
+                            canDelete = true;
+                        }
+                        if (isSelf) {
+                            canEdit = true;
+                        }
+                        
+                        if (u.role !== 'super_admin' && u.role !== 'provincial_admin' && u.role !== 'provincial_audit' && u.role !== 'exec_ppho') {
+                            canViewPin = true;
+                        }
+                        if (isSelf) {
+                            canViewPin = true;
+                        }
                     } else if (myRole === 'hospital_admin') { 
-                        canEdit = (['driver','staff'].includes(u.role) || isSelf); 
-                        canViewPin = (['driver','staff'].includes(u.role) || isSelf); 
+                        if (u.role === 'driver' || u.role === 'staff') {
+                            canEdit = true;
+                            canViewPin = true;
+                        }
+                        if (isSelf) {
+                            canEdit = true;
+                            canViewPin = true;
+                        }
                         canDelete = false; 
                     }
                     
                     let btnEdit = '';
                     if (canEdit) {
-                        btnEdit = `<button onclick="openEditUser('${u.userId}', '${u.phone}', '${u.displayName}', '${u.org}', '${u.role}', '${u.email}')" class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-[10px] font-medium mr-1 shadow-sm transition">แก้ไข</button>`;
+                        let emailParam = "";
+                        if (u.email) emailParam = u.email;
+                        btnEdit = `<button onclick="openEditUser('${u.userId}', '${u.phone}', '${u.displayName}', '${u.org}', '${u.role}', '${emailParam}')" class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-[10px] font-medium mr-1 shadow-sm transition">แก้ไข</button>`;
                     }
 
                     let btnView = '';
-                    if (['driver','staff'].includes(u.role)) {
+                    if (u.role === 'driver' || u.role === 'staff') {
                         btnView = `<button onclick="confirmViewProfile('${u.userId}', '${u.displayName}')" class="bg-indigo-500 hover:bg-indigo-600 text-white px-2 py-1 rounded text-[10px] font-medium shadow-sm transition mr-1">ดูข้อมูล</button>`;
                     }
 
@@ -3289,12 +3892,15 @@
                         statusClass = 'bg-yellow-100 text-yellow-700';
                     }
 
+                    let uEmailDisplay = '-';
+                    if (u.email) uEmailDisplay = u.email;
+
                     html += `
                         <tr class="border-b hover:bg-gray-50 bg-white">
                             <td class="px-4 py-3 text-center text-gray-500 font-bold">${index + 1}</td>
                             <td class="px-4 py-3 font-medium text-gray-800">${u.displayName}</td>
                             <td class="px-4 py-3 font-mono text-sm text-gray-600">${u.phone}${pinBtn}</td>
-                            <td class="px-4 py-3 text-xs text-gray-500">${u.email || '-'}</td>
+                            <td class="px-4 py-3 text-xs text-gray-500">${uEmailDisplay}</td>
                             <td class="px-4 py-3 text-xs">
                                 <span class="bg-gray-100 border border-gray-200 text-gray-700 px-2 py-0.5 rounded font-medium">${roleThText}</span>
                             </td>
@@ -3376,7 +3982,7 @@
 
         let btnAddUser = document.getElementById('btnOpenAddUser');
         if (btnAddUser) {
-            btnAddUser.onclick = () => { 
+            btnAddUser.onclick = function() { 
                 let fAdd = document.getElementById('formAddUser'); 
                 if (fAdd) {
                     fAdd.reset(); 
@@ -3394,13 +4000,17 @@
                     let hiddenOpts = ['optAddProvAdmin','optAddProvAudit','optAddExec','optAddSuper', 'optAddDriver', 'optAddStaff'];
                     hiddenOpts.forEach(id => { 
                         let el = document.getElementById(id); 
-                        if (el) el.style.display = 'none'; 
+                        if (el) {
+                            el.style.display = 'none'; 
+                        }
                     });
                     
                     let showOpts = ['optAddDir','optAddAdmin'];
                     showOpts.forEach(id => { 
                         let el = document.getElementById(id); 
-                        if (el) el.style.display = 'block'; 
+                        if (el) {
+                            el.style.display = 'block'; 
+                        }
                     });
 
                     if (roleSelect) {
@@ -3414,13 +4024,17 @@
                     let hiddenOpts = ['optAddProvAdmin','optAddProvAudit','optAddExec','optAddSuper'];
                     hiddenOpts.forEach(id => { 
                         let el = document.getElementById(id); 
-                        if (el) el.style.display = 'none'; 
+                        if (el) {
+                            el.style.display = 'none'; 
+                        }
                     });
                     
                     let showOpts = ['optAddDir','optAddAdmin','optAddDriver','optAddStaff'];
                     showOpts.forEach(id => { 
                         let el = document.getElementById(id); 
-                        if (el) el.style.display = 'block'; 
+                        if (el) {
+                            el.style.display = 'block'; 
+                        }
                     });
 
                     if (roleSelect) {
@@ -3434,7 +4048,9 @@
                     let showOpts = ['optAddProvAdmin','optAddProvAudit','optAddExec','optAddSuper','optAddDir','optAddAdmin','optAddDriver','optAddStaff'];
                     showOpts.forEach(id => { 
                         let el = document.getElementById(id); 
-                        if (el) el.style.display = 'block'; 
+                        if (el) {
+                            el.style.display = 'block'; 
+                        }
                     });
 
                     if (roleSelect) {
@@ -3456,12 +4072,19 @@
             formAddUsr.onsubmit = function(e) {
                 e.preventDefault();
                 const orgSelect = document.getElementById('addOrg'); 
-                const orgValue = orgSelect.disabled ? appUser.org : orgSelect.value;
+                let orgValue = orgSelect.value;
+                
+                if (orgSelect.disabled) {
+                    orgValue = appUser.org;
+                }
+                
+                const fName = document.getElementById('addFirstName').value;
+                const lName = document.getElementById('addLastName').value;
                 
                 const payload = { 
-                    firstName: document.getElementById('addFirstName').value, 
-                    lastName: document.getElementById('addLastName').value, 
-                    displayName: document.getElementById('addFirstName').value + ' ' + document.getElementById('addLastName').value, 
+                    firstName: fName, 
+                    lastName: lName, 
+                    displayName: fName + ' ' + lName, 
                     phone: document.getElementById('addPhone').value, 
                     org: orgValue, 
                     role: document.getElementById('addRole').value, 
@@ -3504,10 +4127,16 @@
 
         function toggleAddDriverFields() { 
             const roleEl = document.getElementById('addRole'); 
-            if (!roleEl) return;
+            if (!roleEl) {
+                return;
+            }
             
             const role = roleEl.value; 
-            const isDriver = (role === 'driver' || role === 'staff');
+            let isDriver = false;
+            
+            if (role === 'driver' || role === 'staff') {
+                isDriver = true;
+            }
             
             let dExt = document.getElementById('addDriverExtraFields'); 
             if (dExt) {
@@ -3539,15 +4168,54 @@
         }
 
         function openEditUser(uid, p, n, o, r, e) {
-            let elUid = document.getElementById('editUserId'); if (elUid) elUid.value = uid; 
-            let elOp = document.getElementById('editOldPhone'); if (elOp) elOp.value = p; 
-            let elOn = document.getElementById('editOldName'); if (elOn) elOn.value = n; 
-            let elOo = document.getElementById('editOldOrg'); if (elOo) elOo.value = o;
-            let elP = document.getElementById('editPhone'); if (elP) elP.value = p; 
-            let elN = document.getElementById('editName'); if (elN) elN.value = n; 
-            let elO = document.getElementById('editOrg'); if (elO) elO.value = o; 
-            let elR = document.getElementById('editRole'); if (elR) elR.value = r; 
-            let elE = document.getElementById('editEmail'); if (elE) elE.value = e || '';
+            let elUid = document.getElementById('editUserId'); 
+            if (elUid) {
+                elUid.value = uid; 
+            }
+            
+            let elOp = document.getElementById('editOldPhone'); 
+            if (elOp) {
+                elOp.value = p; 
+            }
+            
+            let elOn = document.getElementById('editOldName'); 
+            if (elOn) {
+                elOn.value = n; 
+            }
+            
+            let elOo = document.getElementById('editOldOrg'); 
+            if (elOo) {
+                elOo.value = o;
+            }
+            
+            let elP = document.getElementById('editPhone'); 
+            if (elP) {
+                elP.value = p; 
+            }
+            
+            let elN = document.getElementById('editName'); 
+            if (elN) {
+                elN.value = n; 
+            }
+            
+            let elO = document.getElementById('editOrg'); 
+            if (elO) {
+                elO.value = o; 
+            }
+            
+            let elR = document.getElementById('editRole'); 
+            if (elR) {
+                elR.value = r; 
+            }
+            
+            let elE = document.getElementById('editEmail'); 
+            if (elE) {
+                if (e) {
+                    elE.value = e;
+                } else {
+                    elE.value = '';
+                }
+            }
             
             const nameInput = document.getElementById('editName'); 
             const phoneInput = document.getElementById('editPhone'); 
@@ -3559,47 +4227,115 @@
             
             if (appUser.role === 'hospital_admin') {
                 if (uid === appUser.userId) {
-                    if (alertBoxSelf) alertBoxSelf.classList.remove('hidden'); 
-                    if (alertBoxOther) alertBoxOther.classList.add('hidden');
+                    if (alertBoxSelf) {
+                        alertBoxSelf.classList.remove('hidden'); 
+                    }
+                    if (alertBoxOther) {
+                        alertBoxOther.classList.add('hidden');
+                    }
                     
-                    if (nameInput) { nameInput.disabled = false; nameInput.classList.remove('bg-gray-100', 'text-gray-500'); }
-                    if (phoneInput) { phoneInput.disabled = false; phoneInput.classList.remove('bg-gray-100', 'text-gray-500'); }
-                    if (orgSelect) { orgSelect.disabled = false; orgSelect.classList.remove('bg-gray-100', 'text-gray-500'); }
-                    if (roleSelect) { roleSelect.disabled = true; roleSelect.classList.add('bg-gray-100', 'text-gray-500'); }
+                    if (nameInput) { 
+                        nameInput.disabled = false; 
+                        nameInput.classList.remove('bg-gray-100', 'text-gray-500'); 
+                    }
+                    if (phoneInput) { 
+                        phoneInput.disabled = false; 
+                        phoneInput.classList.remove('bg-gray-100', 'text-gray-500'); 
+                    }
+                    if (orgSelect) { 
+                        orgSelect.disabled = false; 
+                        orgSelect.classList.remove('bg-gray-100', 'text-gray-500'); 
+                    }
+                    if (roleSelect) { 
+                        roleSelect.disabled = true; 
+                        roleSelect.classList.add('bg-gray-100', 'text-gray-500'); 
+                    }
                 } else {
-                    if (alertBoxSelf) alertBoxSelf.classList.add('hidden'); 
-                    if (alertBoxOther) alertBoxOther.classList.remove('hidden');
+                    if (alertBoxSelf) {
+                        alertBoxSelf.classList.add('hidden'); 
+                    }
+                    if (alertBoxOther) {
+                        alertBoxOther.classList.remove('hidden');
+                    }
                     
-                    if (nameInput) { nameInput.disabled = true; nameInput.classList.add('bg-gray-100', 'text-gray-500'); }
-                    if (phoneInput) { phoneInput.disabled = true; phoneInput.classList.add('bg-gray-100', 'text-gray-500'); }
-                    if (orgSelect) { orgSelect.disabled = true; orgSelect.classList.add('bg-gray-100', 'text-gray-500'); }
-                    if (roleSelect) { roleSelect.disabled = true; roleSelect.classList.add('bg-gray-100', 'text-gray-500'); }
+                    if (nameInput) { 
+                        nameInput.disabled = true; 
+                        nameInput.classList.add('bg-gray-100', 'text-gray-500'); 
+                    }
+                    if (phoneInput) { 
+                        phoneInput.disabled = true; 
+                        phoneInput.classList.add('bg-gray-100', 'text-gray-500'); 
+                    }
+                    if (orgSelect) { 
+                        orgSelect.disabled = true; 
+                        orgSelect.classList.add('bg-gray-100', 'text-gray-500'); 
+                    }
+                    if (roleSelect) { 
+                        roleSelect.disabled = true; 
+                        roleSelect.classList.add('bg-gray-100', 'text-gray-500'); 
+                    }
                 }
             } else if (appUser.role === 'provincial_admin') {
-                if (alertBoxSelf) alertBoxSelf.classList.add('hidden'); 
-                if (alertBoxOther) alertBoxOther.classList.add('hidden');
+                if (alertBoxSelf) {
+                    alertBoxSelf.classList.add('hidden'); 
+                }
+                if (alertBoxOther) {
+                    alertBoxOther.classList.add('hidden');
+                }
                 
-                if (nameInput) { nameInput.disabled = false; nameInput.classList.remove('bg-gray-100', 'text-gray-500'); }
-                if (phoneInput) { phoneInput.disabled = false; phoneInput.classList.remove('bg-gray-100', 'text-gray-500'); }
-                if (orgSelect) { orgSelect.disabled = false; orgSelect.classList.remove('bg-gray-100', 'text-gray-500'); }
-                if (roleSelect) { roleSelect.disabled = false; roleSelect.classList.remove('bg-gray-100', 'text-gray-500'); }
+                if (nameInput) { 
+                    nameInput.disabled = false; 
+                    nameInput.classList.remove('bg-gray-100', 'text-gray-500'); 
+                }
+                if (phoneInput) { 
+                    phoneInput.disabled = false; 
+                    phoneInput.classList.remove('bg-gray-100', 'text-gray-500'); 
+                }
+                if (orgSelect) { 
+                    orgSelect.disabled = false; 
+                    orgSelect.classList.remove('bg-gray-100', 'text-gray-500'); 
+                }
+                if (roleSelect) { 
+                    roleSelect.disabled = false; 
+                    roleSelect.classList.remove('bg-gray-100', 'text-gray-500'); 
+                }
                 
                 ['optEditProvAdmin','optEditProvAudit','optEditExec','optEditSuper'].forEach(id => { 
                     let el = document.getElementById(id); 
-                    if (el) el.style.display = 'none'; 
+                    if (el) {
+                        el.style.display = 'none'; 
+                    }
                 });
             } else {
-                if (alertBoxSelf) alertBoxSelf.classList.add('hidden'); 
-                if (alertBoxOther) alertBoxOther.classList.add('hidden');
+                if (alertBoxSelf) {
+                    alertBoxSelf.classList.add('hidden'); 
+                }
+                if (alertBoxOther) {
+                    alertBoxOther.classList.add('hidden');
+                }
                 
-                if (nameInput) { nameInput.disabled = false; nameInput.classList.remove('bg-gray-100', 'text-gray-500'); }
-                if (phoneInput) { phoneInput.disabled = false; phoneInput.classList.remove('bg-gray-100', 'text-gray-500'); }
-                if (orgSelect) { orgSelect.disabled = false; orgSelect.classList.remove('bg-gray-100', 'text-gray-500'); }
-                if (roleSelect) { roleSelect.disabled = false; roleSelect.classList.remove('bg-gray-100', 'text-gray-500'); }
+                if (nameInput) { 
+                    nameInput.disabled = false; 
+                    nameInput.classList.remove('bg-gray-100', 'text-gray-500'); 
+                }
+                if (phoneInput) { 
+                    phoneInput.disabled = false; 
+                    phoneInput.classList.remove('bg-gray-100', 'text-gray-500'); 
+                }
+                if (orgSelect) { 
+                    orgSelect.disabled = false; 
+                    orgSelect.classList.remove('bg-gray-100', 'text-gray-500'); 
+                }
+                if (roleSelect) { 
+                    roleSelect.disabled = false; 
+                    roleSelect.classList.remove('bg-gray-100', 'text-gray-500'); 
+                }
                 
                 ['optEditProvAdmin','optEditProvAudit','optEditExec','optEditSuper'].forEach(id => { 
                     let el = document.getElementById(id); 
-                    if (el) el.style.display = 'block'; 
+                    if (el) {
+                        el.style.display = 'block'; 
+                    }
                 });
             }
 
@@ -3629,7 +4365,12 @@
                 api.run('adminEditUser', payload).then(res => { 
                     hideLoader(); 
                     if (res.ok) { 
-                        Swal.fire('สำเร็จ', res.message || 'อัปเดตข้อมูลผู้ใช้เรียบร้อยแล้ว', 'success'); 
+                        let msg = 'อัปเดตข้อมูลผู้ใช้เรียบร้อยแล้ว';
+                        if (res.message) {
+                            msg = res.message;
+                        }
+                        
+                        Swal.fire('สำเร็จ', msg, 'success'); 
                         
                         let me = document.getElementById('modalEditUser'); 
                         if (me) {
@@ -3703,14 +4444,24 @@
             `;
             
             if (u.role === 'driver' || u.role === 'staff') {
+                let ageDisplay = '-';
+                if (p.age) {
+                    ageDisplay = p.age;
+                }
+                
+                let dobDisplay = '-';
+                if (p.dob) {
+                    dobDisplay = formatThaiDate(p.dob);
+                }
+                
                 html += `
                     <div>
                         <span class="text-gray-500 block text-xs">อายุ</span>
-                        <span class="font-bold">${p.age || '-'} ปี</span>
+                        <span class="font-bold">${ageDisplay} ปี</span>
                     </div>
                     <div>
                         <span class="text-gray-500 block text-xs">วันเกิด</span>
-                        <span class="font-bold">${formatThaiDate(p.dob)}</span>
+                        <span class="font-bold">${dobDisplay}</span>
                     </div>
                 `;
                 
@@ -3721,15 +4472,21 @@
                      } else {
                          fileLinkHtml = '<span class="text-gray-400 text-sm">ไม่มีไฟล์แนบ</span>';
                      }
+                     
+                     let posDisplay = '-';
+                     if (p.position) posDisplay = p.position;
+                     
+                     let depDisplay = '-';
+                     if (p.department) depDisplay = p.department;
 
                      html += `
                         <div>
                             <span class="text-gray-500 block text-xs">ตำแหน่ง</span>
-                            <span class="font-bold">${p.position || '-'}</span>
+                            <span class="font-bold">${posDisplay}</span>
                         </div>
                         <div>
                             <span class="text-gray-500 block text-xs">กลุ่มงาน</span>
-                            <span class="font-bold">${p.department || '-'}</span>
+                            <span class="font-bold">${depDisplay}</span>
                         </div>
                         <div class="col-span-2">
                             <span class="text-gray-500 block text-xs">ไฟล์คำสั่ง</span>
@@ -3737,6 +4494,18 @@
                         </div>
                     `;
                 }
+                
+                let chrDisplay = '-';
+                if (p.chronicDisease) chrDisplay = p.chronicDisease;
+                
+                let medDisplay = '-';
+                if (p.regularMeds) medDisplay = p.regularMeds;
+                
+                let smoDisplay = '-';
+                if (p.smoking) smoDisplay = p.smoking;
+                
+                let alcDisplay = '-';
+                if (p.alcohol) alcDisplay = p.alcohol;
 
                 html += `
                     <div class="col-span-2 bg-yellow-50 p-3 rounded-lg border border-yellow-100 mt-2 mb-2">
@@ -3744,19 +4513,19 @@
                         <div class="grid grid-cols-2 gap-2">
                             <div>
                                 <span class="text-gray-500 block text-[10px]">โรคประจำตัว</span>
-                                <span class="font-bold text-red-600">${p.chronicDisease || '-'}</span>
+                                <span class="font-bold text-red-600">${chrDisplay}</span>
                             </div>
                             <div>
                                 <span class="text-gray-500 block text-[10px]">ยาที่ใช้ประจำ</span>
-                                <span class="font-bold text-red-600">${p.regularMeds || '-'}</span>
+                                <span class="font-bold text-red-600">${medDisplay}</span>
                             </div>
                             <div>
                                 <span class="text-gray-500 block text-[10px]">ประวัติการสูบบุหรี่</span>
-                                <span class="font-bold">${p.smoking || '-'}</span>
+                                <span class="font-bold">${smoDisplay}</span>
                             </div>
                             <div>
                                 <span class="text-gray-500 block text-[10px]">ประวัติการดื่มแอลกอฮอล์</span>
-                                <span class="font-bold">${p.alcohol || '-'}</span>
+                                <span class="font-bold">${alcDisplay}</span>
                             </div>
                         </div>
                     </div>
@@ -3797,6 +4566,7 @@
             } else { 
                 html += `<div class="col-span-2 text-center text-gray-400 py-4">ไม่มีข้อมูลประวัติสุขภาพสำหรับ Role นี้</div>`; 
             }
+            
             html += `</div>`;
             
             let vp = document.getElementById('viewProfileContent'); 
@@ -3810,52 +4580,75 @@
             }
         }
         
-        // 💡 ฟังก์ชันใหม่: ถ่ายรูปหน้าจอ Dashboard ให้เป็น A4 แบบเนียนกริบ
+        // 💡 ฟังก์ชันใหม่: ถ่ายรูปหน้าจอ Dashboard ให้เป็น A4 แบบไม่ต้องล็อกอิน
         function downloadDashboardImage() {
             showLoader("กำลังเตรียมรูปภาพ...");
             
-            // 1. ซ่อนปุ่มและเมนูที่ไม่ต้องการให้อยู่ในรูป (Navbar ด้านบน และ ปุ่มกดต่างๆ ใน Dashboard)
-            const navActions = document.getElementById('navActionButtons');
+            // ซ่อนปุ่มและเมนูต่างๆ (เช่น Navbar และส่วนควบคุม Dashboard) เพื่อให้ภาพออกมาคลีนที่สุด
+            const topNav = document.getElementById('topNavBar');
             const dashControls = document.getElementById('dashboardControls');
             
-            if (navActions) navActions.style.display = 'none';
-            if (dashControls) dashControls.style.display = 'none';
+            if (topNav) {
+                topNav.style.display = 'none';
+            }
             
-            // 2. กำหนดกรอบให้เป็นขนาด A4 แนวนอน (1123px * 794px)
+            if (dashControls) {
+                dashControls.style.display = 'none';
+            }
+            
+            // กำหนดความกว้างหน้าจอและพื้นหลังจำลองสำหรับการแคปเจอร์
             const viewAdmin = document.getElementById('viewAdmin');
+            if (viewAdmin) {
+                viewAdmin.classList.add('a4-wrapper'); 
+            }
             
-            viewAdmin.classList.add('a4-wrapper'); // เรียกใช้ CSS class จาก Part 1
-            
-            // ให้เวลาเบราว์เซอร์ปรับขนาด UI ให้เสถียรแป๊บนึง ก่อนลงมือแคปเจอร์
+            // รอให้เบราว์เซอร์จัดหน้าแบบใหม่ให้เสร็จก่อนถ่ายรูป
             setTimeout(() => {
-                html2canvas(viewAdmin, {
-                    scale: 2, // 💡 เพิ่ม Scale เป็น 2 เท่าเพื่อให้ภาพคมชัด ไม่แตก
-                    useCORS: true,
-                    backgroundColor: '#f3f4f6'
-                }).then(canvas => {
-                    // 3. คืนค่า UI กลับมาเหมือนเดิม (เปิดปุ่มคืน ยกเลิกขนาด A4)
-                    if (navActions) navActions.style.display = '';
-                    if (dashControls) dashControls.style.display = '';
-                    viewAdmin.classList.remove('a4-wrapper');
-                    
-                    // 4. บังคับดาวน์โหลดเป็นไฟล์ JPG ความละเอียดสูง
-                    const link = document.createElement('a');
-                    link.download = `Dashboard_DHR_${new Date().toISOString().split('T')[0]}.jpg`;
-                    link.href = canvas.toDataURL('image/jpeg', 0.9);
-                    link.click();
-                    
+                const targetArea = document.getElementById('viewAdmin');
+                
+                if (targetArea) {
+                    html2canvas(targetArea, {
+                        scale: 2, 
+                        useCORS: true,
+                        backgroundColor: '#f3f4f6'
+                    }).then(canvas => {
+                        // คืนค่า UI ทั้งหมดกลับมาเหมือนเดิม
+                        if (topNav) {
+                            topNav.style.display = '';
+                        }
+                        if (dashControls) {
+                            dashControls.style.display = '';
+                        }
+                        if (viewAdmin) {
+                            viewAdmin.classList.remove('a4-wrapper');
+                        }
+                        
+                        // สร้างไฟล์ภาพสำหรับดาวน์โหลด
+                        const link = document.createElement('a');
+                        link.download = `Dashboard_DHR_${new Date().toISOString().split('T')[0]}.jpg`;
+                        link.href = canvas.toDataURL('image/jpeg', 0.9);
+                        link.click();
+                        
+                        hideLoader();
+                        Swal.fire('สำเร็จ', 'บันทึกรูปภาพ Dashboard เรียบร้อยแล้ว', 'success');
+                    }).catch(err => {
+                        if (topNav) {
+                            topNav.style.display = '';
+                        }
+                        if (dashControls) {
+                            dashControls.style.display = '';
+                        }
+                        if (viewAdmin) {
+                            viewAdmin.classList.remove('a4-wrapper');
+                        }
+                        
+                        hideLoader();
+                        Swal.fire('ข้อผิดพลาด', 'ไม่สามารถบันทึกรูปภาพได้: ' + err.message, 'error');
+                    });
+                } else {
                     hideLoader();
-                    Swal.fire('สำเร็จ', 'บันทึกรูปภาพ Dashboard เรียบร้อยแล้ว', 'success');
-                }).catch(err => {
-                    // ในกรณี Error ต้องไม่ลืมคืนค่า UI ให้กลับมาปกติ
-                    if (navActions) navActions.style.display = '';
-                    if (dashControls) dashControls.style.display = '';
-                    viewAdmin.classList.remove('a4-wrapper');
-                    
-                    hideLoader();
-                    Swal.fire('ข้อผิดพลาด', 'ไม่สามารถบันทึกรูปภาพได้: ' + err.message, 'error');
-                });
-            }, 500); // ดีเลย์ 0.5 วินาที
+                }
+            }, 500); 
         }
     </script>
 </body>
