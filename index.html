@@ -52,7 +52,6 @@
             -ms-overflow-style: none; 
             scrollbar-width: none; 
         }
-        /* 💡 กำหนดขนาดของ A4 แนวนอน เวลาเตรียมถ่ายรูประบบ Dashboard */
         .a4-wrapper {
             width: 1123px !important; 
             min-height: 794px !important; 
@@ -141,7 +140,7 @@
                 </div>
             </div>
 
-            <div id="publicAlert" class="bg-blue-50 border border-blue-200 text-blue-800 p-3 rounded-lg text-sm mb-6 flex items-start gap-2">
+            <div id="publicAlert" class="hidden bg-blue-50 border border-blue-200 text-blue-800 p-3 rounded-lg text-sm mb-6 flex items-start gap-2">
                 <span><b>มุมมองสาธารณะ:</b> คุณกำลังดูข้อมูลในโหมดผู้เยี่ยมชม ข้อมูลจะถูกเซ็นเซอร์ไว้ กรุณาเข้าสู่ระบบด้วยสิทธิ์ผู้ดูแลเพื่อดูข้อมูลฉบับเต็ม</span>
             </div>
             
@@ -239,12 +238,9 @@
             </form>
             <div class="mt-6 text-center border-t pt-4">
                 <p class="text-sm text-gray-500">ผู้ขับขี่ใหม่? <button type="button" onclick="switchView('viewRegister')" class="text-blue-600 font-medium hover:underline">ลงทะเบียนที่นี่</button></p>
-                
                 <div class="mt-4 pt-4 border-t border-dashed border-gray-300">
                     <button type="button" onclick="openPassengerMode()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-3 rounded-lg transition shadow-md flex justify-center items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
-                        </svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" /></svg>
                         สำหรับผู้โดยสาร (ตรวจสอบคนขับ)
                     </button>
                 </div>
@@ -728,9 +724,7 @@
                 </div>
                 <div class="flex justify-end gap-2 mt-4 pt-4 border-t">
                     <button type="button" onclick="document.getElementById('modalExport').classList.add('hidden')" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded transition font-medium">ยกเลิก</button>
-                    <button type="submit" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded shadow-sm transition font-medium flex items-center gap-1">
-                        ดาวน์โหลด
-                    </button>
+                    <button type="submit" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded shadow-sm transition font-medium flex items-center gap-1">ดาวน์โหลด</button>
                 </div>
             </form>
         </div>
@@ -886,7 +880,7 @@
                     console.error("API Error:", err);
                     Swal.fire({
                         title: 'การเชื่อมต่อถูกปฏิเสธ',
-                        html: 'ระบบไม่สามารถดึงข้อมูลจากฐานข้อมูลได้<br><br><b>วิธีแก้ไข:</b><br>โปรดตรวจสอบการตั้งค่า Deploy ใน Google Apps Script ตรงช่อง <b>Who has access</b> ว่าได้ตั้งเป็น <b>"ทุกคน (Anyone)"</b> แล้วหรือไม่',
+                        html: 'ระบบไม่สามารถดึงข้อมูลจากฐานข้อมูลได้<br><br><b>วิธีแก้ไข:</b><br>โปรดตรวจสอบการตั้งค่า Deploy ใน Google Apps Script ว่าเลือกเป็น "เวอร์ชันใหม่" หรือไม่',
                         icon: 'error'
                     });
                     throw err;
@@ -979,13 +973,9 @@
         }
 
         function formatThaiDate(dateStr) {
-            if (!dateStr || dateStr === '-') {
-                return '-'; 
-            }
+            if (!dateStr || dateStr === '-') return '-'; 
             const d = new Date(dateStr); 
-            if (isNaN(d.getTime())) {
-                return dateStr;
-            }
+            if (isNaN(d.getTime())) return dateStr;
             const months = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
             return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear() + 543}`;
         }
@@ -993,47 +983,33 @@
         function switchView(viewId) {
             views.forEach(v => { 
                 let el = document.getElementById(v); 
-                if (el) {
-                    el.classList.add('hidden'); 
-                }
+                if (el) el.classList.add('hidden'); 
             }); 
             
             let targetView = document.getElementById(viewId); 
-            if (targetView) {
-                targetView.classList.remove('hidden');
-            }
+            if (targetView) targetView.classList.remove('hidden');
             
             let navBtns = ['btnNavDash', 'btnNavUsers', 'btnNavEditReq', 'btnNavAudit', 'btnNavSetting'];
             navBtns.forEach(b => { 
                 let btn = document.getElementById(b); 
-                if (btn) {
-                    btn.classList.remove('text-white', 'underline'); 
-                }
+                if (btn) btn.classList.remove('text-white', 'underline'); 
             });
 
             if (viewId === 'viewAdmin') { 
                 let b = document.getElementById('btnNavDash'); 
-                if (b) {
-                    b.classList.add('text-white', 'underline'); 
-                }
+                if (b) b.classList.add('text-white', 'underline'); 
             }
             if (viewId === 'viewUserManagement') { 
                 let b = document.getElementById('btnNavUsers'); 
-                if (b) {
-                    b.classList.add('text-white', 'underline'); 
-                }
+                if (b) b.classList.add('text-white', 'underline'); 
             }
             if (viewId === 'viewAdminEditReq') { 
                 let b = document.getElementById('btnNavEditReq'); 
-                if (b) {
-                    b.classList.add('text-white', 'underline'); 
-                }
+                if (b) b.classList.add('text-white', 'underline'); 
             }
             if (viewId === 'viewAuditLog') { 
                 let b = document.getElementById('btnNavAudit'); 
-                if (b) {
-                    b.classList.add('text-white', 'underline'); 
-                }
+                if (b) b.classList.add('text-white', 'underline'); 
                 if (appUser) { 
                     localStorage.setItem('localAuditCount_' + appUser.phone, localStorage.getItem('backendAuditCount') || '0'); 
                     updateAuditBadge(0); 
@@ -1041,9 +1017,7 @@
             }
             if (viewId === 'viewSettings') { 
                 let b = document.getElementById('btnNavSetting'); 
-                if (b) {
-                    b.classList.add('text-white', 'underline'); 
-                }
+                if (b) b.classList.add('text-white', 'underline'); 
             }
         }
 
@@ -1062,27 +1036,7 @@
             }
         }
 
-        function openManual() {
-            if (!appUser || !globalSettings.manualUrls) {
-                return;
-            }
-            let userRoleKey = appUser.role === 'provincial_audit' ? 'provincial_admin' : appUser.role;
-            if (userRoleKey === 'staff') {
-                userRoleKey = 'driver'; 
-            }
-            const url = globalSettings.manualUrls[userRoleKey];
-            if (url && url.trim() !== "") {
-                window.open(url, '_blank'); 
-            } else {
-                Swal.fire('แจ้งเตือน', `ยังไม่ได้ตั้งค่าลิงก์คู่มือสำหรับสิทธิ์ของท่าน`, 'info'); 
-            }
-        }
-
         window.onload = function() {
-            if (API_URL.includes("ใส่_URL")) {
-                return Swal.fire('ตั้งค่าไม่สมบูรณ์', 'กรุณานำลิงก์ /exec มาใส่ในตัวแปร API_URL ที่บรรทัดแรกของ Javascript ด้วยครับ', 'error');
-            }
-            
             switchView('viewAdmin');
             const token = localStorage.getItem('dhr_session');
             
@@ -1096,13 +1050,9 @@
                         if (res.auditLogCount !== undefined) {
                             localStorage.setItem('backendAuditCount', res.auditLogCount);
                             let localCount = parseInt(localStorage.getItem('localAuditCount_' + res.currentUser.phone) || '0');
-                            
                             let diff = res.auditLogCount - localCount;
-                            if (diff > 0) {
-                                updateAuditBadge(diff);
-                            } else {
-                                updateAuditBadge(0);
-                            }
+                            if (diff > 0) updateAuditBadge(diff);
+                            else updateAuditBadge(0);
                         }
                         
                         renderDynamicHealthForm(); 
@@ -1111,235 +1061,270 @@
                         localStorage.removeItem('dhr_session'); 
                         loadAdminDashboard(); 
                         let btnL = document.getElementById('btnNavLogin'); 
-                        if (btnL) {
-                            btnL.classList.remove('hidden'); 
-                        }
+                        if (btnL) btnL.classList.remove('hidden'); 
                     }
                 }).catch(err => { 
                     loadAdminDashboard(); 
                     let btnL = document.getElementById('btnNavLogin'); 
-                    if (btnL) {
-                        btnL.classList.remove('hidden'); 
-                    }
+                    if (btnL) btnL.classList.remove('hidden'); 
                 });
             } else { 
                 loadAdminDashboard(); 
                 let btnL = document.getElementById('btnNavLogin'); 
-                if (btnL) {
-                    btnL.classList.remove('hidden'); 
-                }
+                if (btnL) btnL.classList.remove('hidden'); 
             }
         };
 
         function updateEditReqBadge(count) { 
             const badge = document.getElementById('badgeEditReq'); 
-            if (!badge) {
-                return; 
-            }
-            if (count > 0) { 
-                badge.innerText = count; 
-                badge.classList.remove('hidden'); 
-            } else {
-                badge.classList.add('hidden'); 
-            }
+            if (!badge) return; 
+            if (count > 0) { badge.innerText = count; badge.classList.remove('hidden'); } 
+            else badge.classList.add('hidden'); 
         }
 
         function updateUsersBadge(count) { 
             const badge = document.getElementById('badgeUsers'); 
-            if (!badge) {
-                return; 
-            }
-            if (count > 0) { 
-                badge.innerText = count; 
-                badge.classList.remove('hidden'); 
-            } else {
-                badge.classList.add('hidden'); 
-            }
+            if (!badge) return; 
+            if (count > 0) { badge.innerText = count; badge.classList.remove('hidden'); } 
+            else badge.classList.add('hidden'); 
         }
 
         function updateAuditBadge(count) { 
             const badge = document.getElementById('badgeAudit'); 
-            if (!badge) {
-                return; 
-            }
-            if (count > 0) { 
-                badge.innerText = count; 
-                badge.classList.remove('hidden'); 
-            } else {
-                badge.classList.add('hidden'); 
-            }
+            if (!badge) return; 
+            if (count > 0) { badge.innerText = count; badge.classList.remove('hidden'); } 
+            else badge.classList.add('hidden'); 
         }
 
-        function renderDynamicHealthForm() {
-            let elTS = document.getElementById('inputTimeSlot'); 
-            if (elTS) {
-                let optionsHtml = '<option value="">เลือกช่วงเวลา...</option>';
-                if (globalSettings.timeSlots) {
-                    globalSettings.timeSlots.forEach(t => {
-                        optionsHtml += `<option value="${t}">${t}</option>`;
-                    });
-                }
-                elTS.innerHTML = optionsHtml;
-            }
-
-            let elCR = document.getElementById('divCriticalRisks'); 
-            if (elCR) {
-                let risksHtml = '';
-                if (globalSettings.criticalRisks) {
-                    globalSettings.criticalRisks.forEach(r => {
-                        risksHtml += `<label class="flex items-center p-3 border border-red-200 bg-red-50 rounded-lg cursor-pointer"><input type="checkbox" name="criticalRiskItem" value="${r}" class="w-5 h-5 text-red-600 flex-shrink-0"><span class="ml-3 text-red-800 text-sm font-medium">${r}</span></label>`;
-                    });
-                }
-                elCR.innerHTML = risksHtml;
-            }
-
-            let setTS = document.getElementById('set_timeSlots'); 
-            if (setTS) {
-                if (globalSettings.timeSlots) {
-                    setTS.value = globalSettings.timeSlots.join(',');
-                }
-            }
-
-            let setCR = document.getElementById('set_criticalRisks'); 
-            if (setCR) {
-                if (globalSettings.criticalRisks) {
-                    setCR.value = globalSettings.criticalRisks.join(',');
-                }
-            }
-
-            if (globalSettings.manualUrls) { 
-                let roles = ['driver','hospital_admin','hospital_director','exec_ppho','super_admin', 'provincial_admin'];
-                roles.forEach(r => { 
-                    let el = document.getElementById('set_url_' + r); 
-                    if (el) {
-                        if (globalSettings.manualUrls[r]) {
-                            el.value = globalSettings.manualUrls[r]; 
-                        } else {
-                            el.value = '';
-                        }
-                    }
-                }); 
-            }
-
-            if (globalSettings.scoringCriteria) { 
-                const sc = globalSettings.scoringCriteria; 
-                let scFields = ['sc_tempHigh','sc_tempLow','sc_sysRed','sc_diaRed','sc_sysAmber','sc_diaAmber','sc_pulseMin','sc_pulseMax','sc_fatigueRed','sc_fatigueAmber','sc_sleepMin'];
-                scFields.forEach(id => { 
-                    let el = document.getElementById(id); 
-                    let key = id.replace('sc_', '');
-                    if (el && sc[key] !== undefined) {
-                        el.value = sc[key]; 
-                    }
-                }); 
-            }
-            
-            if (globalSettings.telegramConfig) {
-                const tg = globalSettings.telegramConfig;
-                let elEn = document.getElementById('tg_enabled'); 
-                if (elEn) {
-                    elEn.checked = tg.enabled;
-                }
-
-                let elBt = document.getElementById('tg_botToken'); 
-                if (elBt) {
-                    if (tg.botToken) {
-                        elBt.value = tg.botToken;
-                    } else {
-                        elBt.value = '';
-                    }
-                }
-
-                let elGl = document.getElementById('tg_globalChatId'); 
-                if (elGl) {
-                    if (tg.globalChatId) {
-                        elGl.value = tg.globalChatId;
-                    } else {
-                        elGl.value = '';
-                    }
-                }
+        // ================= AUTHENTICATION =================
+        let loginFormEl = document.getElementById('loginForm');
+        if (loginFormEl) {
+            loginFormEl.onsubmit = function(e) {
+                e.preventDefault(); 
+                let phone = document.getElementById('inputPhone').value; 
+                let pin = document.getElementById('inputPin').value;
                 
-                if (tg.orgChatIds) {
-                    let e1 = document.getElementById('tg_org_1'); 
-                    if (e1) {
-                        e1.value = tg.orgChatIds['สำนักงานสาธารณสุขจังหวัดนครนายก (สสจ.)'] || '';
-                    }
-                    
-                    let e2 = document.getElementById('tg_org_2'); 
-                    if (e2) {
-                        e2.value = tg.orgChatIds['โรงพยาบาลนครนายก'] || '';
-                    }
-                    
-                    let e3 = document.getElementById('tg_org_3'); 
-                    if (e3) {
-                        e3.value = tg.orgChatIds['โรงพยาบาลปากพลี'] || '';
-                    }
-                    
-                    let e4 = document.getElementById('tg_org_4'); 
-                    if (e4) {
-                        e4.value = tg.orgChatIds['โรงพยาบาลบ้านนา'] || '';
-                    }
-                    
-                    let e5 = document.getElementById('tg_org_5'); 
-                    if (e5) {
-                        e5.value = tg.orgChatIds['โรงพยาบาลองครักษ์'] || '';
-                    }
-                }
-            }
-        }
+                if (!phone || phone.length !== 10) return Swal.fire('แจ้งเตือน', 'กรุณากรอกเบอร์โทรศัพท์ 10 หลัก', 'warning');
+                if (!pin || pin.length !== 6) return Swal.fire('แจ้งเตือน', 'กรุณากรอกรหัส PIN 6 หลัก', 'warning');
 
-        // ================= PERSONAL SETTINGS =================
-        function openPersonalSettings() {
-            if (!appUser) {
-                return;
-            }
-            
-            let elToggle = document.getElementById('userEmailNotif');
-            if (elToggle) {
-                if (appUser.emailNotif !== false) {
-                    elToggle.checked = true;
-                } else {
-                    elToggle.checked = false;
-                }
-            }
-            
-            let modal = document.getElementById('modalPersonalSettings');
-            if (modal) {
-                modal.classList.remove('hidden');
-            }
-        }
-
-        let fPersonal = document.getElementById('formPersonalSettings');
-        if (fPersonal) {
-            fPersonal.onsubmit = function(e) {
-                e.preventDefault();
-                const isEnabled = document.getElementById('userEmailNotif').checked;
+                showLoader("กำลังตรวจสอบข้อมูลและเข้าสู่ระบบ...");
                 
-                showLoader("กำลังบันทึกการตั้งค่า...");
-                api.run('updateEmailNotif', { isEnabled: isEnabled }).then(res => {
-                    hideLoader();
-                    if (res.ok) {
-                        if (appUser) {
-                            appUser.emailNotif = isEnabled;
-                        }
-                        Swal.fire('สำเร็จ', 'บันทึกการตั้งค่าส่วนตัวเรียบร้อยแล้ว', 'success');
+                api.run('login', { phone: phone, pin: pin }).then(res => {
+                    if (res.ok) { 
+                        // 💡 แก้บัค: เพิ่ม Alert แจ้งเตือนเมื่อเข้าสู่ระบบสำเร็จ
+                        Swal.fire({
+                            title: 'เข้าสู่ระบบสำเร็จ!',
+                            icon: 'success',
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
+
+                        localStorage.setItem('dhr_session', res.sessionToken); 
+                        showLoader("กำลังดึงข้อมูลส่วนบุคคล...");
                         
-                        let modal = document.getElementById('modalPersonalSettings');
-                        if (modal) {
-                            modal.classList.add('hidden');
-                        }
-                    } else {
-                        Swal.fire('ข้อผิดพลาด', res.error, 'error');
+                        api.run('getInitialData').then(initRes => { 
+                            hideLoader();
+                            if (initRes.ok) { 
+                                globalSettings = initRes.settings; 
+                                renderDynamicHealthForm(); 
+                                updateEditReqBadge(initRes.pendingReqs); 
+                                updateUsersBadge(initRes.pendingUsers); 
+                                
+                                if (initRes.auditLogCount !== undefined) {
+                                    localStorage.setItem('backendAuditCount', initRes.auditLogCount);
+                                    let localCount = parseInt(localStorage.getItem('localAuditCount_' + res.user.phone) || '0');
+                                    let diff = initRes.auditLogCount - localCount;
+                                    if (diff > 0) updateAuditBadge(diff);
+                                    else updateAuditBadge(0);
+                                }
+                                handleLoginSuccess(initRes.currentUser);
+                            } 
+                        }).catch(err => { 
+                            hideLoader(); 
+                            Swal.fire('ข้อผิดพลาด', 'ดึงข้อมูลไม่สำเร็จ', 'error'); 
+                        });
+                    } else { 
+                        hideLoader(); 
+                        Swal.fire('ข้อมูลไม่ถูกต้อง', res.error, 'error'); 
                     }
-                }).catch(err => {
-                    hideLoader();
-                    Swal.fire('ข้อผิดพลาด', err.message, 'error');
+                }).catch(err => { 
+                    hideLoader(); 
                 });
+                return false;
             };
         }
 
-        // ================= PASSENGER / OTP LOGIC =================
+        let btnNavLoginEl = document.getElementById('btnNavLogin');
+        if (btnNavLoginEl) { 
+            btnNavLoginEl.onclick = function() { 
+                let fLogin = document.getElementById('loginForm'); 
+                if (fLogin) fLogin.reset(); 
+                switchView('viewLogin'); 
+            }; 
+        }
         
-        // 💡 ฟังก์ชันเปิดหน้าผู้โดยสาร พร้อมโหลดรายชื่อคนขับ
+        let btnLogoutEl = document.getElementById('btnLogout');
+        if (btnLogoutEl) {
+            btnLogoutEl.onclick = function() {
+                localStorage.removeItem('dhr_session'); 
+                appUser = null; 
+                
+                let fLogin = document.getElementById('loginForm'); 
+                if (fLogin) fLogin.reset();
+                let fHealth = document.getElementById('healthForm'); 
+                if (fHealth) fHealth.reset();
+                
+                let bLogout = document.getElementById('btnLogout'); 
+                if (bLogout) bLogout.classList.add('hidden'); 
+                let bLogin = document.getElementById('btnNavLogin'); 
+                if (bLogin) bLogin.classList.remove('hidden'); 
+                let bManual = document.getElementById('btnNavManual'); 
+                if (bManual) bManual.classList.add('hidden');
+                let bProfile = document.getElementById('btnNavProfile');
+                if (bProfile) bProfile.classList.add('hidden');
+                
+                let hideElements = ['btnNavDash', 'btnNavUsers', 'btnNavEditReq', 'btnNavAudit', 'btnNavSetting', 'navUserName'];
+                hideElements.forEach(id => { 
+                    let el = document.getElementById(id); 
+                    if (el) el.classList.add('hidden'); 
+                }); 
+
+                switchView('viewAdmin'); 
+                loadAdminDashboard();
+            };
+        }
+
+        function handleLoginSuccess(user) {
+            appUser = user; 
+            let bLogin = document.getElementById('btnNavLogin'); 
+            if (bLogin) bLogin.classList.add('hidden'); 
+            let bLogout = document.getElementById('btnLogout'); 
+            if (bLogout) bLogout.classList.remove('hidden'); 
+            let bManual = document.getElementById('btnNavManual'); 
+            if (bManual) bManual.classList.remove('hidden');
+            let bProfile = document.getElementById('btnNavProfile');
+            if (bProfile) bProfile.classList.remove('hidden');
+            
+            let nUser = document.getElementById('navUserName');
+            if (nUser) { 
+                nUser.innerText = `${user.displayName} (${getRoleTh(user.role, user.org)})`; 
+                nUser.classList.remove('hidden'); 
+            }
+            
+            let btnExport = document.getElementById('btnExportReport');
+            if (btnExport) {
+                if (user.role === 'super_admin' || user.role === 'exec_ppho' || user.role === 'hospital_director' || user.role === 'hospital_admin' || user.role === 'provincial_admin' || user.role === 'provincial_audit') {
+                    btnExport.classList.remove('hidden');
+                } else {
+                    btnExport.classList.add('hidden');
+                }
+            }
+
+            if (user.role === 'driver' || user.role === 'staff') {
+                let dName = document.getElementById('driverName'); 
+                if (dName) dName.innerText = user.displayName;
+
+                let dOrg = document.getElementById('driverOrg'); 
+                if (dOrg) {
+                    if (user.profile && user.profile.age) {
+                        dOrg.innerText = user.org + ` (อายุ ${user.profile.age} ปี)`;
+                    } else {
+                        dOrg.innerText = user.org;
+                    }
+                }
+                
+                let notice = document.getElementById('staffExemptNotice');
+                if (notice) { 
+                    if (user.role === 'staff') notice.classList.remove('hidden'); 
+                    else notice.classList.add('hidden'); 
+                }
+
+                const actionArea = document.getElementById('driverActionArea');
+                if (actionArea) {
+                    if (user.pendingEditReq) {
+                        actionArea.innerHTML = `
+                            <span class="text-xs text-orange-600 font-bold bg-orange-100 px-2 py-1 rounded mb-2 block border border-orange-200">⏳ รอ Admin อนุมัติข้อมูล</span>
+                            <button onclick="cancelDriverReq('${user.pendingEditReq.id}')" class="text-sm bg-red-50 hover:bg-red-100 text-red-600 px-3 py-1.5 rounded border border-red-200 transition shadow-sm font-medium">ยกเลิกคำขอแก้ไข</button>
+                        `;
+                    } else {
+                        actionArea.innerHTML = `<button onclick="switchView('viewEditDriverReq')" class="text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded border border-gray-300 transition shadow-sm font-medium">ขอแก้ไขข้อมูล</button>`;
+                        
+                        ['selfEditEmailGroup', 'selfEditNameGroup', 'selfEditOrgGroup'].forEach(id => {
+                            let el = document.getElementById(id);
+                            if(el) el.classList.add('hidden');
+                        });
+                        
+                        let elDriverOnly = document.getElementById('driverOnlyReqFields'); 
+                        if (elDriverOnly) elDriverOnly.classList.remove('hidden');
+
+                        if (user.profile) { 
+                            let elPhone = document.getElementById('reqPhoneForm'); 
+                            if (elPhone) elPhone.value = user.phone || ''; 
+                            let elEmail = document.getElementById('reqEmailForm'); 
+                            if (elEmail) elEmail.value = user.email || '';
+                            let elChr = document.getElementById('reqChronicForm'); 
+                            if (elChr) elChr.value = user.profile.chronicDisease || ''; 
+                            let elMed = document.getElementById('reqMedsForm'); 
+                            if (elMed) elMed.value = user.profile.regularMeds || ''; 
+                            let elSmo = document.getElementById('reqSmokingForm'); 
+                            if (elSmo) elSmo.value = user.profile.smoking || 'ไม่สูบ';
+                            let elAlc = document.getElementById('reqAlcoholForm'); 
+                            if (elAlc) elAlc.value = user.profile.alcohol || 'ไม่ดื่ม';
+                        }
+                    }
+                }
+                switchView('viewDriver'); 
+                loadDriverHistory();
+            } else {
+                ['btnNavDash', 'btnNavUsers', 'btnNavEditReq'].forEach(id => {
+                    let el = document.getElementById(id);
+                    if(el) el.classList.remove('hidden');
+                });
+                
+                if (user.role === 'super_admin' || user.role === 'exec_ppho' || user.role === 'hospital_director' || user.role === 'provincial_admin' || user.role === 'provincial_audit') {
+                    let nAudit = document.getElementById('btnNavAudit'); 
+                    if (nAudit) nAudit.classList.remove('hidden');
+                }
+                
+                let btnAdd = document.getElementById('btnOpenAddUser'); 
+                let btnSet = document.getElementById('btnNavSetting');
+
+                if (user.role === 'super_admin') { 
+                    if (btnAdd) btnAdd.classList.remove('hidden'); 
+                    if (btnSet) btnSet.classList.remove('hidden'); 
+                } else if (user.role === 'hospital_admin' || user.role === 'provincial_admin') { 
+                    if (btnAdd) btnAdd.classList.remove('hidden'); 
+                    if (btnSet) btnSet.classList.add('hidden'); 
+                } else { 
+                    if (btnAdd) btnAdd.classList.add('hidden'); 
+                    if (btnSet) btnSet.classList.add('hidden'); 
+                }
+                
+                let orgFilter = document.getElementById('adminOrgFilter');
+                if (orgFilter) { 
+                    if (user.role === 'hospital_admin' || user.role === 'hospital_director') { 
+                        orgFilter.value = user.org; 
+                        orgFilter.disabled = true; 
+                    } else {
+                        orgFilter.disabled = false; 
+                    }
+                }
+                
+                let btnSubmitAdmin = document.getElementById('btnAdminSubmitCheck');
+                if (btnSubmitAdmin) { 
+                    if (user.role === 'super_admin' || user.role === 'hospital_admin' || user.role === 'provincial_admin') {
+                        btnSubmitAdmin.classList.remove('hidden'); 
+                    } else {
+                        btnSubmitAdmin.classList.add('hidden'); 
+                    }
+                }
+                
+                switchView('viewAdmin'); 
+                loadAdminDashboard();
+            }
+        }
+
+        // ================= PASSENGER / OTP LOGIC =================
         function openPassengerMode() {
             showLoader("กำลังโหลดข้อมูลคนขับรถ...");
             api.run('getPublicDriverList').then(res => {
@@ -1355,9 +1340,7 @@
                     }
                     
                     let pinInput = document.getElementById('passengerPinInput');
-                    if (pinInput) {
-                        pinInput.value = '';
-                    }
+                    if (pinInput) pinInput.value = '';
                     
                     switchView('viewPassenger');
                 } else {
@@ -1369,7 +1352,6 @@
             });
         }
         
-        // 💡 ฟังก์ชันเมื่อผู้โดยสารกด Submit ตรวจสอบ PIN
         let passForm = document.getElementById('passengerForm');
         if (passForm) {
             passForm.onsubmit = function(e) {
@@ -1377,33 +1359,29 @@
                 const driverId = document.getElementById('passengerDriverSelect').value;
                 const pin = document.getElementById('passengerPinInput').value;
                 
-                if (!driverId || !pin) {
-                    return Swal.fire('แจ้งเตือน', 'กรุณาเลือกคนขับและกรอกรหัส PIN ให้ครบถ้วน', 'warning');
-                }
+                if (!driverId || !pin) return Swal.fire('แจ้งเตือน', 'กรุณาเลือกคนขับและกรอกรหัส PIN ให้ครบถ้วน', 'warning');
                 
                 showLoader("กำลังตรวจสอบข้อมูลความพร้อม...");
                 api.run('verifyTempPin', { driverId: driverId, pin: pin }).then(res => {
                     hideLoader();
                     if (res.ok) {
                         const d = res.data;
-                        let bandColor = '#10b981'; // Green
+                        let bandColor = '#10b981'; 
                         let bandText = 'พร้อมปฏิบัติงาน';
                         let icon = 'success';
                         
                         if (d.band === 'RED') {
-                            bandColor = '#ef4444'; // Red
+                            bandColor = '#ef4444'; 
                             bandText = 'งดปฏิบัติงาน (มีความเสี่ยง)';
                             icon = 'error';
                         } else if (d.band === 'AMBER') {
-                            bandColor = '#f59e0b'; // Amber
+                            bandColor = '#f59e0b'; 
                             bandText = 'เฝ้าระวัง (มีความเสี่ยงเล็กน้อย)';
                             icon = 'warning';
                         }
                         
                         let reasonsHtml = 'ปกติ ไม่มีอาการผิดปกติ';
-                        if (d.reasons && d.reasons.length > 0) {
-                            reasonsHtml = d.reasons.join(', ');
-                        }
+                        if (d.reasons && d.reasons.length > 0) reasonsHtml = d.reasons.join(', ');
                         
                         Swal.fire({
                             title: 'ผลการประเมินล่าสุด',
@@ -1423,8 +1401,6 @@
                             confirmButtonText: 'ปิดหน้าต่าง',
                             confirmButtonColor: '#059669'
                         });
-                        
-                        // Clear PIN after successful check
                         document.getElementById('passengerPinInput').value = '';
                     } else {
                         Swal.fire('ตรวจสอบไม่ผ่าน', res.error, 'error');
@@ -1436,12 +1412,8 @@
             };
         }
         
-        // 💡 ฟังก์ชันสำหรับคนขับรถเพื่อกดสร้าง OTP ให้ผู้โดยสาร
         function requestDriverOTP() {
-            if (!appUser) {
-                return;
-            }
-            
+            if (!appUser) return;
             showLoader("กำลังสร้างรหัส OTP...");
             api.run('generateTempPin').then(res => {
                 hideLoader();
@@ -1467,125 +1439,6 @@
                 Swal.fire('ข้อผิดพลาด', err.message, 'error');
             });
         }
-
-        // ================= AUTHENTICATION =================
-        let btnNavLoginEl = document.getElementById('btnNavLogin');
-        if (btnNavLoginEl) { 
-            btnNavLoginEl.onclick = function() { 
-                let fLogin = document.getElementById('loginForm'); 
-                if (fLogin) {
-                    fLogin.reset(); 
-                }
-                switchView('viewLogin'); 
-            }; 
-        }
-        
-        let btnLogoutEl = document.getElementById('btnLogout');
-        if (btnLogoutEl) {
-            btnLogoutEl.onclick = function() {
-                localStorage.removeItem('dhr_session'); 
-                appUser = null; 
-                
-                let fLogin = document.getElementById('loginForm'); 
-                if (fLogin) {
-                    fLogin.reset();
-                }
-                
-                let fHealth = document.getElementById('healthForm'); 
-                if (fHealth) {
-                    fHealth.reset();
-                }
-                
-                let bLogout = document.getElementById('btnLogout'); 
-                if (bLogout) {
-                    bLogout.classList.add('hidden'); 
-                }
-                
-                let bLogin = document.getElementById('btnNavLogin'); 
-                if (bLogin) {
-                    bLogin.classList.remove('hidden'); 
-                }
-                
-                let bManual = document.getElementById('btnNavManual'); 
-                if (bManual) {
-                    bManual.classList.add('hidden');
-                }
-
-                let bProfile = document.getElementById('btnNavProfile');
-                if (bProfile) {
-                    bProfile.classList.add('hidden');
-                }
-                
-                let hideElements = ['btnNavDash', 'btnNavUsers', 'btnNavEditReq', 'btnNavAudit', 'btnNavSetting', 'navUserName'];
-                hideElements.forEach(id => { 
-                    let el = document.getElementById(id); 
-                    if (el) {
-                        el.classList.add('hidden'); 
-                    }
-                }); 
-
-                switchView('viewAdmin'); 
-                loadAdminDashboard();
-            };
-        }
-
-        let loginFormEl = document.getElementById('loginForm');
-        if (loginFormEl) {
-            loginFormEl.onsubmit = function(e) {
-                e.preventDefault(); 
-                let phone = document.getElementById('inputPhone').value; 
-                let pin = document.getElementById('inputPin').value;
-                
-                if (!phone || phone.length !== 10) {
-                    return Swal.fire('แจ้งเตือน', 'กรุณากรอกเบอร์โทรศัพท์ 10 หลัก', 'warning');
-                }
-                if (!pin || pin.length !== 6) {
-                    return Swal.fire('แจ้งเตือน', 'กรุณากรอกรหัส PIN 6 หลัก', 'warning');
-                }
-
-                showLoader("กำลังตรวจสอบข้อมูลและเข้าสู่ระบบ...");
-                
-                api.run('login', { phone: phone, pin: pin }).then(res => {
-                    if (res.ok) { 
-                        localStorage.setItem('dhr_session', res.sessionToken); 
-                        showLoader("กำลังดึงข้อมูลส่วนบุคคล...");
-                        
-                        api.run('getInitialData').then(initRes => { 
-                            hideLoader();
-                            if (initRes.ok) { 
-                                globalSettings = initRes.settings; 
-                                renderDynamicHealthForm(); 
-                                updateEditReqBadge(initRes.pendingReqs); 
-                                updateUsersBadge(initRes.pendingUsers); 
-                                
-                                if (initRes.auditLogCount !== undefined) {
-                                    localStorage.setItem('backendAuditCount', initRes.auditLogCount);
-                                    let localCount = parseInt(localStorage.getItem('localAuditCount_' + res.user.phone) || '0');
-                                    let diff = initRes.auditLogCount - localCount;
-                                    
-                                    if (diff > 0) {
-                                        updateAuditBadge(diff);
-                                    } else {
-                                        updateAuditBadge(0);
-                                    }
-                                }
-                                handleLoginSuccess(initRes.currentUser);
-                            } 
-                        }).catch(err => { 
-                            hideLoader(); 
-                            Swal.fire('ข้อผิดพลาด', 'ดึงข้อมูลไม่สำเร็จ', 'error'); 
-                        });
-                    } else { 
-                        hideLoader(); 
-                        Swal.fire('ข้อมูลไม่ถูกต้อง', res.error, 'error'); 
-                    }
-                }).catch(err => { 
-                    hideLoader(); 
-                });
-                return false;
-            };
-        }
-
         function toggleRegFields() {
             const role = document.getElementById('regRole').value;
             const staffFields = document.getElementById('staffExtraFields');
@@ -1672,6 +1525,7 @@
                     }
                 }).catch(err => { 
                     hideLoader(); 
+                    Swal.fire('เกิดข้อผิดพลาด', err.message, 'error');
                 });
                 return false;
             };
@@ -4377,7 +4231,7 @@
             }
         }
         
-        // 💡 ฟังก์ชันดาวน์โหลดภาพ Dashboard (A4)
+        // 💡 ฟังก์ชันใหม่: แคปภาพ Dashboard เป็นรูปภาพ A4
         function downloadDashboardImage() {
             showLoader("กำลังเตรียมรูปภาพ...");
             
