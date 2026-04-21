@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ระบบตรวจความพร้อมสุขภาพพนักงานขับรถ</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -116,7 +116,6 @@
                 </div>
                 
                 <div class="flex flex-wrap items-center gap-2 w-full md:w-auto" id="dashboardControls">
-                    
                     <button onclick="downloadDashboardImage()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-lg text-sm transition shadow-sm mr-2 flex items-center gap-1 font-bold">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                         โหลดเป็นรูปภาพ
@@ -138,7 +137,7 @@
                             <option value="7d">ย้อนหลัง 7 วัน</option>
                             <option value="30d">ย้อนหลัง 30 วัน</option>
                         </select>
-                        <select id="adminOrgFilter" class="border rounded-lg px-2 py-1.5 text-sm bg-gray-50 focus:ring-blue-500 w-32 truncate" title="เลือกหน่วยงาน">
+                        <select id="adminOrgFilter" class="border rounded-lg px-2 py-1.5 text-sm bg-gray-50 focus:ring-blue-500 w-32 truncate">
                             <option value="ALL">ทุกหน่วยงาน</option>
                             <option value="สำนักงานสาธารณสุขจังหวัดนครนายก (สสจ.)">สสจ. นครนายก</option>
                             <option value="โรงพยาบาลนครนายก">รพ. นครนายก</option>
@@ -146,7 +145,7 @@
                             <option value="โรงพยาบาลบ้านนา">รพ. บ้านนา</option>
                             <option value="โรงพยาบาลองครักษ์">รพ. องครักษ์</option>
                         </select>
-                        <button onclick="refreshAdminDashboard()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1.5 rounded-lg transition border" title="รีเฟรชข้อมูล">🔄</button>
+                        <button onclick="refreshAdminDashboard()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1.5 rounded-lg transition border">🔄</button>
                     </div>
                 </div>
             </div>
@@ -2038,6 +2037,7 @@
             }
         }
 
+        // ================= IMAGE COMPRESSION & SUBMIT =================
         let inputEvidenceEl = document.getElementById('inputEvidence');
         if (inputEvidenceEl) {
             inputEvidenceEl.addEventListener('change', function(e) {
@@ -3475,7 +3475,7 @@
             tbody.innerHTML = html;
         }
 
-        // 💡 จัดการปุ่ม Export Report (ส่งออกรายงาน)
+        // 💡 จัดการปุ่ม Export Report (ส่งออกรายงาน) รองรับภาษาไทยใน Excel
         let fExport = document.getElementById('formExport');
         if (fExport) {
             fExport.onsubmit = function(e) {
@@ -3491,7 +3491,8 @@
                 api.run('exportReport', { startDate: startDate, endDate: endDate }).then(res => {
                     hideLoader();
                     if (res.ok) {
-                        const blob = new Blob([res.csvData], { type: 'text/csv;charset=utf-8;' });
+                        // เพิ่ม BOM \uFEFF ให้ Excel อ่านภาษาไทยได้สมบูรณ์
+                        const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), res.csvData], { type: 'text/csv;charset=utf-8;' });
                         const link = document.createElement("a");
                         const url = URL.createObjectURL(blob);
                         
@@ -4580,11 +4581,10 @@
             }
         }
         
-        // 💡 ฟังก์ชันใหม่: ถ่ายรูปหน้าจอ Dashboard ให้เป็น A4 แบบไม่ต้องล็อกอิน
+        // 💡 ฟังก์ชันใหม่: แคปภาพ Dashboard เป็นรูปภาพ A4
         function downloadDashboardImage() {
             showLoader("กำลังเตรียมรูปภาพ...");
             
-            // ซ่อนปุ่มและเมนูต่างๆ (เช่น Navbar และส่วนควบคุม Dashboard) เพื่อให้ภาพออกมาคลีนที่สุด
             const topNav = document.getElementById('topNavBar');
             const dashControls = document.getElementById('dashboardControls');
             
@@ -4596,13 +4596,11 @@
                 dashControls.style.display = 'none';
             }
             
-            // กำหนดความกว้างหน้าจอและพื้นหลังจำลองสำหรับการแคปเจอร์
             const viewAdmin = document.getElementById('viewAdmin');
             if (viewAdmin) {
                 viewAdmin.classList.add('a4-wrapper'); 
             }
             
-            // รอให้เบราว์เซอร์จัดหน้าแบบใหม่ให้เสร็จก่อนถ่ายรูป
             setTimeout(() => {
                 const targetArea = document.getElementById('viewAdmin');
                 
@@ -4612,7 +4610,6 @@
                         useCORS: true,
                         backgroundColor: '#f3f4f6'
                     }).then(canvas => {
-                        // คืนค่า UI ทั้งหมดกลับมาเหมือนเดิม
                         if (topNav) {
                             topNav.style.display = '';
                         }
@@ -4623,7 +4620,6 @@
                             viewAdmin.classList.remove('a4-wrapper');
                         }
                         
-                        // สร้างไฟล์ภาพสำหรับดาวน์โหลด
                         const link = document.createElement('a');
                         link.download = `Dashboard_DHR_${new Date().toISOString().split('T')[0]}.jpg`;
                         link.href = canvas.toDataURL('image/jpeg', 0.9);
