@@ -1,314 +1,2847 @@
-<!DOCTYPE html>
-<html lang="th">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบตรวจความพร้อมสุขภาพพนักงานขับรถ</title>
+/**
+ * Driver Health Readiness - Pro Version
+ * Backend (Google Apps Script)
+ * Version: 3.6.6 (Fixed CSV Export Date & Phone Formatting)
+ */
+
+const CONFIG = {
+    SHEET_ID: "1zaRwj2cwShO3_a7e7ZvRu3PSe7fW35ehYpV7d5XVbNc", 
+    APP_NAME: "ระบบตรวจความพร้อมสุขภาพพนักงานขับรถ",
+    VERSION: "v3.6.6"
+};
+
+// ======================================================================
+// 1. API ROUTER (รับส่งข้อมูลแบบ JSON)
+// ======================================================================
+function doGet(e) {
+    return ContentService.createTextOutput(JSON.stringify({ 
+        status: "success", 
+        message: "DHR API v3.6.6 is running perfectly!",
+        timestamp: new Date().toISOString()
+    })).setMimeType(ContentService.MimeType.JSON);
+}
+
+function doPost(e) {
+    try {
+        const request = JSON.parse(e.postData.contents);
+        const action = request.action;
+        const payload = request.payload || {};
+        const token = request.sessionToken;
+
+        let result = {};
+
+        switch (action) {
+            case 'login': 
+                result = login(payload.phone, payload.pin); 
+                break;
+            case 'registerUser': 
+                result = registerUser(payload); 
+                break;
+            case 'getInitialData': 
+                result = getInitialData(token); 
+                break;
+            case 'getDriversForAdmin': 
+                result = getDriversForAdmin(token); 
+                break;
+            case 'submitHealthCheck': 
+                result = submitHealthCheck(payload, token); 
+                break;
+            case 'getDriverHistory': 
+                result = getDriverHistory(token); 
+                break;
+            case 'getHealthAnalysis15Days': 
+                result = getHealthAnalysis15Days(token); 
+                break;
+            case 'submitEditRequest': 
+                result = submitEditRequest(payload, token); 
+                break;
+            case 'cancelEditRequest': 
+                result = cancelEditRequest(payload.reqId, token); 
+                break;
+            case 'getEditRequestsList': 
+                result = getEditRequestsList(token); 
+                break;
+            case 'approveEditRequest': 
+                result = approveEditRequest(payload.reqId, token); 
+                break;
+            case 'rejectEditRequest': 
+                result = rejectEditRequest(payload.reqId, payload.rejectReason, token); 
+                break;
+            case 'getAdminDashboard': 
+                result = getAdminDashboard(payload.filters, token); 
+                break;
+            case 'getAdminUsersList': 
+                result = getAdminUsersList(token); 
+                break;
+            case 'adminUpdateUserStatus': 
+                result = adminUpdateUserStatus(payload.targetUserId, payload.targetName, payload.newStatus, payload.rejectReason, token); 
+                break;
+            case 'addUser': 
+                result = addUser(payload, token); 
+                break;
+            case 'adminEditUser': 
+                result = adminEditUser(payload, token); 
+                break;
+            case 'deleteUser': 
+                result = deleteUser(payload.targetUserId, payload.targetName, token); 
+                break;
+            case 'getUserProfileDetail': 
+                result = getUserProfileDetail(payload.targetUserId, payload.targetName, token); 
+                break;
+            case 'saveSystemSettings': 
+                result = saveSystemSettings(payload, token); 
+                break;
+            case 'clearDatabase': 
+                result = clearDatabase(token); 
+                break;
+            case 'getAuditLogsList': 
+                result = getAuditLogsList(token); 
+                break;
+            case 'apiSeedAdmins': 
+                result = apiSeedAdmins(token); 
+                break;
+            case 'apiGenerateTestData': 
+                result = apiGenerateTestData(token); 
+                break;
+            case 'updateEmailNotif': 
+                result = updateEmailNotif(payload.isEnabled, token); 
+                break;
+            case 'exportReport': 
+                result = exportReport(payload, token); 
+                break;
+            case 'repairDatabase': 
+                result = apiRepairDatabase(token); 
+                break;
+            default: 
+                throw new Error("Action not found: " + action);
+        }
+
+        return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
+    } catch (error) {
+        return ContentService.createTextOutput(JSON.stringify({ 
+            ok: false, 
+            error: error.message 
+        })).setMimeType(ContentService.MimeType.JSON);
+    }
+}
+
+// ======================================================================
+// 2. UTILITIES & HELPER FUNCTIONS
+// ======================================================================
+function checkSession(token) {
+    if (!token) {
+        return null;
+    }
+    const raw = CacheService.getScriptCache().get(`sess:${token}`);
+    if (raw) {
+        return JSON.parse(raw);
+    } else {
+        return null;
+    }
+}
+
+function logAudit(action, actorUserId, actorPhone, actorRole, targetUserId, targetPhone, org, status, actorName="", targetName="") {
+    const now = Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd'T'HH:mm:ssXXX");
+    const logId = generateId("LOG");
+    DB.insertRecord("AUDIT_LOG", [
+        logId, 
+        now, 
+        actorUserId, 
+        sheetStr(actorPhone), 
+        actorRole, 
+        action, 
+        targetUserId, 
+        sheetStr(targetPhone), 
+        org, 
+        status, 
+        "{}", 
+        "", 
+        "", 
+        actorName, 
+        targetName
+    ]);
+}
+
+function getSettings() {
+    const settingsData = DB.readData("SETTINGS");
+    let settingsObj = { 
+        timeSlots: [], 
+        criticalRisks: [], 
+        manualUrls: {}, 
+        scoringCriteria: null, 
+        telegramConfig: null 
+    };
     
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    settingsData.forEach(row => { 
+        try { 
+            settingsObj[row.key] = JSON.parse(row.value); 
+        } catch (e) { 
+            settingsObj[row.key] = row.value; 
+        } 
+    });
     
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body { 
-            font-family: 'Noto Sans Thai', sans-serif; 
-            background-color: #f3f4f6; 
-        }
-        .hidden { 
-            display: none !important; 
-        }
-        .spinner { 
-            border: 4px solid rgba(0, 0, 0, 0.1); 
-            width: 36px; 
-            height: 36px; 
-            border-radius: 50%; 
-            border-left-color: #0ea5e9; 
-            animation: spin 1s linear infinite; 
-        }
-        @keyframes spin { 
-            0% { transform: rotate(0deg); } 
-            100% { transform: rotate(360deg); } 
-        }
-        @media print { 
-            body > *:not(.print-only) { 
-                display: none !important; 
-            } 
-            .print-only { 
-                display: block !important; 
-                position: absolute; 
-                left: 0; 
-                top: 0; 
-                width: 100%; 
-                background: white; 
-                padding: 20px; 
-            } 
-        }
-        .no-scrollbar::-webkit-scrollbar { 
-            display: none; 
-        }
-        .no-scrollbar { 
-            -ms-overflow-style: none; 
-            scrollbar-width: none; 
-        }
-        .a4-wrapper {
-            width: 1123px !important; 
-            min-height: 794px !important; 
-            padding: 20px;
-            background-color: #f3f4f6; 
-            margin: 0 auto;
-        }
-    </style>
-</head>
-<body class="text-gray-800 antialiased min-h-screen flex flex-col">
+    return settingsObj;
+}
 
-    <div id="printArea" class="hidden print-only"></div>
-
-    <nav id="topNavBar" class="bg-blue-600 text-white shadow-md w-full sticky top-0 z-50">
-        <div class="max-w-6xl mx-auto px-4 py-3 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 md:gap-0">
-            <div class="flex items-center gap-2 cursor-pointer w-full md:w-auto overflow-hidden" onclick="goToHome()">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <div class="flex flex-col overflow-hidden w-full">
-                    <span class="font-bold text-base md:text-lg leading-tight truncate">ระบบประเมินความพร้อมผู้ขับขี่รถยนต์ราชการ</span>
-                    <span class="text-[10px] md:text-[11px] text-blue-200 truncate">ภายในสังกัดสำนักงานสาธารณสุขจังหวัดนครนายก</span>
-                </div>
-            </div>
-            
-            <div class="flex items-center gap-3 overflow-x-auto no-scrollbar w-full md:w-auto pb-1 md:pb-0" id="navActionButtons">
-                <button id="btnNavDash" class="hidden text-sm font-medium hover:text-blue-200 transition flex-shrink-0">แดชบอร์ด</button>
-                <button id="btnNavUsers" class="hidden text-sm font-medium hover:text-blue-200 transition relative flex-shrink-0">
-                    จัดการผู้ใช้ <span id="badgeUsers" class="hidden absolute -top-2 -right-3 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">0</span>
-                </button>
-                <button id="btnNavEditReq" class="hidden text-sm font-medium hover:text-blue-200 transition relative flex-shrink-0">
-                    คำขอแก้ไข <span id="badgeEditReq" class="hidden absolute -top-2 -right-3 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">0</span>
-                </button>
-                <button id="btnNavAudit" class="hidden text-sm font-medium hover:text-blue-200 transition relative flex-shrink-0">
-                    ประวัติ Log <span id="badgeAudit" class="hidden absolute -top-2 -right-3 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">0</span>
-                </button>
-                <button id="btnNavSetting" class="hidden text-sm font-medium hover:text-blue-200 transition flex-shrink-0">ตั้งค่าระบบ</button>
-                <span id="navUserName" class="hidden text-sm font-medium text-blue-100 md:border-l border-blue-400 md:pl-3 whitespace-nowrap flex-shrink-0"></span>
-                <button id="btnNavManual" onclick="openManual()" class="hidden text-sm bg-indigo-500 hover:bg-indigo-600 px-3 py-1 rounded transition shadow flex items-center gap-1 ml-2 flex-shrink-0">คู่มือ</button>
-                <button id="btnNavProfile" onclick="openPersonalSettings()" class="hidden text-sm bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded transition shadow flex items-center gap-1 ml-1 flex-shrink-0 border border-indigo-400">ตั้งค่าส่วนตัว</button>
-                <button id="btnLogout" class="hidden text-sm bg-blue-700 hover:bg-blue-800 px-3 py-1 rounded transition shadow flex-shrink-0">ออกจากระบบ</button>
-                <button id="btnNavLogin" class="text-sm bg-white text-blue-600 hover:bg-blue-50 font-semibold px-4 py-1.5 rounded-full transition shadow-sm whitespace-nowrap flex-shrink-0 ml-auto md:ml-0">เข้าสู่ระบบ</button>
-            </div>
-        </div>
-    </nav>
-
-    <div id="globalLoader" class="fixed inset-0 bg-white bg-opacity-80 z-50 flex flex-col items-center justify-center hidden">
-        <div class="spinner mb-4"></div>
-        <p class="text-blue-600 font-medium" id="loaderText">กำลังโหลดข้อมูล...</p>
-    </div>
-
-    <main id="mainContentArea" class="flex-grow max-w-6xl mx-auto w-full p-4 flex flex-col items-center justify-start">
+function sendTelegramMsg(message, orgName) {
+    try {
+        const settings = getSettings();
+        const tg = settings.telegramConfig;
         
-        <div id="viewAdmin" class="w-full bg-white rounded-xl shadow-lg p-6 mt-4 flex-grow">
-            <div id="dashboardHeader" class="flex flex-col md:flex-row justify-between items-start md:items-center border-b pb-4 mb-6 gap-4">
-                <div>
-                    <h3 class="text-2xl font-bold text-gray-800" id="dashTitle">ภาพรวมความพร้อมประจำวัน</h3>
-                    <p class="text-sm text-gray-500 mt-1">ข้อมูลวันที่: <span id="adminDateNow" class="font-medium text-gray-700"></span></p>
-                </div>
-                
-                <div class="flex flex-wrap items-center gap-2 w-full md:w-auto" id="dashboardControls">
-                    <button onclick="downloadDashboardImage()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-lg text-sm transition shadow-sm mr-2 flex items-center gap-1 font-bold">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg> โหลดเป็นรูปภาพ
-                    </button>
-                    <button id="btnAdminSubmitCheck" onclick="openAdminSubmitCheck()" class="hidden bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-lg text-sm transition shadow-sm mr-2 flex items-center gap-1">ประเมินแทนผู้ขับขี่</button>
-                    <button id="btnExportReport" onclick="document.getElementById('modalExport').classList.remove('hidden')" class="hidden bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg text-sm transition shadow-sm flex items-center gap-1">ส่งออกรายงาน</button>
-                    
-                    <div class="flex items-center gap-2 mt-2 md:mt-0 ml-auto border-l pl-4 border-gray-200">
-                        <span class="text-sm font-medium text-gray-600">ตัวกรอง:</span>
-                        <input type="date" id="adminDateFilter" class="border rounded-lg px-2 py-1.5 text-sm bg-gray-50 focus:ring-blue-500" onchange="document.getElementById('adminPeriodFilter').value=''; refreshAdminDashboard();">
-                        <select id="adminPeriodFilter" class="border rounded-lg px-2 py-1.5 text-sm bg-gray-50 focus:ring-blue-500" onchange="document.getElementById('adminDateFilter').value=''; refreshAdminDashboard();">
-                            <option value="today">วันนี้</option>
-                            <option value="7d">ย้อนหลัง 7 วัน</option>
-                            <option value="30d">ย้อนหลัง 30 วัน</option>
-                        </select>
-                        <select id="adminOrgFilter" class="border rounded-lg px-2 py-1.5 text-sm bg-gray-50 focus:ring-blue-500 w-32 truncate">
-                            <option value="ALL">ทุกหน่วยงาน</option>
-                            <option value="สำนักงานสาธารณสุขจังหวัดนครนายก (สสจ.)">สสจ. นครนายก</option>
-                            <option value="โรงพยาบาลนครนายก">รพ. นครนายก</option>
-                            <option value="โรงพยาบาลปากพลี">รพ. ปากพลี</option>
-                            <option value="โรงพยาบาลบ้านนา">รพ. บ้านนา</option>
-                            <option value="โรงพยาบาลองครักษ์">รพ. องครักษ์</option>
-                        </select>
-                        <button onclick="refreshAdminDashboard()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1.5 rounded-lg transition border">🔄</button>
-                    </div>
-                </div>
-            </div>
+        if (!tg || !tg.enabled || !tg.botToken) {
+            return;
+        }
 
-            <div id="publicAlert" class="hidden bg-blue-50 border border-blue-200 text-blue-800 p-3 rounded-lg text-sm mb-6 flex items-start gap-2">
-                <span><b>มุมมองสาธารณะ:</b> คุณกำลังดูข้อมูลในโหมดผู้เยี่ยมชม ข้อมูลจะถูกเซ็นเซอร์ไว้ กรุณาเข้าสู่ระบบด้วยสิทธิ์ผู้ดูแลเพื่อดูข้อมูลฉบับเต็ม</span>
-            </div>
+        let chatIds = [];
+        
+        if (orgName && tg.orgChatIds && tg.orgChatIds[orgName] && tg.orgChatIds[orgName].trim() !== "") {
+            chatIds.push(tg.orgChatIds[orgName].trim());
+        }
+        
+        if (tg.globalChatId && tg.globalChatId.trim() !== "") {
+            chatIds.push(tg.globalChatId.trim());
+        }
+
+        chatIds = [...new Set(chatIds)];
+
+        chatIds.forEach(chatId => {
+            const url = `https://api.telegram.org/bot${tg.botToken}/sendMessage`;
+            const payload = {
+                chat_id: chatId,
+                text: message
+            };
             
-            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8 w-full">
-                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center flex flex-col justify-center shadow-sm"><p class="text-blue-800 font-medium text-[11px] md:text-xs">พขร. ประจำ (ทั้งหมด)</p><h2 class="text-3xl font-bold text-blue-600 mt-2" id="statTotalDriver">-</h2></div>
-                <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4 text-center flex flex-col justify-center shadow-sm"><p class="text-indigo-800 font-medium text-[11px] md:text-xs">เจ้าหน้าที่ (ทั้งหมด)</p><h2 class="text-3xl font-bold text-indigo-600 mt-2" id="statTotalStaff">-</h2></div>
-                <div class="bg-green-50 border border-green-200 rounded-lg p-4 text-center flex flex-col justify-center shadow-sm"><p class="text-green-800 font-medium text-[11px] md:text-xs">พร้อม (GREEN)</p><h2 class="text-3xl font-bold text-green-600 mt-2" id="statGreen">-</h2></div>
-                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center flex flex-col justify-center shadow-sm"><p class="text-yellow-800 font-medium text-[11px] md:text-xs">เฝ้าระวัง (AMBER)</p><h2 class="text-3xl font-bold text-yellow-600 mt-2" id="statAmber">-</h2></div>
-                <div class="bg-red-50 border border-red-200 rounded-lg p-4 text-center flex flex-col justify-center shadow-sm"><p class="text-red-800 font-medium text-[11px] md:text-xs">งดปฏิบัติงาน (RED)</p><h2 class="text-3xl font-bold text-red-600 mt-2" id="statRed">-</h2></div>
-                <div class="bg-gray-100 border border-gray-200 rounded-lg p-4 text-center flex flex-col justify-center shadow-sm"><p class="text-gray-600 font-medium text-[11px] md:text-[11px]">ยังไม่ประเมิน (เฉพาะ พขร.)</p><h2 class="text-3xl font-bold text-gray-700 mt-2" id="statNoData">-</h2></div>
-            </div>
+            UrlFetchApp.fetch(url, {
+                method: "post",
+                contentType: "application/json",
+                payload: JSON.stringify(payload),
+                muteHttpExceptions: true
+            });
+        });
+    } catch (e) {
+        console.error("Telegram Notification Error: " + e.message);
+    }
+}
 
-            <div class="flex flex-col md:flex-row gap-6 mb-8">
-                <div class="w-full md:w-1/3 bg-gray-50 border border-gray-200 rounded-lg p-4 flex flex-col items-center justify-center min-h-[300px]">
-                    <canvas id="dashChart"></canvas>
-                </div>
-                <div class="w-full md:w-2/3 bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                    <h4 class="font-bold text-gray-800 mb-4 flex items-center gap-2"><span class="w-2 h-6 bg-blue-500 rounded-full"></span>สถิติการประเมินแยกตามหน่วยงาน</h4>
-                    <div class="h-[250px]"><canvas id="orgBarChart"></canvas></div>
-                </div>
-            </div>
+function normPhone(p) {
+    if (!p) {
+        return "";
+    }
+    let str = String(p).replace(/\D/g, '');
+    if (str.length === 9) {
+        return '0' + str; 
+    }
+    return str;
+}
 
-            <div class="grid grid-cols-1 gap-8 mb-8">
-                <div>
-                    <h4 class="font-bold text-red-700 mb-3 flex items-center gap-2">⚠️ รายชื่อ <u class="text-red-800">พนักงานขับรถประจำ</u> ที่ต้องเฝ้าระวัง / งดขับ</h4>
-                    <div class="overflow-x-auto border rounded-lg shadow-sm">
-                        <table class="w-full text-sm text-left">
-                            <thead class="bg-red-600 text-white border-b-2 border-red-700">
-                                <tr><th class="px-4 py-3 w-16 text-center">ลำดับที่</th><th class="px-4 py-3">วัน/เวลาที่ประเมิน</th><th class="px-4 py-3">ชื่อพนักงาน</th><th class="px-4 py-3">เบอร์ติดต่อ</th><th class="px-4 py-3">สถานะ</th><th class="px-4 py-3">สาเหตุหลัก</th></tr>
-                            </thead>
-                            <tbody id="adminActionListDriver" class="divide-y"></tbody>
-                        </table>
-                    </div>
-                </div>
-                <div>
-                    <h4 class="font-bold text-orange-700 mb-3 flex items-center gap-2">⚠️ รายชื่อ <u class="text-orange-800">เจ้าหน้าที่</u> ที่ต้องเฝ้าระวัง / งดขับ</h4>
-                    <div class="overflow-x-auto border rounded-lg shadow-sm">
-                        <table class="w-full text-sm text-left">
-                            <thead class="bg-orange-500 text-white border-b-2 border-orange-600">
-                                <tr><th class="px-4 py-3 w-16 text-center">ลำดับที่</th><th class="px-4 py-3">วัน/เวลาที่ประเมิน</th><th class="px-4 py-3">ชื่อเจ้าหน้าที่</th><th class="px-4 py-3">เบอร์ติดต่อ</th><th class="px-4 py-3">สถานะ</th><th class="px-4 py-3">สาเหตุหลัก</th></tr>
-                            </thead>
-                            <tbody id="adminActionListStaff" class="divide-y"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+function sheetStr(val) { 
+    return "'" + String(val).trim(); 
+}
 
-            <div class="grid grid-cols-1 gap-8 mb-8 hidden" id="divGreenListArea">
-                <div id="divGreenListDriver">
-                    <h4 class="font-bold text-green-700 mb-3 flex items-center gap-2">✅ รายชื่อ <u class="text-green-800">พนักงานขับรถประจำ</u> ที่ผ่านเกณฑ์ประเมิน (สีเขียว)</h4>
-                    <div class="overflow-x-auto border rounded-lg shadow-sm">
-                        <table class="w-full text-sm text-left">
-                            <thead class="bg-green-600 text-white border-b-2 border-green-700">
-                                <tr><th class="px-4 py-3 w-16 text-center">ลำดับที่</th><th class="px-4 py-3">ชื่อพนักงาน</th><th class="px-4 py-3 text-center">อุณหภูมิ (°C)</th><th class="px-4 py-3 text-center">ความดัน (BP)</th><th class="px-4 py-3 text-center">ชีพจร</th><th class="px-4 py-3 text-center">เวลาประเมิน</th></tr>
-                            </thead>
-                            <tbody id="adminGreenListDriver" class="divide-y"></tbody>
-                        </table>
-                    </div>
-                </div>
-                <div id="divGreenListStaff">
-                    <h4 class="font-bold text-teal-700 mb-3 flex items-center gap-2">✅ รายชื่อ <u class="text-teal-800">เจ้าหน้าที่</u> ที่ผ่านเกณฑ์ประเมิน (สีเขียว)</h4>
-                    <div class="overflow-x-auto border rounded-lg shadow-sm">
-                        <table class="w-full text-sm text-left">
-                            <thead class="bg-teal-500 text-white border-b-2 border-teal-600">
-                                <tr><th class="px-4 py-3 w-16 text-center">ลำดับที่</th><th class="px-4 py-3">ชื่อเจ้าหน้าที่</th><th class="px-4 py-3 text-center">อุณหภูมิ (°C)</th><th class="px-4 py-3 text-center">ความดัน (BP)</th><th class="px-4 py-3 text-center">ชีพจร</th><th class="px-4 py-3 text-center">เวลาประเมิน</th></tr>
-                            </thead>
-                            <tbody id="adminGreenListStaff" class="divide-y"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+function generateId(prefix) { 
+    return prefix + "-" + Utilities.getUuid().substring(0, 8).toUpperCase(); 
+}
 
-            <div class="mt-8 hidden" id="divNoDataList">
-                <h4 class="font-bold text-gray-800 mb-3 flex items-center gap-2">รายชื่อ <u class="text-gray-900">พนักงานขับรถประจำ</u> ที่ยังไม่ได้ทำแบบประเมิน (ไม่รวมเจ้าหน้าที่)</h4>
-                <div class="overflow-x-auto border rounded-lg shadow-sm">
-                    <table class="w-full text-sm text-left">
-                        <thead class="bg-gray-600 text-white border-b-2 border-gray-700">
-                            <tr><th class="px-4 py-3 w-16 text-center">ลำดับที่</th><th class="px-4 py-3">ชื่อพนักงานขับรถ</th><th class="px-4 py-3 text-center">เบอร์ติดต่อ</th><th class="px-4 py-3 text-center">สถานะ</th></tr>
-                        </thead>
-                        <tbody id="adminNoDataList" class="divide-y"></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
+// ======================================================================
+// 3. DATABASE SETUP & INITIALIZATION
+// ======================================================================
+const INITIAL_ADMINS = [
+    { phone: "0868246621", pin: "235689", role: "super_admin", org: "สำนักงานสาธารณสุขจังหวัดนครนายก (สสจ.)", displayName: "วรวงศ์ คูณหอม", email: "wongnazaipot@gmail.com" },
+    { phone: "0899999999", pin: "999999", role: "exec_ppho", org: "สำนักงานสาธารณสุขจังหวัดนครนายก (สสจ.)", displayName: "นายแพทย์สุวรรณ เพ็ชรรุ่ง", email: "digitalhealthnayok@gmail.com" },
+    { phone: "0944899645", pin: "879423", role: "hospital_director", org: "สำนักงานสาธารณสุขจังหวัดนครนายก (สสจ.)", displayName: "สิรเศรษฐ นันทธีโร", email: "" },
+    { phone: "0865790243", pin: "913222", role: "hospital_admin", org: "โรงพยาบาลปากพลี", displayName: "พี่นนท์ IT", email: "" },
+    { phone: "0668316297", pin: "621419", role: "hospital_admin", org: "โรงพยาบาลบ้านนา", displayName: "พี่กุ้ง IT", email: "" },
+    { phone: "0892944597", pin: "678841", role: "hospital_admin", org: "โรงพยาบาลนครนายก", displayName: "พี่อาร์ต IT", email: "" }
+];
 
-        <div id="viewLogin" class="hidden w-full max-w-md bg-white rounded-xl shadow-lg p-6 mt-4">
-            <div class="text-center mb-6">
-                <h2 class="text-2xl font-bold text-gray-800">เข้าสู่ระบบ</h2>
-                <p class="text-gray-500 text-sm mt-1">สำนักงานสาธารณสุขจังหวัดนครนายก</p>
-            </div>
-            <form id="loginForm" class="space-y-4">
-                <div><label class="block text-sm font-medium text-gray-700 mb-1">เบอร์โทรศัพท์ (10 หลัก)</label><input type="tel" id="inputPhone" maxlength="10" class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500" required></div>
-                <div><label class="block text-sm font-medium text-gray-700 mb-1">รหัส PIN (6 หลัก)</label><input type="password" id="inputPin" maxlength="6" class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500" required></div>
-                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg transition shadow-md">เข้าสู่ระบบ</button>
-            </form>
-            <div class="mt-6 text-center border-t pt-4">
-                <p class="text-sm text-gray-500">ผู้ขับขี่ใหม่? <button type="button" onclick="switchView('viewRegister')" class="text-blue-600 font-medium hover:underline">ลงทะเบียนที่นี่</button></p>
-                <div class="mt-4 pt-4 border-t border-dashed border-gray-300">
-                    <button type="button" onclick="openPassengerMode()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-3 rounded-lg transition shadow-md flex justify-center items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" /></svg>
-                        สำหรับผู้โดยสาร (ตรวจสอบคนขับ)
-                    </button>
-                </div>
-            </div>
-        </div>
+const TABLES = {
+    USERS: ["userId", "createdAt", "updatedAt", "phone", "pin", "role", "org", "status", "displayName", "lastLoginAt", "note", "email", "emailNotif"],
+    DRIVER_PROFILE: ["userId", "createdAt", "updatedAt", "phone", "org", "firstName", "lastName", "position", "dob", "age", "chronicDisease", "regularMeds", "alcohol", "smoking", "consentVersion", "consentAt", "consentWithdrawnAt", "department", "authFileUrl"],
+    HEALTH_CHECKS: ["id", "userId", "createdAt", "date", "timeSlot", "phone", "org", "sleepHours", "fatigue", "stress", "temperature", "systolic", "diastolic", "pulse", "criticalRisks", "symptoms", "note", "score", "band", "reasonsJSON", "driverName", "evidenceUrl"],
+    SETTINGS: ["key", "value", "updatedAt"],
+    CONSENT_LOG: ["userId", "createdAt", "phone", "consentVersion", "action", "summary", "userAgent", "ip"],
+    AUDIT_LOG: ["id", "createdAt", "actorUserId", "actorPhone", "actorRole", "action", "targetUserId", "targetPhone", "org", "status", "detailJSON", "userAgent", "ip", "actorName", "targetName"],
+    EDIT_REQUESTS: ["id", "userId", "createdAt", "phone", "org", "reqPhone", "reqChronic", "reqMeds", "reqSmoking", "reqAlcohol", "status", "approvedBy", "approvedAt", "driverName", "reqName", "reqOrg", "reqEmail"] 
+};
 
-        <div id="viewPassenger" class="hidden w-full max-w-md bg-white rounded-xl shadow-lg p-6 mt-4">
-            <div class="flex justify-between items-center border-b pb-3 mb-4">
-                <h3 class="text-xl font-bold text-emerald-800">ตรวจสอบความพร้อมคนขับ</h3>
-                <button type="button" onclick="switchView('viewLogin')" class="text-gray-400 hover:text-gray-600">ปิด</button>
-            </div>
-            <form id="passengerForm" class="space-y-4">
-                <div class="bg-blue-50 p-3 rounded-lg border border-blue-100 text-sm text-blue-800 mb-4 leading-relaxed">
-                    เพื่อความโปร่งใสและหลัก PDPA กรุณาสอบถาม <b>"รหัส PIN 4 หลัก"</b> จากพนักงานขับรถของท่าน เพื่อตรวจสอบผลการประเมินสุขภาพล่าสุด
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">เลือกพนักงานขับรถ / เจ้าหน้าที่</label>
-                    <select id="passengerDriverSelect" class="w-full px-4 py-2 border rounded-lg focus:ring-emerald-500 bg-gray-50" required>
-                        <option value="">-- กำลังโหลดรายชื่อ --</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1 mt-2">รหัส PIN 4 หลัก (จากคนขับ)</label>
-                    <input type="text" id="passengerPinInput" maxlength="4" pattern="[0-9]{4}" class="w-full px-4 py-3 border rounded-lg focus:ring-emerald-500 text-center text-3xl font-bold tracking-widest bg-gray-50" placeholder="----" required autocomplete="off">
-                </div>
-                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-lg transition shadow-md text-lg mt-4">ตรวจสอบข้อมูล</button>
-            </form>
-        </div>
+const DB = {
+    getSpreadsheet: () => {
+        return SpreadsheetApp.openById(CONFIG.SHEET_ID);
+    },
+    getSheet: (sheetName) => {
+        return DB.getSpreadsheet().getSheetByName(sheetName);
+    },
+    readData: (sheetName) => {
+        const sheet = DB.getSheet(sheetName);
+        if (!sheet) {
+            return [];
+        }
+        
+        const data = sheet.getDataRange().getValues();
+        if (data.length <= 1) {
+            return [];
+        }
+        
+        const headers = TABLES[sheetName] || data[0].map(h => String(h).trim());
+        
+        return data.slice(1).filter(row => {
+            return row.join("").trim() !== "";
+        }).map(row => {
+            let obj = {};
+            headers.forEach((header, index) => {
+                let val = row[index];
+                if (val instanceof Date) {
+                    val = Utilities.formatDate(val, "Asia/Bangkok", "yyyy-MM-dd'T'HH:mm:ssXXX");
+                }
+                if (header && header.toLowerCase().includes('phone')) {
+                    val = normPhone(val);
+                }
+                if (val !== undefined) {
+                    obj[header] = val;
+                } else {
+                    obj[header] = "";
+                }
+            });
+            return obj;
+        });
+    },
+    insertRecord: (sheetName, recordArray) => {
+        DB.getSheet(sheetName).appendRow(recordArray);
+    },
+    updateRecord: (sheetName, rowIndex, columnNumber, value) => {
+        DB.getSheet(sheetName).getRange(rowIndex, columnNumber).setValue(value);
+    }
+};
 
-        <div id="viewRegister" class="hidden w-full max-w-lg bg-white rounded-xl shadow-lg p-6 mt-4">
-            <div class="flex justify-between items-center border-b pb-3 mb-4">
-                <h3 class="text-xl font-bold text-gray-800">ลงทะเบียนผู้ขับขี่ใหม่</h3>
-                <button type="button" onclick="switchView('viewLogin')" class="text-gray-400 hover:text-gray-600">ปิด</button>
-            </div>
-            <form id="registerForm" class="space-y-4">
-                <div class="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
-                    <label class="block text-sm font-bold text-indigo-800 mb-2">สมัครในฐานะ <span class="text-red-500">*</span></label>
-                    <select id="regRole" class="w-full px-3 py-2 border rounded-lg font-bold text-blue-700 focus:ring-indigo-500" required onchange="toggleRegFields()">
-                        <option value="driver">พนักงานขับรถยนต์ประจำ (ประเมินทุกวัน)</option>
-                        <option value="staff">เจ้าหน้าที่ ขับรถยามจำเป็น (มีคำสั่งราชการ)</option>
-                    </select>
-                </div>
-                <div id="staffExtraFields" class="hidden p-4 bg-gray-50 border border-gray-200 rounded-lg space-y-4">
-                    <p class="text-sm font-bold text-gray-800 border-b pb-2">ข้อมูลเฉพาะตำแหน่งเจ้าหน้าที่</p>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div><label class="block text-sm font-medium text-gray-700 mb-1">ตำแหน่ง</label><input type="text" id="regPosition" class="w-full px-3 py-2 border rounded-lg" placeholder="เช่น นักวิชาการสาธารณสุข"></div>
-                        <div><label class="block text-sm font-medium text-gray-700 mb-1">กลุ่มงาน</label><input type="text" id="regDepartment" class="w-full px-3 py-2 border rounded-lg" placeholder="เช่น กลุ่มงานบริหารทั่วไป"></div>
+function repairDatabase() {
+    const ss = SpreadsheetApp.openById(CONFIG.SHEET_ID);
+    
+    Object.entries(TABLES).forEach(([sheetName, standardHeaders]) => {
+        const sheet = ss.getSheetByName(sheetName);
+        if (!sheet) {
+            return;
+        }
+        
+        const lastRow = sheet.getLastRow();
+        const lastCol = sheet.getLastColumn();
+        
+        if (lastRow > 1) {
+            const rawData = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
+            
+            sheet.clear();
+            
+            sheet.getRange(1, 1, 1, standardHeaders.length).setValues([standardHeaders]);
+            sheet.getRange(1, 1, 1, standardHeaders.length).setFontWeight("bold").setBackground("#f3f3f3");
+            sheet.setFrozenRows(1);
+            
+            const cleanedData = rawData.map(row => {
+                let newRow = [];
+                for (let i = 0; i < standardHeaders.length; i++) {
+                    if (row[i] !== undefined) {
+                        newRow.push(row[i]);
+                    } else {
+                        newRow.push("");
+                    }
+                }
+                return newRow;
+            });
+            
+            sheet.getRange(2, 1, cleanedData.length, standardHeaders.length).setValues(cleanedData);
+            
+            standardHeaders.forEach((h, idx) => {
+                if (h.toLowerCase().includes('phone') || h === 'date') {
+                    sheet.getRange(2, idx + 1, cleanedData.length, 1).setNumberFormat("@");
+                }
+            });
+        } else {
+            sheet.clear();
+            sheet.getRange(1, 1, 1, standardHeaders.length).setValues([standardHeaders]);
+            sheet.getRange(1, 1, 1, standardHeaders.length).setFontWeight("bold").setBackground("#f3f3f3");
+            sheet.setFrozenRows(1);
+        }
+    });
+    
+    return "ซ่อมแซมและจัดเรียงข้อมูลในฐานข้อมูลเสร็จสมบูรณ์ 100%!";
+}
+
+function apiRepairDatabase(sessionToken) {
+    const session = checkSession(sessionToken);
+    if (!session || session.role !== 'super_admin') {
+        throw new Error("ไม่มีสิทธิ์เข้าถึง (จำกัดเฉพาะ Super Admin)");
+    }
+    
+    const msg = repairDatabase();
+    logAudit("REPAIR_DATABASE", session.userId, session.phone, session.role, "SYSTEM", "SYSTEM", "ALL", "SUCCESS", session.displayName, "SYSTEM");
+    return { 
+        ok: true, 
+        message: msg 
+    };
+}
+
+function Setup() {
+    repairDatabase();
+    return "Database setup completed!";
+}
+
+// ======================================================================
+// 4. MAIN LOGIC FUNCTIONS
+// ======================================================================
+function login(phone, pin) {
+    const users = DB.readData("USERS");
+    const loginPhone = normPhone(phone);
+    
+    const user = users.find(u => {
+        return normPhone(u.phone) === loginPhone && String(u.pin) === String(pin);
+    });
+    
+    if (!user) {
+        throw new Error("เบอร์โทรศัพท์หรือ PIN ไม่ถูกต้อง");
+    }
+    
+    if (String(user.status).toUpperCase() !== "APPROVED" && String(user.role) !== "super_admin") {
+        throw new Error(`บัญชีของคุณอยู่ในสถานะ: ${user.status} (รออนุมัติ)`);
+    }
+
+    const sessionToken = Utilities.getUuid();
+    let profileData = {};
+    
+    if (user.role === 'driver' || user.role === 'staff') {
+        profileData = DB.readData("DRIVER_PROFILE").find(p => {
+            return String(p.userId) === String(user.userId);
+        }) || {};
+    }
+
+    const sessionObj = {
+        userId: user.userId, 
+        phone: loginPhone, 
+        role: user.role, 
+        org: user.org, 
+        displayName: user.displayName, 
+        email: user.email, 
+        loginAt: Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd'T'HH:mm:ssXXX")
+    };
+
+    CacheService.getScriptCache().put(`sess:${sessionToken}`, JSON.stringify(sessionObj), 6 * 60 * 60);
+    
+    logAudit("LOGIN_SUCCESS", user.userId, loginPhone, user.role, user.userId, loginPhone, user.org, "SUCCESS", user.displayName, user.displayName);
+    
+    return { 
+        ok: true, 
+        sessionToken: sessionToken, 
+        user: { 
+            userId: user.userId, 
+            phone: loginPhone, 
+            role: user.role, 
+            org: user.org, 
+            displayName: user.displayName, 
+            email: user.email, 
+            emailNotif: user.emailNotif !== "FALSE", 
+            profile: profileData 
+        } 
+    };
+}
+
+function getInitialData(sessionToken) {
+    const sessionData = checkSession(sessionToken);
+    let pendingReqsCount = 0; 
+    let pendingUsersCount = 0; 
+    let auditLogCount = 0;
+    
+    if (sessionData) {
+        const freshUser = DB.readData("USERS").find(u => {
+            return String(u.userId) === String(sessionData.userId);
+        });
+        
+        if (freshUser) {
+            sessionData.emailNotif = freshUser.emailNotif !== "FALSE";
+        } else {
+            sessionData.emailNotif = true;
+        }
+        
+        if (sessionData.role === 'driver' || sessionData.role === 'staff') {
+            sessionData.profile = DB.readData("DRIVER_PROFILE").find(p => {
+                return String(p.userId) === String(sessionData.userId);
+            }) || {};
+            
+            sessionData.pendingEditReq = DB.readData("EDIT_REQUESTS").find(r => {
+                return String(r.userId) === String(sessionData.userId) && String(r.status) === 'PENDING';
+            }) || null;
+            
+        } else if (sessionData.role === 'hospital_admin' || sessionData.role === 'hospital_director' || sessionData.role === 'exec_ppho' || sessionData.role === 'super_admin' || sessionData.role === 'provincial_admin' || sessionData.role === 'provincial_audit') {
+            
+            let reqs = DB.readData("EDIT_REQUESTS").filter(r => {
+                return String(r.status) === 'PENDING';
+            });
+            
+            let pendingUsers = DB.readData("USERS").filter(u => {
+                return String(u.status) === 'PENDING';
+            });
+            
+            if (sessionData.role === 'hospital_admin' || sessionData.role === 'hospital_director') {
+                reqs = reqs.filter(r => {
+                    return String(r.org) === String(sessionData.org);
+                });
+                pendingUsers = pendingUsers.filter(u => {
+                    return String(u.org) === String(sessionData.org);
+                });
+            }
+            
+            pendingReqsCount = reqs.length; 
+            pendingUsersCount = pendingUsers.length;
+            
+            if (sessionData.role === 'super_admin' || sessionData.role === 'exec_ppho' || sessionData.role === 'hospital_director' || sessionData.role === 'provincial_admin' || sessionData.role === 'provincial_audit') {
+                let logs = DB.readData("AUDIT_LOG");
+                if (sessionData.role === 'hospital_director') {
+                    logs = logs.filter(l => {
+                        return l.org === sessionData.org && l.actorRole !== 'super_admin';
+                    });
+                } else if (sessionData.role === 'exec_ppho' || sessionData.role === 'provincial_audit') {
+                    logs = logs.filter(l => {
+                        return l.actorRole !== 'super_admin';
+                    });
+                }
+                auditLogCount = logs.length;
+            }
+        }
+    }
+    
+    return { 
+        ok: true, 
+        app: CONFIG, 
+        currentUser: sessionData || { role: "guest" }, 
+        settings: getSettings(), 
+        pendingReqs: pendingReqsCount, 
+        pendingUsers: pendingUsersCount, 
+        auditLogCount: auditLogCount 
+    };
+}
+
+function getDriverHistory(sessionToken) {
+    const session = checkSession(sessionToken);
+    
+    if (!session) {
+        throw new Error("ไม่มีสิทธิ์เข้าถึงข้อมูลประวัติส่วนตัว");
+    }
+    if (session.role !== 'driver' && session.role !== 'staff') {
+        throw new Error("ไม่มีสิทธิ์เข้าถึงข้อมูลประวัติส่วนตัว");
+    }
+    
+    const allChecks = DB.readData("HEALTH_CHECKS");
+    
+    const myHistory = allChecks.filter(r => {
+        return String(r.userId) === String(session.userId);
+    }).sort((a, b) => {
+        const dateA = new Date(a.createdAt || 0).getTime();
+        const dateB = new Date(b.createdAt || 0).getTime();
+        return dateB - dateA;
+    }).slice(0, 5).map(record => {
+        const safeCreatedAt = record.createdAt ? String(record.createdAt) : "";
+        const dParts = safeCreatedAt.length >= 10 ? safeCreatedAt.substring(0, 10).split('-') : ["-", "-", "-"];
+        
+        let displayDate = "-";
+        if (dParts.length === 3 && dParts[0] !== "-") {
+            displayDate = `${dParts[2]}/${dParts[1]}/${parseInt(dParts[0]) + 543}`;
+        } else if (record.date) {
+            displayDate = record.date;
+        }
+
+        let pReasons = []; 
+        if (record.reasonsJSON) {
+            try { 
+                pReasons = JSON.parse(record.reasonsJSON); 
+            } catch(e) {
+                // Ignore parsing errors
+            }
+        }
+        
+        return { 
+            id: record.id || generateId("HC"), 
+            date: displayDate, 
+            rawDate: record.date || "", 
+            timeSlot: record.timeSlot || "", 
+            sleepHours: record.sleepHours || 0, 
+            fatigue: record.fatigue || 0, 
+            band: record.band || "GREEN", 
+            sys: record.systolic || "", 
+            dia: record.diastolic || "", 
+            pulse: record.pulse || "", 
+            temp: record.temperature || "", 
+            reasons: pReasons,
+            evidenceUrl: record.evidenceUrl || "" 
+        };
+    });
+    
+    return { 
+        ok: true, 
+        history: myHistory 
+    };
+}
+
+function updateEmailNotif(isEnabled, sessionToken) {
+    const session = checkSession(sessionToken);
+    if (!session) {
+        throw new Error("Unauthorized");
+    }
+    
+    const sheet = DB.getSheet("USERS");
+    const data = sheet.getDataRange().getValues();
+    
+    for (let i = 1; i < data.length; i++) {
+        if (String(data[i][0]) === String(session.userId)) {
+            const emailNotifColIndex = TABLES.USERS.indexOf("emailNotif") + 1;
+            sheet.getRange(i + 1, emailNotifColIndex).setValue(isEnabled ? "TRUE" : "FALSE");
+            return { ok: true };
+        }
+    }
+    
+    throw new Error("User not found");
+}
+
+function getDriversForAdmin(sessionToken) {
+    const session = checkSession(sessionToken);
+    
+    if (!session) {
+        return { ok: false };
+    }
+    if (session.role !== 'super_admin' && session.role !== 'hospital_admin' && session.role !== 'provincial_admin') {
+        return { ok: false };
+    }
+    
+    const allUsers = DB.readData("USERS");
+    let drivers = allUsers.filter(u => {
+        return (u.role === 'driver' || u.role === 'staff') && String(u.status).toUpperCase() === 'APPROVED';
+    });
+    
+    if (session.role === 'hospital_admin') {
+        drivers = drivers.filter(u => {
+            return u.org === session.org;
+        });
+    }
+    
+    const driverData = drivers.map(d => {
+        return { 
+            userId: d.userId, 
+            phone: normPhone(d.phone), 
+            name: d.displayName, 
+            org: d.org 
+        };
+    });
+    
+    return { 
+        ok: true, 
+        drivers: driverData 
+    };
+}
+function submitHealthCheck(payload, sessionToken) {
+    const session = checkSession(sessionToken);
+    
+    if (!session) {
+        throw new Error("Session หมดอายุ");
+    }
+    
+    let targetUserId = session.userId; 
+    let targetPhone = normPhone(session.phone); 
+    let targetName = session.displayName; 
+    let isSubmittingForOther = false;
+    
+    if (payload.targetUserId && payload.targetUserId !== session.userId) {
+        if (session.role !== 'super_admin' && session.role !== 'hospital_admin' && session.role !== 'provincial_admin') {
+            throw new Error("ไม่มีสิทธิ์ประเมินแทน");
+        }
+        targetUserId = payload.targetUserId; 
+        isSubmittingForOther = true;
+    } 
+
+    const usersList = DB.readData("USERS");
+    const tUser = usersList.find(u => {
+        return String(u.userId) === String(targetUserId);
+    });
+    
+    const profileList = DB.readData("DRIVER_PROFILE");
+    const profile = profileList.find(p => {
+        return String(p.userId) === String(targetUserId);
+    });
+    
+    if (!tUser || !profile) {
+        throw new Error("ไม่พบข้อมูลผู้ใช้ในระบบ");
+    }
+
+    targetPhone = tUser.phone; 
+    targetName = tUser.displayName;
+    
+    const date = payload.date;
+    const timeSlot = payload.timeSlot;
+    const sleepHours = payload.sleepHours;
+    const fatigue = payload.fatigue;
+    const stress = payload.stress;
+    const temperature = payload.temperature;
+    const systolic = payload.systolic;
+    const diastolic = payload.diastolic;
+    const pulse = payload.pulse;
+    const criticalRisksSelected = payload.criticalRisksSelected;
+    const symptoms = payload.symptoms;
+    const note = payload.note;
+    const evidenceBase64 = payload.evidenceBase64;
+    const evidenceMimeType = payload.evidenceMimeType;
+    
+    let score = 0; 
+    let band = "GREEN"; 
+    let reasons = [];
+    
+    let criteria = getSettings().scoringCriteria;
+    if (!criteria) {
+        criteria = { 
+            tempHigh: 38.0, 
+            tempLow: 37.5, 
+            sysRed: 160, 
+            diaRed: 100, 
+            sysAmber: 140, 
+            diaAmber: 90, 
+            pulseMin: 50, 
+            pulseMax: 120, 
+            fatigueRed: 8, 
+            fatigueAmber: 5, 
+            sleepMin: 6 
+        };
+    }
+
+    if (criticalRisksSelected && criticalRisksSelected.length > 0) { 
+        band = "RED"; 
+        score += 100; 
+        for (let i = 0; i < criticalRisksSelected.length; i++) {
+            reasons.push(criticalRisksSelected[i]);
+        }
+    }
+    
+    if (temperature >= criteria.tempHigh) { 
+        band = "RED"; 
+        score += 50; 
+        reasons.push(`มีไข้สูง (${temperature}°C)`); 
+    }
+    
+    if (systolic >= criteria.sysRed || diastolic >= criteria.diaRed) { 
+        band = "RED"; 
+        score += 50; 
+        reasons.push(`ความดันสูงอันตราย (${systolic}/${diastolic})`); 
+    } else if (systolic >= criteria.sysAmber || diastolic >= criteria.diaAmber) { 
+        score += 30; 
+        reasons.push(`ความดันสูง (${systolic}/${diastolic})`); 
+    }
+    
+    if (pulse && (pulse < criteria.pulseMin || pulse > criteria.pulseMax)) { 
+        score += 20; 
+        reasons.push(`ชีพจรผิดปกติ (${pulse} bpm)`); 
+    }
+    
+    if (symptoms && symptoms.length > 0) { 
+        score += 20; 
+        reasons.push(`อาการผิดปกติ: ${symptoms.join(', ')}`); 
+    }
+    
+    if (sleepHours < criteria.sleepMin) { 
+        score += 30; 
+        reasons.push("พักผ่อนไม่เพียงพอ"); 
+    }
+    
+    if (fatigue >= criteria.fatigueAmber) { 
+        score += 20; 
+        reasons.push("มีอาการอ่อนล้า"); 
+    }
+
+    if (band !== "RED") { 
+        if (score >= 40) {
+            band = "RED"; 
+        } else if (score >= 20) {
+            band = "AMBER"; 
+        }
+    }
+
+    let fileUrl = "";
+    if (evidenceBase64) {
+        try {
+            const folderName = "DHR_Health_Evidence";
+            let folders = DriveApp.getFoldersByName(folderName);
+            let folder;
+            
+            if (folders.hasNext()) {
+                folder = folders.next();
+            } else {
+                folder = DriveApp.createFolder(folderName);
+            }
+            
+            let blob = Utilities.base64Decode(evidenceBase64);
+            let timestampStr = new Date().getTime();
+            let mimeType = evidenceMimeType;
+            
+            if (!mimeType) {
+                mimeType = MimeType.JPEG;
+            }
+            
+            let fileName = `Evidence_${targetPhone}_${date}_${timestampStr}.jpg`;
+            
+            let fileBlob = Utilities.newBlob(blob, mimeType, fileName);
+            let savedFile = folder.createFile(fileBlob);
+            savedFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+            fileUrl = savedFile.getUrl();
+        } catch(e) {
+            console.error("Upload Error: " + e.message);
+        }
+    }
+
+    const now = Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd'T'HH:mm:ssXXX");
+    
+    let sysVal = systolic;
+    if (!sysVal) sysVal = "";
+    
+    let diaVal = diastolic;
+    if (!diaVal) diaVal = "";
+    
+    let pulseVal = pulse;
+    if (!pulseVal) pulseVal = "";
+    
+    let stressVal = stress;
+    if (!stressVal) stressVal = 0;
+    
+    let crJSON = "[]";
+    if (criticalRisksSelected) crJSON = JSON.stringify(criticalRisksSelected);
+    
+    let sympJSON = "[]";
+    if (symptoms) sympJSON = JSON.stringify(symptoms);
+    
+    let adminNote = "";
+    if (isSubmittingForOther) {
+        adminNote = "(ประเมินโดย Admin) ";
+    }
+    
+    DB.insertRecord("HEALTH_CHECKS", [
+        generateId("HC"), 
+        targetUserId, 
+        now, 
+        date, 
+        timeSlot, 
+        sheetStr(targetPhone), 
+        profile.org, 
+        sleepHours, 
+        fatigue, 
+        stressVal, 
+        temperature, 
+        sysVal, 
+        diaVal, 
+        pulseVal, 
+        crJSON, 
+        sympJSON, 
+        adminNote, 
+        score, 
+        band, 
+        JSON.stringify(reasons), 
+        targetName, 
+        fileUrl
+    ]);
+  
+    logAudit("SUBMIT_HEALTH_CHECK", session.userId, session.phone, session.role, targetUserId, targetPhone, profile.org, band, session.displayName, targetName);
+    
+    SpreadsheetApp.flush();
+
+    if (band === 'RED') {
+        const tgMsg = `🛑 แจ้งเตือนฉุกเฉิน: ผู้ขับขี่งดทำงาน (สถานะ RED)\n\n👤 ชื่อ: ${targetName}\n🏥 หน่วยงาน: ${profile.org}\n⚠️ สาเหตุที่พบ: ${reasons.join(', ')}\n\nโปรดตรวจสอบและระงับการขับขี่ของบุคคลนี้ทันที!`;
+        sendTelegramMsg(tgMsg, profile.org);
+        
+        try {
+            const adminEmails = [];
+            const allUsers = DB.readData("USERS");
+            
+            allUsers.forEach(u => {
+                if (String(u.status).toUpperCase() !== 'APPROVED') return;
+                if (!u.email || String(u.email).trim() === "") return;
+                if (String(u.emailNotif) === "FALSE") return;
+                
+                if (u.role === 'super_admin' || u.role === 'provincial_admin' || (u.role === 'hospital_admin' && u.org === profile.org)) {
+                    adminEmails.push(u.email);
+                }
+            });
+            
+            if (adminEmails.length > 0) {
+                MailApp.sendEmail({ 
+                    to: adminEmails.join(","), 
+                    subject: `[DHR แจ้งเตือนด่วน] ผู้ขับขี่งดทำงาน - ${targetName}`, 
+                    body: `เรียน Admin\n\nสถานะ RED\nผู้ขับขี่: ${targetName}\nหน่วยงาน: ${profile.org}\nสาเหตุ: ${reasons.join(', ')}\n\nกรุณาตรวจสอบหลักฐานในระบบ` 
+                });
+            }
+        } catch (err) {
+            // Ignore email error
+        }
+        
+    } else if (band === 'AMBER') {
+        const tgMsg = `⚠️ แจ้งเตือน: ผู้ขับขี่ต้องเฝ้าระวัง (สถานะ AMBER)\n\n👤 ชื่อ: ${targetName}\n🏥 หน่วยงาน: ${profile.org}\n⚠️ ความเสี่ยงที่พบ: ${reasons.join(', ')}\n\nโปรดพิจารณาความพร้อมก่อนมอบหมายงาน`;
+        sendTelegramMsg(tgMsg, profile.org);
+    }
+
+    return { 
+        ok: true, 
+        band: band, 
+        score: score, 
+        reasons: reasons 
+    };
+}
+
+function getHealthAnalysis15Days(sessionToken) {
+    const session = checkSession(sessionToken);
+    
+    if (!session) {
+        throw new Error("ไม่มีสิทธิ์");
+    }
+    if (session.role !== 'driver' && session.role !== 'staff') {
+        throw new Error("ไม่มีสิทธิ์");
+    }
+    
+    const past15 = new Date(Date.now() - (15 * 24 * 60 * 60 * 1000));
+    const allChecks = DB.readData("HEALTH_CHECKS");
+    
+    const myChecks = allChecks.filter(c => {
+        if (String(c.userId) !== String(session.userId)) return false;
+        
+        let cDate;
+        if (c.createdAt) {
+            cDate = new Date(c.createdAt);
+        } else {
+            cDate = new Date(0);
+        }
+        
+        return cDate >= past15;
+    });
+    
+    if (myChecks.length === 0) {
+        return { 
+            ok: true, 
+            hasData: false 
+        };
+    }
+
+    let red = 0;
+    let amber = 0;
+    let green = 0;
+    let sumSys = 0;
+    let sumDia = 0;
+    let sumSleep = 0;
+    let sumFatigue = 0;
+    
+    let issues = new Set();
+    
+    myChecks.forEach(c => {
+        if (c.band === 'RED') {
+            red++; 
+        } else if (c.band === 'AMBER') {
+            amber++; 
+        } else {
+            green++;
+        }
+        
+        if (c.systolic) sumSys += parseFloat(c.systolic);
+        if (c.diastolic) sumDia += parseFloat(c.diastolic);
+        if (c.sleepHours) sumSleep += parseFloat(c.sleepHours);
+        if (c.fatigue) sumFatigue += parseFloat(c.fatigue);
+        
+        if (c.reasonsJSON) {
+            try { 
+                const resArr = JSON.parse(c.reasonsJSON);
+                resArr.forEach(res => {
+                    issues.add(res);
+                });
+            } catch(e) {
+                // Ignore parse error
+            }
+        }
+    });
+    
+    let avgSysVal = (sumSys / myChecks.length).toFixed(0);
+    let avgDiaVal = (sumDia / myChecks.length).toFixed(0);
+    let avgSleepVal = (sumSleep / myChecks.length).toFixed(1);
+    let avgFatigueVal = (sumFatigue / myChecks.length).toFixed(1);
+    
+    return { 
+        ok: true, 
+        hasData: true, 
+        stats: { 
+            count: myChecks.length, 
+            red: red, 
+            amber: amber, 
+            green: green, 
+            avgSys: avgSysVal, 
+            avgDia: avgDiaVal, 
+            avgSleep: avgSleepVal, 
+            avgFatigue: avgFatigueVal, 
+            issues: Array.from(issues) 
+        } 
+    };
+}
+
+function getAdminDashboard(filters, sessionToken) {
+    const session = checkSession(sessionToken);
+    
+    let isPublic = true;
+    if (session && session.role !== 'driver' && session.role !== 'staff' && session.role !== 'guest') {
+        isPublic = false;
+    }
+    
+    let orgFilter = "ALL";
+    if (filters && filters.org) {
+        orgFilter = filters.org;
+    }
+    
+    let periodFilter = "today";
+    if (filters && filters.period) {
+        periodFilter = filters.period;
+    }
+    
+    let allUsers = DB.readData("USERS");
+    let usersList = allUsers.filter(u => {
+        return (u.role === 'driver' || u.role === 'staff') && String(u.status).toUpperCase() === "APPROVED";
+    });
+    
+    if (session && (session.role === 'hospital_admin' || session.role === 'hospital_director')) {
+        usersList = usersList.filter(u => {
+            return String(u.org) === String(session.org);
+        });
+    } else if (orgFilter !== "ALL") {
+        usersList = usersList.filter(u => {
+            return String(u.org) === orgFilter;
+        });
+    }
+
+    const userIds = new Set();
+    usersList.forEach(d => {
+        userIds.add(String(d.userId));
+    });
+    
+    const now = new Date(); 
+    let startDate = new Date(); 
+    let targetDateStr = null;
+    
+    if (periodFilter.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        targetDateStr = periodFilter;
+    } else if (periodFilter === '7d') {
+        startDate.setDate(now.getDate() - 7);
+    } else if (periodFilter === '30d') {
+        startDate.setDate(now.getDate() - 30);
+    } else if (periodFilter === 'today') {
+        targetDateStr = Utilities.formatDate(now, "Asia/Bangkok", "yyyy-MM-dd");
+    }
+    
+    startDate.setHours(0, 0, 0, 0);
+
+    const allChecks = DB.readData("HEALTH_CHECKS");
+    const filteredChecks = allChecks.filter(c => {
+        if (!userIds.has(String(c.userId))) {
+            return false;
+        }
+        
+        if (targetDateStr) {
+            let cDateStr = "";
+            if (c.createdAt) {
+                cDateStr = String(c.createdAt).substring(0, 10);
+            }
+            return cDateStr === targetDateStr;
+        }
+        
+        let cDate;
+        if (c.createdAt) {
+            cDate = new Date(c.createdAt);
+        } else {
+            cDate = new Date(0);
+        }
+        
+        return cDate >= startDate && cDate <= now;
+    });
+
+    const stats = { 
+        statGreen: 0, 
+        statAmber: 0, 
+        statRed: 0, 
+        statNoData: 0 
+    };
+    
+    const orgStats = {};
+    usersList.forEach(d => { 
+        if(!orgStats[d.org]) {
+            orgStats[d.org] = { green: 0, amber: 0, red: 0 }; 
+        }
+    });
+
+    const actionRequiredDriver = []; 
+    const actionRequiredStaff = []; 
+    const greenListDriver = []; 
+    const greenListStaff = []; 
+    const noDataList = []; 
+
+    let totalDrivers = 0;
+    let totalStaff = 0;
+    
+    usersList.forEach(d => {
+        if (d.role === 'driver') {
+            totalDrivers++;
+        } else if (d.role === 'staff') {
+            totalStaff++;
+        }
+    });
+
+    if (targetDateStr) { 
+        const latest = {};
+        filteredChecks.forEach(c => { 
+            let cDate = new Date(c.createdAt || 0);
+            
+            if (!latest[c.userId]) {
+                latest[c.userId] = c;
+            } else {
+                let lDate = new Date(latest[c.userId].createdAt || 0);
+                if (cDate > lDate) {
+                    latest[c.userId] = c;
+                }
+            }
+        });
+        
+        usersList.forEach(d => {
+            const c = latest[d.userId];
+            if (c) {
+                if (c.band === 'GREEN') { 
+                    stats.statGreen++; 
+                    if(orgStats[c.org]) {
+                        orgStats[c.org].green++; 
+                    }
+                    
+                    let dName = isPublic ? maskName(d.displayName) : d.displayName;
+                    let dPhone = isPublic ? maskPhone(d.phone) : normPhone(d.phone);
+                    
+                    let item = { 
+                        name: dName, 
+                        org: d.org, 
+                        phone: dPhone, 
+                        temp: c.temperature, 
+                        bp: `${c.systolic}/${c.diastolic}`, 
+                        pulse: c.pulse, 
+                        createdAt: c.createdAt, 
+                        evidenceUrl: c.evidenceUrl || "" 
+                    };
+                    
+                    if (d.role === 'driver') {
+                        greenListDriver.push(item); 
+                    } else {
+                        greenListStaff.push(item);
+                    }
+                } else if (c.band === 'AMBER') { 
+                    stats.statAmber++; 
+                    if(orgStats[c.org]) {
+                        orgStats[c.org].amber++; 
+                    }
+                } else if (c.band === 'RED') { 
+                    stats.statRed++; 
+                    if(orgStats[c.org]) {
+                        orgStats[c.org].red++; 
+                    }
+                }
+                
+                if (c.band === 'RED' || c.band === 'AMBER') {
+                    let r = []; 
+                    if (c.reasonsJSON) {
+                        try { 
+                            r = JSON.parse(c.reasonsJSON); 
+                        } catch(e) {
+                            // Ignore
+                        }
+                    }
+                    
+                    let cDateStr = "";
+                    if (c.createdAt) {
+                        cDateStr = String(c.createdAt).substring(0, 10);
+                    }
+                    
+                    let dName = isPublic ? maskName(d.displayName) : d.displayName;
+                    let dPhone = isPublic ? maskPhone(d.phone) : normPhone(d.phone);
+                    
+                    let item = { 
+                        date: cDateStr, 
+                        createdAt: c.createdAt, 
+                        name: dName, 
+                        phone: dPhone, 
+                        org: c.org, 
+                        band: c.band, 
+                        score: c.score, 
+                        reasons: r, 
+                        timeSlot: c.timeSlot, 
+                        evidenceUrl: c.evidenceUrl || "" 
+                    };
+                    
+                    if (d.role === 'driver') {
+                        actionRequiredDriver.push(item); 
+                    } else {
+                        actionRequiredStaff.push(item);
+                    }
+                }
+            } else { 
+                if (d.role === 'driver') {
+                    stats.statNoData++; 
+                    
+                    let dName = isPublic ? maskName(d.displayName) : d.displayName;
+                    let dPhone = isPublic ? maskPhone(d.phone) : normPhone(d.phone);
+                    
+                    noDataList.push({ 
+                        name: dName, 
+                        phone: dPhone, 
+                        org: d.org 
+                    });
+                }
+            }
+        });
+    } else { 
+        filteredChecks.forEach(c => {
+            const d = usersList.find(x => {
+                return String(x.userId) === String(c.userId);
+            });
+            
+            if (!d) {
+                return;
+            }
+            
+            if (c.band === 'GREEN') { 
+                stats.statGreen++; 
+                if(orgStats[c.org]) {
+                    orgStats[c.org].green++; 
+                }
+            } else if (c.band === 'AMBER') { 
+                stats.statAmber++; 
+                if(orgStats[c.org]) {
+                    orgStats[c.org].amber++; 
+                }
+            } else if (c.band === 'RED') { 
+                stats.statRed++; 
+                if(orgStats[c.org]) {
+                    orgStats[c.org].red++; 
+                }
+            }
+            
+            if (c.band === 'RED' || c.band === 'AMBER') {
+                let r = []; 
+                if (c.reasonsJSON) {
+                    try { 
+                        r = JSON.parse(c.reasonsJSON); 
+                    } catch(e) {
+                        // Ignore
+                    }
+                }
+                
+                let cDateStr = "";
+                if (c.createdAt) {
+                    cDateStr = String(c.createdAt).substring(0, 10);
+                }
+                
+                let dName = isPublic ? maskName(d.displayName) : d.displayName;
+                let cPhone = isPublic ? maskPhone(c.phone) : normPhone(c.phone);
+                
+                let item = { 
+                    date: cDateStr, 
+                    createdAt: c.createdAt, 
+                    name: dName, 
+                    phone: cPhone, 
+                    org: c.org, 
+                    band: c.band, 
+                    score: c.score, 
+                    reasons: r, 
+                    timeSlot: c.timeSlot, 
+                    evidenceUrl: c.evidenceUrl || "" 
+                };
+                
+                if (d.role === 'driver') {
+                    actionRequiredDriver.push(item); 
+                } else {
+                    actionRequiredStaff.push(item);
+                }
+            }
+        });
+    }
+
+    const sortFn = (a, b) => { 
+        if(a.date !== b.date) {
+            return new Date(b.date) - new Date(a.date); 
+        }
+        if (a.band === 'RED') {
+            return -1;
+        } else {
+            return 1;
+        }
+    };
+    
+    actionRequiredDriver.sort(sortFn); 
+    actionRequiredStaff.sort(sortFn);
+
+    return { 
+        ok: true, 
+        stats: stats, 
+        orgStats: orgStats, 
+        actionRequiredDriver: actionRequiredDriver, 
+        actionRequiredStaff: actionRequiredStaff, 
+        noDataList: noDataList, 
+        greenListDriver: greenListDriver, 
+        greenListStaff: greenListStaff, 
+        totalDrivers: totalDrivers, 
+        totalStaff: totalStaff, 
+        isPublicView: isPublic 
+    };
+}
+
+function maskName(name) { 
+    if (!name) return "ไม่ระบุ";
+    let str = String(name);
+    let parts = str.split(" ");
+    let maskedParts = [];
+    for (let i = 0; i < parts.length; i++) {
+        maskedParts.push(parts[i].charAt(0) + "****");
+    }
+    return maskedParts.join(" ");
+}
+
+function maskPhone(phone) { 
+    if (!phone) return "****";
+    let str = String(phone);
+    if (str.length >= 10) {
+        return str.substring(0, 3) + "****" + str.substring(7);
+    } else {
+        return "****";
+    }
+}
+
+function submitEditRequest(payload, sessionToken) {
+    const session = checkSession(sessionToken);
+    if (!session) {
+        throw new Error("ไม่มีสิทธิ์");
+    }
+    if (session.role !== 'driver' && session.role !== 'staff' && session.role !== 'hospital_admin') {
+        throw new Error("ไม่มีสิทธิ์");
+    }
+    
+    const allReqs = DB.readData("EDIT_REQUESTS");
+    const existingReq = allReqs.find(r => {
+        return String(r.userId) === String(session.userId) && String(r.status) === 'PENDING';
+    });
+    
+    if (existingReq) {
+        throw new Error("มีคำขอรออนุมัติอยู่แล้ว กรุณารอผลอนุมัติ");
+    }
+    
+    const now = Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd'T'HH:mm:ssXXX");
+    
+    let reqChr = payload.reqChronic;
+    if (!reqChr) reqChr = "";
+    
+    let reqMed = payload.reqMeds;
+    if (!reqMed) reqMed = "";
+    
+    let reqSmo = payload.reqSmoking;
+    if (!reqSmo) reqSmo = "";
+    
+    let reqAlc = payload.reqAlcohol;
+    if (!reqAlc) reqAlc = "";
+    
+    let reqName = payload.reqName;
+    if (!reqName) reqName = "";
+    
+    let reqOrg = payload.reqOrg;
+    if (!reqOrg) reqOrg = "";
+    
+    let reqEmail = payload.reqEmail;
+    if (!reqEmail) reqEmail = "";
+    
+    DB.insertRecord("EDIT_REQUESTS", [
+        generateId("REQ"), 
+        session.userId, 
+        now, 
+        sheetStr(session.phone), 
+        session.org, 
+        sheetStr(normPhone(payload.reqPhone)), 
+        reqChr, 
+        reqMed, 
+        reqSmo, 
+        reqAlc, 
+        "PENDING", 
+        "", 
+        "", 
+        session.displayName, 
+        reqName, 
+        reqOrg, 
+        reqEmail
+    ]);
+    
+    logAudit("SUBMIT_EDIT_REQUEST", session.userId, session.phone, session.role, session.userId, session.phone, session.org, "PENDING", session.displayName, session.displayName);
+    
+    const tgMsg = `📝 มีคำขอแก้ไขข้อมูลส่วนตัว (รออนุมัติ)\n\n👤 ผู้ขอแก้ไข: ${session.displayName}\n🏥 หน่วยงาน: ${session.org}\n📞 เบอร์โทร: ${session.phone}\n\nกรุณาเข้าสู่ระบบเพื่อพิจารณาอนุมัติข้อมูล`;
+    sendTelegramMsg(tgMsg, session.org);
+
+    return { ok: true };
+}
+
+function cancelEditRequest(reqId, sessionToken) {
+    const session = checkSession(sessionToken);
+    if (!session) {
+        throw new Error("Session expired");
+    }
+    
+    const sheetReq = DB.getSheet("EDIT_REQUESTS"); 
+    const dataReq = sheetReq.getDataRange().getValues();
+    
+    let row = -1; 
+    for (let i = 1; i < dataReq.length; i++) { 
+        if (String(dataReq[i][0]) === String(reqId) && String(dataReq[i][1]) === String(session.userId)) { 
+            row = i + 1; 
+            break; 
+        } 
+    }
+    
+    if (row === -1) {
+        throw new Error("ไม่พบคำขอ");
+    }
+    
+    const now = Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd'T'HH:mm:ssXXX");
+    
+    sheetReq.getRange(row, 11).setValue("CANCELLED"); 
+    sheetReq.getRange(row, 12).setValue(session.displayName); 
+    sheetReq.getRange(row, 13).setValue(now);
+    
+    logAudit("CANCEL_EDIT_REQUEST", session.userId, session.phone, session.role, session.userId, session.phone, session.org, "CANCELLED", session.displayName, session.displayName);
+    
+    return { ok: true };
+}
+
+function getEditRequestsList(sessionToken) {
+    const session = checkSession(sessionToken);
+    
+    if (!session) {
+        throw new Error("ไม่มีสิทธิ์");
+    }
+    if (session.role === 'driver' || session.role === 'staff' || session.role === 'guest') {
+        throw new Error("ไม่มีสิทธิ์");
+    }
+    
+    let reqs = DB.readData("EDIT_REQUESTS");
+    
+    if (session.role === 'hospital_admin' || session.role === 'hospital_director') {
+        reqs = reqs.filter(r => {
+            return String(r.org) === String(session.org);
+        });
+    }
+    
+    const allUsers = DB.readData("USERS"); 
+    const profiles = DB.readData("DRIVER_PROFILE");
+    
+    reqs = reqs.map(r => {
+        const u = allUsers.find(x => {
+            return String(x.userId) === String(r.userId);
+        }); 
+        
+        const p = profiles.find(x => {
+            return String(x.userId) === String(r.userId);
+        });
+        
+        if (u) {
+            r.driverName = u.displayName;
+            r.oldPhone = normPhone(u.phone);
+            r.oldOrg = u.org;
+            
+            if (u.email) {
+                r.oldEmail = u.email;
+            } else {
+                r.oldEmail = "";
+            }
+            
+            r.reqUserRole = u.role;
+        } else {
+            if (!r.driverName) {
+                r.driverName = "ไม่ระบุชื่อ";
+            }
+            r.oldPhone = "";
+            r.oldOrg = "";
+            r.oldEmail = "";
+            r.reqUserRole = "driver";
+        }
+        
+        if (p) {
+            r.oldChronic = p.chronicDisease;
+            r.oldMeds = p.regularMeds;
+            r.oldSmoking = p.smoking;
+            r.oldAlcohol = p.alcohol;
+        } else {
+            r.oldChronic = "";
+            r.oldMeds = "";
+            r.oldSmoking = "";
+            r.oldAlcohol = "";
+        }
+        
+        if (!r.reqName) r.reqName = ""; 
+        if (!r.reqOrg) r.reqOrg = ""; 
+        if (!r.reqEmail) r.reqEmail = "";
+        
+        return r;
+    });
+    
+    reqs.sort((a, b) => {
+        const dateA = new Date(a.createdAt || 0).getTime();
+        const dateB = new Date(b.createdAt || 0).getTime();
+        return dateB - dateA;
+    });
+    
+    let pCount = 0;
+    reqs.forEach(r => {
+        if (r.status === 'PENDING') {
+            pCount++;
+        }
+    });
+    
+    return { 
+        ok: true, 
+        requests: reqs, 
+        pendingCount: pCount 
+    };
+}
+
+function approveEditRequest(reqId, sessionToken) {
+    const session = checkSession(sessionToken);
+    
+    if (!session) {
+        throw new Error("ไม่มีสิทธิ์อนุมัติ");
+    }
+    if (session.role !== 'hospital_admin' && session.role !== 'super_admin' && session.role !== 'provincial_admin') {
+        throw new Error("ไม่มีสิทธิ์อนุมัติ");
+    }
+    
+    const sheetReq = DB.getSheet("EDIT_REQUESTS"); 
+    const dataReq = sheetReq.getDataRange().getValues();
+    
+    let row = -1; 
+    let reqData = null;
+    
+    for (let i = 1; i < dataReq.length; i++) { 
+        if (String(dataReq[i][0]) === String(reqId)) { 
+            row = i + 1; 
+            reqData = dataReq[i]; 
+            break; 
+        } 
+    }
+    
+    if (row === -1) {
+        throw new Error("ไม่พบคำขอ หรือจัดการไปแล้ว");
+    }
+    if (String(reqData[10]) !== "PENDING") {
+        throw new Error("ไม่พบคำขอ หรือจัดการไปแล้ว");
+    }
+    
+    const tUid = String(reqData[1]);
+    const sUsr = DB.getSheet("USERS"); 
+    const dUsr = sUsr.getDataRange().getValues();
+    
+    let tUserRow = dUsr.find(r => {
+        return String(r[0]) === tUid;
+    });
+    
+    if (tUserRow && session.role === 'hospital_admin') {
+        let tRole = String(tUserRow[5]);
+        if (tRole !== 'driver' && tRole !== 'staff') {
+            throw new Error("Admin รพ. สามารถอนุมัติได้เฉพาะคำขอของพนักงานขับรถ/เจ้าหน้าที่เท่านั้น");
+        }
+    }
+    
+    if (session.role === 'hospital_admin') {
+        if (String(reqData[4]) !== session.org) {
+            throw new Error("ไม่มีสิทธิ์ข้ามหน่วยงาน");
+        }
+    }
+    
+    let tPhone = normPhone(reqData[3]);
+    let tOrg = String(reqData[4]);
+    let rPhone = normPhone(reqData[5]);
+    let rChr = String(reqData[6]);
+    let rMed = String(reqData[7]);
+    let rSmo = String(reqData[8]);
+    let rAlc = String(reqData[9]);
+    
+    let reqName = "";
+    if (reqData[14]) reqName = String(reqData[14]);
+    
+    let reqOrg = "";
+    if (reqData[15]) reqOrg = String(reqData[15]);
+    
+    let reqEmail = "";
+    if (reqData[16]) reqEmail = String(reqData[16]);
+
+    const sProf = DB.getSheet("DRIVER_PROFILE"); 
+    if (sProf) {
+        const dProf = sProf.getDataRange().getValues();
+        for (let i = 1; i < dProf.length; i++) {
+            if (String(dProf[i][0]) === tUid) {
+                if (rPhone !== tPhone) {
+                    sProf.getRange(i + 1, 4).setValue(sheetStr(rPhone));
+                }
+                sProf.getRange(i + 1, 11).setValue(rChr); 
+                sProf.getRange(i + 1, 12).setValue(rMed); 
+                sProf.getRange(i + 1, 13).setValue(rAlc); 
+                sProf.getRange(i + 1, 14).setValue(rSmo); 
+                break;
+            }
+        }
+    }
+
+    let tEmail = ""; 
+    let tName = ""; 
+    let targetEmailNotif = "TRUE";
+    
+    for (let i = 1; i < dUsr.length; i++) {
+        if (String(dUsr[i][0]) === tUid) {
+            if (rPhone !== tPhone) {
+                sUsr.getRange(i + 1, 4).setValue(sheetStr(rPhone));
+            }
+            if (reqName && reqName !== "") {
+                sUsr.getRange(i + 1, 9).setValue(reqName);
+            }
+            if (reqOrg && reqOrg !== "") {
+                sUsr.getRange(i + 1, 7).setValue(reqOrg);
+            }
+            if (reqEmail && reqEmail !== "") {
+                sUsr.getRange(i + 1, 12).setValue(reqEmail);
+            }
+            
+            if (reqEmail) {
+                tEmail = reqEmail;
+            } else {
+                tEmail = dUsr[i][11];
+            }
+            
+            if (reqName) {
+                tName = reqName;
+            } else {
+                tName = dUsr[i][8];
+            }
+            
+            if (dUsr[i][12]) {
+                targetEmailNotif = String(dUsr[i][12]);
+            }
+            
+            break;
+        }
+    }
+    
+    const now = Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd'T'HH:mm:ssXXX");
+    
+    sheetReq.getRange(row, 11).setValue("APPROVED"); 
+    sheetReq.getRange(row, 12).setValue(session.displayName); 
+    sheetReq.getRange(row, 13).setValue(now); 
+    
+    logAudit("APPROVE_EDIT_REQUEST", session.userId, session.phone, session.role, tUid, tPhone, tOrg, "APPROVED", session.displayName, tName);
+    
+    if (tEmail && String(tEmail).trim() !== "" && targetEmailNotif !== "FALSE") {
+        try { 
+            let bodyMsg = `เรียนคุณ ${tName}\n\nคำขอแก้ไขข้อมูลส่วนบุคคลได้รับการตรวจสอบและอนุมัติเรียบร้อยแล้ว\n\nระบบ Driver Health Readiness`;
+            MailApp.sendEmail({ 
+                to: tEmail, 
+                subject: `[DHR] คำขอแก้ไขข้อมูลส่วนตัวของคุณได้รับการอนุมัติแล้ว`, 
+                body: bodyMsg 
+            }); 
+        } catch(e) {
+            // Ignore email error
+        }
+    }
+    return { ok: true };
+}
+
+function rejectEditRequest(reqId, rejectReason, sessionToken) {
+    const session = checkSession(sessionToken);
+    
+    if (!session) {
+        throw new Error("ไม่มีสิทธิ์");
+    }
+    if (session.role !== 'hospital_admin' && session.role !== 'super_admin' && session.role !== 'provincial_admin') {
+        throw new Error("ไม่มีสิทธิ์");
+    }
+    
+    const sheetReq = DB.getSheet("EDIT_REQUESTS"); 
+    const dataReq = sheetReq.getDataRange().getValues();
+    
+    let row = -1; 
+    let reqData = null;
+    
+    for (let i = 1; i < dataReq.length; i++) { 
+        if (String(dataReq[i][0]) === String(reqId)) { 
+            row = i + 1; 
+            reqData = dataReq[i]; 
+            break; 
+        } 
+    }
+    
+    if (row === -1) {
+        throw new Error("ไม่พบคำขอ");
+    }
+    if (String(reqData[10]) !== "PENDING") {
+        throw new Error("ไม่พบคำขอ");
+    }
+    
+    const tUid = String(reqData[1]);
+    const allUsers = DB.readData("USERS");
+    const tUser = allUsers.find(r => {
+        return String(r.userId) === tUid;
+    });
+    
+    if (tUser && session.role === 'hospital_admin') {
+        if (tUser.role !== 'driver' && tUser.role !== 'staff') {
+            throw new Error("Admin รพ. สามารถปฏิเสธได้เฉพาะคำขอของพนักงานขับรถ/เจ้าหน้าที่เท่านั้น");
+        }
+    }
+    
+    if (session.role === 'hospital_admin') {
+        if (String(reqData[4]) !== session.org) {
+            throw new Error("ไม่มีสิทธิ์ข้ามหน่วยงาน");
+        }
+    }
+    
+    const now = Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd'T'HH:mm:ssXXX");
+    
+    sheetReq.getRange(row, 11).setValue("REJECTED"); 
+    sheetReq.getRange(row, 12).setValue(session.displayName); 
+    sheetReq.getRange(row, 13).setValue(now); 
+    
+    logAudit("REJECT_EDIT_REQUEST", session.userId, session.phone, session.role, tUid, normPhone(reqData[3]), String(reqData[4]), `REJECTED: ${rejectReason}`, session.displayName, "");
+    
+    return { ok: true };
+}
+
+function getAdminUsersList(sessionToken) {
+    const session = checkSession(sessionToken);
+    
+    if (!session) {
+        throw new Error("ไม่มีสิทธิ์");
+    }
+    
+    if (session.role !== 'hospital_admin' && session.role !== 'hospital_director' && session.role !== 'exec_ppho' && session.role !== 'super_admin' && session.role !== 'provincial_admin' && session.role !== 'provincial_audit') {
+        throw new Error("ไม่มีสิทธิ์");
+    }
+    
+    let allUsers = DB.readData("USERS");
+    
+    if (session.role === 'hospital_admin') {
+        allUsers = allUsers.filter(u => {
+            return u.org === session.org || u.role === 'provincial_admin' || u.role === 'provincial_audit' || u.role === 'exec_ppho' || u.role === 'hospital_admin';
+        });
+    } else if (session.role === 'hospital_director') {
+        allUsers = allUsers.filter(u => {
+            return String(u.org) === String(session.org);
+        });
+    }
+    
+    if (session.role !== 'super_admin') {
+        allUsers = allUsers.filter(u => {
+            return u.role !== 'super_admin';
+        });
+    }
+    
+    const safeUsers = allUsers.map(u => {
+        let uEmail = "";
+        if (u.email) {
+            uEmail = u.email;
+        }
+        
+        return { 
+            userId: u.userId, 
+            phone: normPhone(u.phone), 
+            role: u.role, 
+            org: u.org, 
+            status: String(u.status).toUpperCase(), 
+            displayName: u.displayName, 
+            createdAt: u.createdAt, 
+            pin: u.pin, 
+            email: uEmail 
+        };
+    });
+    
+    safeUsers.sort((a, b) => {
+        const dateA = new Date(a.createdAt || 0).getTime();
+        const dateB = new Date(b.createdAt || 0).getTime();
+        return dateB - dateA;
+    });
+    
+    return { 
+        ok: true, 
+        users: safeUsers, 
+        myRole: session.role, 
+        myOrg: session.org, 
+        myId: session.userId 
+    };
+}
+
+function adminUpdateUserStatus(targetUserId, targetName, newStatus, rejectReason, sessionToken) {
+    const session = checkSession(sessionToken);
+    
+    if (!session) {
+        throw new Error("ไม่มีสิทธิ์");
+    }
+    if (session.role !== 'hospital_admin' && session.role !== 'super_admin' && session.role !== 'provincial_admin') {
+        throw new Error("ไม่มีสิทธิ์");
+    }
+    
+    const sheet = DB.getSheet("USERS"); 
+    const data = sheet.getDataRange().getValues();
+    
+    let row = -1; 
+    let tOrg = ""; 
+    let tEmail = ""; 
+    let tRole = ""; 
+    let tPhone = ""; 
+    let targetPin = "";
+    let targetEmailNotif = "TRUE";
+    
+    for (let i = 1; i < data.length; i++) { 
+        if (String(data[i][0]) === String(targetUserId)) { 
+            row = i + 1; 
+            tPhone = String(data[i][3]); 
+            targetPin = String(data[i][4]); 
+            tRole = String(data[i][5]); 
+            tOrg = String(data[i][6]); 
+            tEmail = String(data[i][11]); 
+            if (data[i][12]) {
+                targetEmailNotif = String(data[i][12]);
+            }
+            break; 
+        } 
+    }
+    
+    if (row === -1) {
+        throw new Error("ไม่พบผู้ใช้");
+    }
+    
+    if (session.role === 'hospital_admin') {
+        if (session.org !== tOrg) {
+            throw new Error("ไม่มีสิทธิ์ข้ามหน่วยงาน");
+        }
+        
+        let upperNewStatus = newStatus.toUpperCase();
+        if (tRole === 'hospital_admin' || tRole === 'hospital_director' || tRole === 'provincial_admin' || tRole === 'provincial_audit') {
+            if (upperNewStatus === 'APPROVED' || upperNewStatus === 'REJECTED') {
+                throw new Error("ระดับของคุณไม่สามารถจัดการ Role นี้ได้");
+            }
+        }
+    } else if (session.role === 'provincial_admin') {
+        if (tRole === 'super_admin' || tRole === 'provincial_admin' || tRole === 'provincial_audit') {
+            throw new Error("ไม่สามารถจัดการ Role ระดับจังหวัดได้");
+        }
+    }
+    
+    const oldStatus = String(sheet.getRange(row, 8).getValue()).toUpperCase();
+    
+    sheet.getRange(row, 8).setValue(newStatus.toUpperCase()); 
+    const now = Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd'T'HH:mm:ssXXX");
+    sheet.getRange(row, 3).setValue(now);
+    
+    let logStatus = newStatus.toUpperCase();
+    if (logStatus === 'REJECTED') {
+        logStatus = `REJECTED: ${rejectReason}`;
+    }
+    
+    logAudit("UPDATE_USER_STATUS", session.userId, session.phone, session.role, targetUserId, tPhone, tOrg, logStatus, session.displayName, targetName);
+    
+    if (oldStatus === 'PENDING' && newStatus.toUpperCase() === 'APPROVED') {
+        if (tEmail && tEmail.trim() !== "" && targetEmailNotif !== "FALSE") {
+            let msg = `เรียนคุณ ${targetName}\n\nบัญชีผู้ใช้งานของคุณได้รับการอนุมัติแล้ว\n\n`;
+            
+            if (tRole === 'hospital_admin' || tRole === 'provincial_admin' || tRole === 'provincial_audit') {
+                msg += `เบอร์โทรศัพท์: ${tPhone}\nรหัส PIN เข้าระบบ: ${targetPin}\n\nกรุณาเก็บรหัส PIN นี้ไว้เป็นความลับ\n\nระบบ Driver Health Readiness`;
+            } else {
+                msg += `คุณสามารถเข้าสู่ระบบโดยใช้เบอร์โทรศัพท์และ PIN ที่ได้รับตอนสมัครได้ทันที\n\nระบบ Driver Health Readiness`;
+            }
+            
+            try { 
+                MailApp.sendEmail({ 
+                    to: tEmail, 
+                    subject: `[DHR] บัญชีผู้ใช้งานของคุณได้รับการอนุมัติแล้ว`, 
+                    body: msg 
+                }); 
+            } catch(e) {
+                // Ignore email error
+            }
+        }
+    } else if (oldStatus === 'PENDING' && newStatus.toUpperCase() === 'REJECTED') {
+        if (tEmail && tEmail.trim() !== "" && targetEmailNotif !== "FALSE") {
+            let msg = `เรียนคุณ ${targetName}\n\nบัญชีของคุณถูก ปฏิเสธ โดย Admin\nเหตุผล: ${rejectReason}\n\nระบบ Driver Health Readiness`;
+            
+            try { 
+                MailApp.sendEmail({ 
+                    to: tEmail, 
+                    subject: `[DHR] คำขอสร้างบัญชีผู้ใช้งานของคุณถูก ปฏิเสธ`, 
+                    body: msg 
+                }); 
+            } catch(e) {
+                // Ignore email error
+            }
+        }
+    }
+    
+    return { ok: true };
+}
+
+function addUser(payload, sessionToken) {
+    const session = checkSession(sessionToken);
+    
+    if (!session) {
+        throw new Error("ไม่มีสิทธิ์เพิ่มผู้ใช้");
+    }
+    if (session.role !== 'super_admin' && session.role !== 'hospital_admin' && session.role !== 'provincial_admin') {
+        throw new Error("ไม่มีสิทธิ์เพิ่มผู้ใช้");
+    }
+    
+    const phone = payload.phone;
+    const displayName = payload.displayName;
+    const role = payload.role;
+    const org = payload.org;
+    const email = payload.email;
+    const firstName = payload.firstName;
+    const lastName = payload.lastName;
+    const dob = payload.dob;
+    const chronicDisease = payload.chronicDisease;
+    const regularMeds = payload.regularMeds;
+    const smoking = payload.smoking;
+    const alcohol = payload.alcohol;
+    
+    const addPhone = normPhone(phone);
+    
+    if (session.role === 'hospital_admin') {
+        if (org !== session.org) {
+            throw new Error("คุณเพิ่มได้เฉพาะหน่วยงานคุณ");
+        }
+        if (role !== 'hospital_admin' && role !== 'hospital_director') {
+            throw new Error("Admin รพ. สามารถเพิ่มได้แค่ Admin รพ. และ ผอ.รพ. เท่านั้น");
+        }
+        if (role === 'hospital_admin') {
+            if (!email || String(email).trim() === "") {
+                throw new Error("ต้องระบุ Email สำหรับเพิ่ม Admin รพ. เพื่อรับรหัส PIN ภายหลังการอนุมัติ");
+            }
+        }
+    }
+    
+    if (role === 'provincial_admin' || role === 'provincial_audit') {
+        if (session.role !== 'super_admin') {
+            throw new Error("เฉพาะ Super Admin เท่านั้นที่สร้างผู้ดูแลระดับจังหวัดได้");
+        }
+    }
+
+    const users = DB.readData("USERS"); 
+    const existingPins = new Set();
+    
+    users.forEach(u => {
+        existingPins.add(String(u.pin));
+    });
+    
+    let newPin;
+    let pinValid = false;
+    
+    while (!pinValid) {
+        newPin = String(Math.floor(100000 + Math.random() * 900000));
+        if (!existingPins.has(newPin)) {
+            pinValid = true;
+        }
+    }
+    
+    const now = Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd'T'HH:mm:ssXXX"); 
+    const newUserId = generateId("U");
+    
+    let initialStatus = "APPROVED";
+    
+    if (session.role === 'hospital_admin' || session.role === 'provincial_admin') {
+        if (role === 'hospital_admin' || role === 'hospital_director' || role === 'provincial_admin' || role === 'provincial_audit') {
+            initialStatus = "PENDING";
+        }
+    }
+    
+    let userEmail = "";
+    if (email) userEmail = email;
+    
+    DB.insertRecord("USERS", [ 
+        newUserId, 
+        now, 
+        now, 
+        sheetStr(addPhone), 
+        sheetStr(newPin), 
+        role, 
+        org, 
+        initialStatus, 
+        displayName, 
+        "", 
+        `Created by ${session.displayName}`, 
+        userEmail, 
+        "TRUE" 
+    ]);
+    
+    if (role === 'driver' || role === 'staff') {
+        let age = 0;
+        if (dob) {
+            age = Math.abs(new Date(Date.now() - new Date(dob).getTime()).getUTCFullYear() - 1970);
+        }
+        
+        let finalPos = "พนักงานขับรถ";
+        if (role === 'staff') {
+            finalPos = "เจ้าหน้าที่";
+        }
+        
+        let fName = firstName;
+        if (!fName) fName = displayName;
+        
+        let lName = lastName;
+        if (!lName) lName = "";
+        
+        let userDob = dob;
+        if (!userDob) userDob = "1990-01-01";
+        
+        let userChr = chronicDisease;
+        if (!userChr) userChr = "-";
+        
+        let userMed = regularMeds;
+        if (!userMed) userMed = "-";
+        
+        let userAlc = alcohol;
+        if (!userAlc) userAlc = "ไม่ดื่ม";
+        
+        let userSmo = smoking;
+        if (!userSmo) userSmo = "ไม่สูบ";
+        
+        DB.insertRecord("DRIVER_PROFILE", [ 
+            newUserId, 
+            now, 
+            now, 
+            sheetStr(addPhone), 
+            org, 
+            fName, 
+            lName, 
+            finalPos, 
+            userDob, 
+            age, 
+            userChr, 
+            userMed, 
+            userAlc, 
+            userSmo, 
+            "1.0", 
+            now, 
+            "", 
+            "", 
+            "" 
+        ]);
+    }
+    
+    logAudit("ADD_USER", session.userId, session.phone, session.role, newUserId, addPhone, org, initialStatus, session.displayName, displayName);
+    
+    let hidePin = false;
+    if (session.role === 'hospital_admin' && role === 'hospital_admin') {
+        hidePin = true;
+    }
+    
+    return { 
+        ok: true, 
+        generatedPin: newPin, 
+        status: initialStatus, 
+        hidePin: hidePin 
+    };
+}
+
+function adminEditUser(payload, sessionToken) {
+    const session = checkSession(sessionToken);
+    
+    if (!session) {
+        throw new Error("ไม่มีสิทธิ์แก้ไข");
+    }
+    if (session.role !== 'super_admin' && session.role !== 'hospital_admin' && session.role !== 'provincial_admin') {
+        throw new Error("ไม่มีสิทธิ์แก้ไข");
+    }
+    
+    const targetUserId = payload.targetUserId;
+    const newPhone = payload.newPhone;
+    const displayName = payload.displayName;
+    const role = payload.role;
+    const org = payload.org;
+    const email = payload.email;
+    const oldPhone = payload.oldPhone;
+    const oldDisplayName = payload.oldDisplayName;
+    const oldOrg = payload.oldOrg;
+    
+    const targetNew = normPhone(newPhone);
+    const sheet = DB.getSheet("USERS"); 
+    const data = sheet.getDataRange().getValues();
+    
+    let row = -1; 
+    let targetRole = "";
+    
+    for (let i = 1; i < data.length; i++) {
+        if (String(data[i][0]) === String(targetUserId)) { 
+            targetRole = String(data[i][5]);
+            
+            if (session.role === 'hospital_admin') {
+                if (data[i][6] !== session.org && targetUserId !== session.userId) {
+                    throw new Error("เป้าหมายไม่ได้อยู่ในหน่วยงานคุณ");
+                }
+            }
+            
+            if (session.role === 'provincial_admin') {
+                if (targetRole === 'super_admin' || targetRole === 'provincial_admin' || targetRole === 'provincial_audit') {
+                    throw new Error("ไม่มีสิทธิ์แก้ไขข้อมูลระดับจังหวัด");
+                }
+            }
+            
+            row = i + 1; 
+            break; 
+        }
+    }
+    
+    if (row === -1) {
+        throw new Error("ไม่พบผู้ใช้งานนี้");
+    }
+    
+    const now = Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd'T'HH:mm:ssXXX");
+
+    if (session.role === 'hospital_admin' && targetUserId === session.userId) {
+        let needsApproval = false; 
+        let reqPhone = oldPhone; 
+        let reqName = oldDisplayName; 
+        let reqOrg = oldOrg;
+        
+        if (normPhone(newPhone) !== normPhone(oldPhone)) { 
+            needsApproval = true; 
+            reqPhone = normPhone(newPhone); 
+        }
+        
+        if (displayName !== oldDisplayName) { 
+            needsApproval = true; 
+            reqName = displayName; 
+        }
+        
+        if (org !== oldOrg) { 
+            needsApproval = true; 
+            reqOrg = org; 
+        }
+
+        let uEmail = "";
+        if (email) uEmail = email;
+        
+        sheet.getRange(row, 12).setValue(uEmail);
+
+        if (needsApproval) {
+            const allReqs = DB.readData("EDIT_REQUESTS");
+            const existingReq = allReqs.find(r => {
+                return String(r.userId) === String(session.userId) && String(r.status) === 'PENDING';
+            });
+            
+            if (existingReq) {
+                throw new Error("คุณมีคำขอรออนุมัติอยู่แล้ว กรุณารอผลอนุมัติ");
+            }
+            
+            DB.insertRecord("EDIT_REQUESTS", [
+                generateId("REQ"), 
+                session.userId, 
+                now, 
+                sheetStr(oldPhone), 
+                oldOrg, 
+                sheetStr(reqPhone), 
+                "", 
+                "", 
+                "", 
+                "", 
+                "PENDING", 
+                "", 
+                "", 
+                oldDisplayName, 
+                reqName, 
+                reqOrg, 
+                ""
+            ]);
+            
+            logAudit("SUBMIT_EDIT_REQUEST", session.userId, session.phone, session.role, session.userId, session.phone, session.org, "PENDING (Admin Self Edit)", session.displayName, session.displayName);
+            
+            return { 
+                ok: true, 
+                pendingRequestCreated: true, 
+                message: "อัปเดต Email สำเร็จ! การเปลี่ยนชื่อ, เบอร์โทร หรือหน่วยงาน ถูกส่งคำขออนุมัติแล้ว" 
+            };
+        } else {
+            logAudit("EDIT_USER", session.userId, session.phone, session.role, targetUserId, oldPhone, org, "UPDATED EMAIL", session.displayName, displayName);
+            return { 
+                ok: true, 
+                message: "อัปเดตข้อมูลสำเร็จ" 
+            };
+        }
+    }
+    
+    if (session.role === 'hospital_admin' && targetUserId !== session.userId) {
+        let uEmail = "";
+        if (email) uEmail = email;
+        
+        sheet.getRange(row, 12).setValue(uEmail);
+        
+        logAudit("EDIT_USER", session.userId, session.phone, session.role, targetUserId, oldPhone, org, "UPDATED EMAIL ONLY", session.displayName, displayName);
+        return { 
+            ok: true, 
+            message: "อัปเดตข้อมูลสำเร็จ (จำกัดสิทธิ์แก้ไขได้เฉพาะ Email)" 
+        };
+    }
+
+    if (session.role === 'provincial_admin') {
+        if (role === 'provincial_admin' || role === 'provincial_audit' || role === 'super_admin') {
+            throw new Error("ไม่สามารถปรับสิทธิ์เป็นระดับจังหวัดได้");
+        }
+    }
+    
+    sheet.getRange(row, 3).setValue(now); 
+    
+    if (session.role === 'super_admin' || session.role === 'provincial_admin') {
+        sheet.getRange(row, 4).setValue(sheetStr(targetNew)); 
+        sheet.getRange(row, 6).setValue(role); 
+        sheet.getRange(row, 7).setValue(org); 
+        sheet.getRange(row, 9).setValue(displayName);
+    }
+    
+    let uEmail = "";
+    if (email) uEmail = email;
+    
+    sheet.getRange(row, 12).setValue(uEmail);
+    
+    logAudit("EDIT_USER", session.userId, session.phone, session.role, targetUserId, targetNew, org, "UPDATED", session.displayName, displayName);
+    
+    return { 
+        ok: true, 
+        message: "อัปเดตข้อมูลสำเร็จ" 
+    };
+}
+
+function deleteUser(targetUserId, targetName, sessionToken) {
+    const session = checkSession(sessionToken);
+    
+    if (!session) {
+        throw new Error("ไม่มีสิทธิ์ลบผู้ใช้งาน");
+    }
+    if (session.role !== 'super_admin') {
+        throw new Error("ไม่มีสิทธิ์ลบผู้ใช้งาน");
+    }
+    
+    const userSheet = DB.getSheet("USERS"); 
+    const userData = userSheet.getDataRange().getValues();
+    
+    let deleted = false; 
+    let delPhone = "";
+    
+    for (let i = userData.length - 1; i >= 1; i--) { 
+        if (String(userData[i][0]) === String(targetUserId)) { 
+            delPhone = String(userData[i][3]); 
+            userSheet.deleteRow(i + 1); 
+            deleted = true; 
+            break; 
+        } 
+    }
+    
+    if (!deleted) {
+        throw new Error("ไม่พบผู้ใช้งานนี้ในระบบ");
+    }
+    
+    const profSheet = DB.getSheet("DRIVER_PROFILE");
+    if (profSheet) { 
+        const profData = profSheet.getDataRange().getValues(); 
+        for (let i = profData.length - 1; i >= 1; i--) { 
+            if (String(profData[i][0]) === String(targetUserId)) { 
+                profSheet.deleteRow(i + 1); 
+                break; 
+            } 
+        } 
+    }
+    
+    logAudit("DELETE_USER", session.userId, session.phone, session.role, targetUserId, delPhone, "ALL", "DELETED", session.displayName, targetName);
+    
+    return { ok: true };
+}
+
+function getUserProfileDetail(targetUserId, targetName, sessionToken) {
+    const session = checkSession(sessionToken);
+    
+    if (!session) {
+        throw new Error("ไม่มีสิทธิ์เข้าถึง");
+    }
+    
+    if (session.role !== 'super_admin' && session.role !== 'hospital_admin' && session.role !== 'exec_ppho' && session.role !== 'hospital_director' && session.role !== 'provincial_admin' && session.role !== 'provincial_audit') {
+        throw new Error("ไม่มีสิทธิ์เข้าถึง");
+    }
+    
+    const allUsers = DB.readData("USERS");
+    const user = allUsers.find(u => {
+        return String(u.userId) === String(targetUserId);
+    });
+    
+    if (!user) {
+        throw new Error("ไม่พบผู้ใช้");
+    }
+    
+    if (session.role === 'hospital_admin' || session.role === 'hospital_director') {
+        if (user.org !== session.org) {
+            throw new Error("ไม่มีสิทธิ์ดูข้อมูลข้ามหน่วยงาน");
+        }
+    }
+    
+    const allProfiles = DB.readData("DRIVER_PROFILE");
+    let profile = allProfiles.find(p => {
+        return String(p.userId) === String(targetUserId);
+    });
+    
+    if (!profile) {
+        profile = {};
+    }
+    
+    const allChecks = DB.readData("HEALTH_CHECKS");
+    let checks = allChecks.filter(c => {
+        return String(c.userId) === String(targetUserId);
+    });
+    
+    checks.sort((a,b) => {
+        const dateA = new Date(a.createdAt || 0).getTime();
+        const dateB = new Date(b.createdAt || 0).getTime();
+        return dateB - dateA;
+    });
+    
+    checks = checks.slice(0, 5);
+    
+    const mappedChecks = checks.map(record => {
+        const safeCreatedAt = record.createdAt ? String(record.createdAt) : "";
+        const dParts = safeCreatedAt.length >= 10 ? safeCreatedAt.substring(0, 10).split('-') : ["-", "-", "-"];
+        
+        let displayDate = "-";
+        if (dParts.length === 3 && dParts[0] !== "-") {
+            displayDate = `${dParts[2]}/${dParts[1]}/${parseInt(dParts[0]) + 543}`;
+        }
+        
+        return { 
+            date: displayDate, 
+            timeSlot: record.timeSlot, 
+            sleepHours: record.sleepHours, 
+            fatigue: record.fatigue, 
+            band: record.band, 
+            sys: record.systolic, 
+            dia: record.diastolic, 
+            pulse: record.pulse 
+        };
+    });
+    
+    logAudit("VIEW_PERSONAL_DATA", session.userId, session.phone, session.role, targetUserId, user.phone, user.org, "VIEWED", session.displayName, targetName);
+    
+    return { 
+        ok: true, 
+        user: user, 
+        profile: profile, 
+        history: mappedChecks 
+    };
+}
+
+function saveSystemSettings(payload, sessionToken) {
+    const session = checkSession(sessionToken);
+    
+    if (!session) {
+        throw new Error("ไม่มีสิทธิ์เข้าถึง");
+    }
+    if (session.role !== 'super_admin') {
+        throw new Error("ไม่มีสิทธิ์เข้าถึง");
+    }
+    
+    const sheet = DB.getSheet("SETTINGS"); 
+    const data = sheet.getDataRange().getValues(); 
+    const now = Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd'T'HH:mm:ssXXX");
+    
+    const updateOrAdd = (key, valueStr) => {
+        let found = false; 
+        for (let i = 1; i < data.length; i++) { 
+            if (data[i][0] === key) { 
+                sheet.getRange(i+1, 2).setValue(valueStr); 
+                sheet.getRange(i+1, 3).setValue(now); 
+                found = true; 
+                break; 
+            } 
+        }
+        if (!found) {
+            sheet.appendRow([key, valueStr, now]);
+        }
+    };
+    
+    updateOrAdd("timeSlots", JSON.stringify(payload.timeSlots)); 
+    updateOrAdd("criticalRisks", JSON.stringify(payload.criticalRisks)); 
+    updateOrAdd("manualUrls", JSON.stringify(payload.manualUrls));
+    
+    if (payload.scoringCriteria) {
+        updateOrAdd("scoringCriteria", JSON.stringify(payload.scoringCriteria));
+    }
+    if (payload.telegramConfig) {
+        updateOrAdd("telegramConfig", JSON.stringify(payload.telegramConfig));
+    }
+    
+    logAudit("UPDATE_SETTINGS", session.userId, session.phone, session.role, "SYSTEM", "SYSTEM", "ALL", "UPDATED", session.displayName, "SYSTEM");
+    
+    return { ok: true };
+}
+
+function clearDatabase(sessionToken) {
+    const session = checkSession(sessionToken);
+    
+    if (!session) {
+        throw new Error("ไม่มีสิทธิ์เข้าถึง");
+    }
+    if (session.role !== 'super_admin') {
+        throw new Error("ไม่มีสิทธิ์เข้าถึง");
+    }
+    
+    const ss = DB.getSpreadsheet();
+    
+    const sheetsToClear = ["DRIVER_PROFILE", "HEALTH_CHECKS", "CONSENT_LOG", "AUDIT_LOG", "EDIT_REQUESTS"];
+    
+    sheetsToClear.forEach(name => {
+        const sheet = ss.getSheetByName(name); 
+        if (sheet && sheet.getLastRow() > 1) {
+            sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).clearContent();
+        }
+    });
+    
+    const userSheet = ss.getSheetByName("USERS");
+    if (userSheet && userSheet.getLastRow() > 1) {
+        const data = userSheet.getDataRange().getValues(); 
+        const keptUsers = [data[0]];
+        
+        for (let i = 1; i < data.length; i++) { 
+            if (data[i][5] !== 'driver' && data[i][5] !== 'staff') {
+                keptUsers.push(data[i]); 
+            }
+        }
+        
+        userSheet.getRange(2, 1, userSheet.getLastRow() - 1, userSheet.getLastColumn()).clearContent();
+        
+        if (keptUsers.length > 1) {
+            userSheet.getRange(1, 1, keptUsers.length, data[0].length).setValues(keptUsers);
+        }
+    }
+    
+    logAudit("CLEAR_DATABASE", session.userId, session.phone, session.role, "SYSTEM", "SYSTEM", "ALL", "CLEARED", session.displayName, "SYSTEM");
+    
+    return { ok: true };
+}
+
+function getAuditLogsList(sessionToken) {
+    const session = checkSession(sessionToken);
+    
+    if (!session) {
+        return { ok: false, error: "Unauthorized" };
+    }
+    
+    if (session.role !== 'super_admin' && session.role !== 'exec_ppho' && session.role !== 'hospital_director' && session.role !== 'provincial_admin' && session.role !== 'provincial_audit') {
+        return { ok: false, error: "Unauthorized" };
+    }
+    
+    let logs = DB.readData("AUDIT_LOG");
+    
+    if (session.role === 'hospital_director') {
+        logs = logs.filter(l => {
+            return l.org === session.org && l.actorRole !== 'super_admin';
+        });
+    } else if (session.role === 'exec_ppho' || session.role === 'provincial_audit') {
+        logs = logs.filter(l => {
+            return l.actorRole !== 'super_admin';
+        });
+    }
+    
+    logs.sort((a, b) => {
+        const dateA = new Date(a.createdAt || 0).getTime();
+        const dateB = new Date(b.createdAt || 0).getTime();
+        return dateB - dateA;
+    });
+    
+    return { 
+        ok: true, 
+        logs: logs.slice(0, 300) 
+    };
+}
+
+function apiSeedAdmins(sessionToken) {
+    const session = checkSession(sessionToken);
+    
+    if (!session) {
+        throw new Error("ไม่มีสิทธิ์");
+    }
+    if (session.role !== 'super_admin') {
+        throw new Error("ไม่มีสิทธิ์");
+    }
+    
+    const userSheet = DB.getSheet("USERS"); 
+    const allUsers = DB.readData("USERS");
+    const existingPhones = new Set();
+    
+    allUsers.forEach(u => {
+        existingPhones.add(normPhone(u.phone));
+    });
+    
+    const now = Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd'T'HH:mm:ssXXX"); 
+    let addedCount = 0;
+    
+    INITIAL_ADMINS.forEach(admin => {
+        const adminPhone = normPhone(admin.phone);
+        if (!existingPhones.has(adminPhone)) {
+            userSheet.appendRow([
+                generateId("U"), 
+                now, 
+                now, 
+                sheetStr(adminPhone), 
+                sheetStr(admin.pin), 
+                admin.role, 
+                admin.org, 
+                "APPROVED", 
+                admin.displayName, 
+                "", 
+                "System Seeded", 
+                admin.email, 
+                "TRUE"
+            ]); 
+            addedCount++;
+        }
+    });
+    
+    logAudit("SEED_ADMINS", session.userId, session.phone, session.role, "SYSTEM", "SYSTEM", "ALL", "SUCCESS", session.displayName, "SYSTEM");
+    
+    return { 
+        ok: true, 
+        message: `นำเข้าสำเร็จ ${addedCount} รายการ` 
+    };
+}
+
+function apiGenerateTestData(sessionToken) {
+    const session = checkSession(sessionToken);
+    
+    if (!session) {
+        throw new Error("ไม่มีสิทธิ์");
+    }
+    if (session.role !== 'super_admin') {
+        throw new Error("ไม่มีสิทธิ์");
+    }
+    
+    const orgs = [
+        "สำนักงานสาธารณสุขจังหวัดนครนายก (สสจ.)", 
+        "โรงพยาบาลนครนายก", 
+        "โรงพยาบาลปากพลี", 
+        "โรงพยาบาลบ้านนา", 
+        "โรงพยาบาลองครักษ์"
+    ];
+    
+    const today = Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd"); 
+    let mockTime = new Date();
+    
+    const mockData = [
+        { phone: "0800000001", fname: "สมเกียรติ", lname: "เพียรทำ", role: "driver", org: orgs[0], dob: "1985-05-10", age: 40, chronic: "-", meds: "-", alcohol: "ไม่ดื่ม", smoking: "ไม่สูบ", sleep: 8, fatigue: 1, temp: 36.5, sys: 120, dia: 80, pulse: 75, risks: [], symp: [], score: 0, band: "GREEN", reasons: [] },
+        { phone: "0800000002", fname: "สายฝน", lname: "คนงาม", role: "driver", org: orgs[0], dob: "1975-02-15", age: 51, chronic: "ความดันโลหิตสูง", meds: "Amlodipine", alcohol: "ไม่ดื่ม", smoking: "สูบเป็นครั้งคราว", sleep: 6, fatigue: 3, temp: 36.8, sys: 145, dia: 92, pulse: 82, risks: [], symp: [], score: 30, band: "AMBER", reasons: ["ความดันสูง (145/92)"] },
+        { phone: "0800000003", fname: "สาธิต", lname: "จิตแจ่ม", role: "staff", org: orgs[0], dob: "1992-11-22", age: 33, chronic: "-", meds: "-", alcohol: "ดื่มสังสรรค์", smoking: "ไม่สูบ", sleep: 4, fatigue: 8, temp: 36.6, sys: 125, dia: 82, pulse: 78, risks: [], symp: [], score: 80, band: "RED", reasons: ["อ่อนล้า/ง่วงซึมระดับอันตราย", "พักผ่อนไม่เพียงพอ"] },
+        { phone: "0800000004", fname: "สุดา", lname: "พาดี", role: "staff", org: orgs[0], dob: "1988-08-08", age: 37, chronic: "-", meds: "-", alcohol: "ไม่ดื่ม", smoking: "ไม่สูบ", sleep: 7, fatigue: 5, temp: 37.6, sys: 118, dia: 79, pulse: 80, risks: [], symp: [], score: 50, band: "RED", reasons: ["มีไข้ต่ำ", "มีอาการอ่อนล้า"] },
+        { phone: "0800000005", fname: "สุเมธ", lname: "เกรดดี", role: "driver", org: orgs[0], dob: "1995-10-10", age: 30, chronic: "-", meds: "-", alcohol: "ไม่ดื่ม", smoking: "ไม่สูบ", sleep: 7.5, fatigue: 2, temp: 36.5, sys: 115, dia: 75, pulse: 72, risks: [], symp: [], score: 0, band: "GREEN", reasons: [] }
+    ];
+    
+    const usersSheet = DB.getSpreadsheet().getSheetByName("USERS");
+    const profileSheet = DB.getSpreadsheet().getSheetByName("DRIVER_PROFILE");
+    const checksSheet = DB.getSpreadsheet().getSheetByName("HEALTH_CHECKS");
+    
+    mockData.forEach(m => {
+        mockTime.setMinutes(mockTime.getMinutes() - 5);
+        let customNow = Utilities.formatDate(mockTime, "Asia/Bangkok", "yyyy-MM-dd'T'HH:mm:ssXXX");
+        
+        let pinValid = false;
+        let pin = "";
+        
+        while (!pinValid) {
+            pin = String(Math.floor(100000 + Math.random() * 900000));
+            pinValid = true; 
+        }
+        
+        let displayName = `${m.fname} ${m.lname}`;
+        let uid = generateId("U");
+        let chkId = generateId("HC");
+
+        usersSheet.appendRow([
+            uid, 
+            customNow, 
+            customNow, 
+            sheetStr(m.phone), 
+            sheetStr(pin), 
+            m.role, 
+            m.org, 
+            "APPROVED", 
+            displayName, 
+            "", 
+            "ระบบสร้างข้อมูลทดสอบ", 
+            "", 
+            "TRUE"
+        ]);
+        
+        let finalPos = "พนักงานขับรถ";
+        if (m.role === 'staff') {
+            finalPos = "เจ้าหน้าที่";
+        }
+        
+        profileSheet.appendRow([
+            uid, 
+            customNow, 
+            customNow, 
+            sheetStr(m.phone), 
+            m.org, 
+            m.fname, 
+            m.lname, 
+            finalPos, 
+            m.dob, 
+            m.age, 
+            m.chronic, 
+            m.meds, 
+            m.alcohol, 
+            m.smoking, 
+            "1.0", 
+            customNow, 
+            "", 
+            "", 
+            ""
+        ]);
+        
+        let risksStr = "[]";
+        if (m.risks && m.risks.length > 0) {
+            risksStr = JSON.stringify(m.risks);
+        }
+        
+        let sympStr = "[]";
+        if (m.symp && m.symp.length > 0) {
+            sympStr = JSON.stringify(m.symp);
+        }
+        
+        let rsnStr = "[]";
+        if (m.reasons && m.reasons.length > 0) {
+            rsnStr = JSON.stringify(m.reasons);
+        }
+        
+        checksSheet.appendRow([
+            chkId, 
+            uid, 
+            customNow, 
+            today, 
+            "ก่อนเริ่มงาน", 
+            sheetStr(m.phone), 
+            m.org, 
+            m.sleep, 
+            m.fatigue, 
+            0, 
+            m.temp, 
+            m.sys, 
+            m.dia, 
+            m.pulse, 
+            risksStr, 
+            sympStr, 
+            "", 
+            m.score, 
+            m.band, 
+            rsnStr, 
+            displayName, 
+            ""
+        ]);
+    });
+
+    logAudit("GENERATE_TEST_DATA", session.userId, session.phone, session.role, "SYSTEM", "SYSTEM", "ALL", "SUCCESS", session.displayName, "SYSTEM");
+    
+    SpreadsheetApp.flush();
+    
+    return { ok: true };
+}
+
+// 💡 ฟังก์ชันแก้ปัญหา Excel: แปลงวันที่เป็น DD/MM/YYYY และเบอร์โทรมี ="" นำหน้า
+function exportReport(payload, sessionToken) {
+    const session = checkSession(sessionToken);
+    
+    if (!session) {
+        throw new Error("ไม่มีสิทธิ์ใช้งานส่วนนี้");
+    }
+    
+    if (session.role === 'driver' || session.role === 'staff' || session.role === 'guest') {
+        throw new Error("ไม่มีสิทธิ์ใช้งานส่วนนี้");
+    }
+    
+    const startDate = payload.startDate;
+    const endDate = payload.endDate;
+    
+    let sDate;
+    if (startDate) {
+        sDate = new Date(startDate);
+    } else {
+        sDate = new Date(0);
+    }
+    
+    let eDate;
+    if (endDate) {
+        eDate = new Date(endDate);
+    } else {
+        eDate = new Date();
+    }
+    
+    sDate.setHours(0, 0, 0, 0);
+    eDate.setHours(23, 59, 59, 999);
+
+    let allChecks = DB.readData("HEALTH_CHECKS");
+
+    if (session.role === 'hospital_admin' || session.role === 'hospital_director') {
+        allChecks = allChecks.filter(c => {
+            return String(c.org) === String(session.org);
+        });
+    }
+
+    let filteredChecks = allChecks.filter(c => {
+        let d;
+        if (c.createdAt) {
+            d = new Date(c.createdAt);
+        } else {
+            d = new Date(0);
+        }
+        return d >= sDate && d <= eDate;
+    });
+
+    let csv = ""; 
+    csv += "วันที่ประเมิน,เวลา,ชื่อ-สกุล,หน่วยงาน,เบอร์โทร,ชั่วโมงการนอน,อุณหภูมิ,ความดัน (Sys/Dia),ชีพจร,ระดับความอ่อนล้า,สถานะ,ความเสี่ยงและอาการ,รูปลิงก์หลักฐาน\n";
+
+    filteredChecks.forEach(c => {
+        let reasons = [];
+        if (c.reasonsJSON) {
+            try { 
+                reasons = JSON.parse(c.reasonsJSON); 
+            } catch(e) {
+                // Ignore parsing errors
+            }
+        }
+        
+        let dateStr = "";
+        if (c.createdAt) {
+            let d = new Date(c.createdAt);
+            let day = String(d.getDate()).padStart(2, '0');
+            let month = String(d.getMonth() + 1).padStart(2, '0');
+            let year = d.getFullYear(); 
+            // 💡 บังคับจัดฟอร์แมตวันที่แบบ DD/MM/YYYY ให้ Excel เข้าใจง่ายและเป็นภาษาไทย
+            dateStr = `${day}/${month}/${year}`;
+        } else if (c.date) {
+            dateStr = String(c.date);
+        }
+        
+        let timeStr = "";
+        if (c.timeSlot) {
+            timeStr = String(c.timeSlot);
+        }
+        
+        let name = "";
+        if (c.driverName) {
+            name = String(c.driverName).replace(/,/g, ' '); 
+        }
+        
+        let org = "";
+        if (c.org) {
+            org = String(c.org).replace(/,/g, ' ');
+        }
+        
+        let phone = "";
+        if (c.phone) {
+            // 💡 บังคับให้ Excel มองเบอร์โทรเป็น 'ข้อความ' เสมอ (เลข 0 ข้างหน้าจะไม่หาย)
+            phone = `="` + String(c.phone) + `"`;
+        }
+        
+        let sleep = "";
+        if (c.sleepHours !== undefined && c.sleepHours !== null) {
+            sleep = String(c.sleepHours);
+        }
+        
+        let temp = "";
+        if (c.temperature !== undefined && c.temperature !== null) {
+            temp = String(c.temperature);
+        }
+        
+        let sys = "";
+        if (c.systolic !== undefined && c.systolic !== null) {
+            sys = String(c.systolic);
+        }
+        
+        let dia = "";
+        if (c.diastolic !== undefined && c.diastolic !== null) {
+            dia = String(c.diastolic);
+        }
+        
+        let bp = "";
+        if (sys !== "" || dia !== "") {
+            bp = `${sys}/${dia}`;
+        }
+        
+        let pulse = "";
+        if (c.pulse !== undefined && c.pulse !== null) {
+            pulse = String(c.pulse);
+        }
+        
+        let fatigue = "";
+        if (c.fatigue !== undefined && c.fatigue !== null) {
+            fatigue = String(c.fatigue);
+        }
+        
+        let band = "";
+        if (c.band) {
+            band = String(c.band);
+        }
+        
+        let evUrl = "";
+        if (c.evidenceUrl) {
+            evUrl = String(c.evidenceUrl);
+        }
+        
+        let rsn = `"${reasons.join('; ')}"`; 
+
+        csv += `${dateStr},${timeStr},${name},${org},${phone},${sleep},${temp},${bp},${pulse},${fatigue},${band},${rsn},${evUrl}\n`;
+    });
+
+    logAudit("EXPORT_REPORT", session.userId, session.phone, session.role, "SYSTEM", "SYSTEM", session.org, "SUCCESS", session.displayName, "Report");
+    
+    return { 
+        ok: true, 
+        csvData: csv 
+    };
+}
+<div id="modalExport" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
+            <h3 class="text-xl font-bold mb-4 text-gray-800 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" /></svg>
+                ส่งออกรายงาน (Excel / CSV)
+            </h3>
+            <p class="text-sm text-gray-600 mb-4">ระบบจะทำการดึงข้อมูลประวัติการประเมินสุขภาพตามช่วงวันที่กำหนด เพื่อนำไปใช้งานต่อในโปรแกรม Excel</p>
+            <form id="formExport" class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">ตั้งแต่วันที่</label>
+                        <input type="date" id="exportStartDate" class="w-full px-3 py-2 border rounded-lg focus:ring-green-500" required>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">อัปโหลดไฟล์คำสั่งผู้มีสิทธิ์ขับรถ (PDF) <span class="text-red-500">*</span></label>
-                        <input type="file" id="regAuthFile" accept=".pdf,application/pdf" class="w-full px-3 py-2 border rounded-lg bg-white text-sm">
-                        <p class="text-[10px] text-gray-500 mt-1">บังคับอัปโหลดเฉพาะไฟล์ .pdf ขนาดไม่เกิน 5MB</p>
-                        <input type="hidden" id="regAuthFileBase64"><input type="hidden" id="regAuthFileName">
+                        <label class="block text-sm font-bold text-gray-700 mb-1">ถึงวันที่</label>
+                        <input type="date" id="exportEndDate" class="w-full px-3 py-2 border rounded-lg focus:ring-green-500" required>
                     </div>
                 </div>
-                <div class="grid grid-cols-2 gap-4 mt-2">
-                    <div><label class="block text-sm font-medium text-gray-700 mb-1">ชื่อจริง <span class="text-red-500">*</span></label><input type="text" id="regFirstName" class="w-full px-3 py-2 border rounded-lg" required></div>
-                    <div><label class="block text-sm font-medium text-gray-700 mb-1">นามสกุล <span class="text-red-500">*</span></label><input type="text" id="regLastName" class="w-full px-3 py-2 border rounded-lg" required></div>
+                <div class="flex justify-end gap-2 mt-4 pt-4 border-t">
+                    <button type="button" onclick="document.getElementById('modalExport').classList.add('hidden')" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded transition font-medium">ยกเลิก</button>
+                    <button type="submit" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded shadow-sm transition font-medium flex items-center gap-1">
+                        ดาวน์โหลด
+                    </button>
                 </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div><label class="block text-sm font-medium text-gray-700 mb-1">เบอร์โทรศัพท์ <span class="text-red-500">*</span></label><input type="tel" id="regPhone" maxlength="10" class="w-full px-3 py-2 border rounded-lg" required></div>
-                    <div><label class="block text-sm font-medium text-gray-700 mb-1">อีเมล <span class="text-[10px] text-gray-400 font-normal">(ไม่บังคับ)</span></label><input type="email" id="regEmail" class="w-full px-3 py-2 border rounded-lg"></div>
+            </form>
+        </div>
+    </div>
+
+    <div id="modalAddUser" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <h3 class="text-xl font-bold mb-4">เพิ่มผู้ใช้งาน</h3>
+            <form id="formAddUser" class="space-y-3">
+                <div class="grid grid-cols-2 gap-3">
+                    <div><label class="block text-sm mb-1">ชื่อ</label><input type="text" id="addFirstName" class="w-full border px-3 py-2 rounded" required></div>
+                    <div><label class="block text-sm mb-1">นามสกุล</label><input type="text" id="addLastName" class="w-full border px-3 py-2 rounded" required></div>
                 </div>
-                <div><label class="block text-sm font-medium text-gray-700 mb-1">วัน/เดือน/ปีเกิด <span class="text-red-500">*</span></label><input type="date" id="regDob" class="w-full px-3 py-2 border rounded-lg" required></div>
+                <div><label class="block text-sm mb-1">เบอร์โทรศัพท์</label><input type="tel" id="addPhone" maxlength="10" class="w-full border px-3 py-2 rounded" required></div>
+                <div><label class="block text-sm mb-1 text-blue-700 font-bold" id="labelAddEmail">Email</label><input type="email" id="addEmail" class="w-full border px-3 py-2 rounded"></div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">หน่วยงานต้นสังกัด <span class="text-red-500">*</span></label>
-                    <select id="regOrg" class="w-full px-3 py-2 border rounded-lg" required>
-                        <option value="">เลือกหน่วยงาน...</option>
+                    <label class="block text-sm mb-1">หน่วยงาน</label>
+                    <select id="addOrg" class="w-full border px-3 py-2 rounded" required>
                         <option value="สำนักงานสาธารณสุขจังหวัดนครนายก (สสจ.)">สำนักงานสาธารณสุขจังหวัดนครนายก (สสจ.)</option>
                         <option value="โรงพยาบาลนครนายก">โรงพยาบาลนครนายก</option>
                         <option value="โรงพยาบาลปากพลี">โรงพยาบาลปากพลี</option>
@@ -316,337 +2849,114 @@
                         <option value="โรงพยาบาลองครักษ์">โรงพยาบาลองครักษ์</option>
                     </select>
                 </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div><label class="block text-sm font-medium text-gray-700 mb-1">โรคประจำตัว (ถ้ามี)</label><input type="text" id="regChronic" class="w-full px-3 py-2 border rounded-lg" placeholder="ถ้าไม่มีให้ใส่ -"></div>
-                    <div><label class="block text-sm font-medium text-gray-700 mb-1">ยาที่ใช้ประจำ (ถ้ามี)</label><input type="text" id="regMeds" class="w-full px-3 py-2 border rounded-lg" placeholder="ถ้าไม่มีให้ใส่ -"></div>
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">การสูบบุหรี่ <span class="text-red-500">*</span></label>
-                        <select id="regSmoking" class="w-full px-3 py-2 border rounded-lg" required>
-                            <option value="ไม่สูบ">ไม่สูบ</option>
-                            <option value="สูบเป็นครั้งคราว">สูบเป็นครั้งคราว</option>
-                            <option value="สูบเป็นประจำ">สูบเป็นประจำ</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">การดื่มแอลกอฮอล์ <span class="text-red-500">*</span></label>
-                        <select id="regAlcohol" class="w-full px-3 py-2 border rounded-lg" required>
-                            <option value="ไม่ดื่ม">ไม่ดื่ม</option>
-                            <option value="ดื่มสังสรรค์">ดื่มสังสรรค์บ้าง</option>
-                            <option value="ดื่มเป็นประจำ">ดื่มเป็นประจำ</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="bg-blue-50 p-4 rounded-lg border border-blue-100 text-sm mt-4">
-                    <label class="flex items-start cursor-pointer">
-                        <input type="checkbox" id="regPdpa" class="mt-1 w-4 h-4 text-blue-600 rounded flex-shrink-0" required>
-                        <span class="ml-2 text-gray-700 leading-relaxed">
-                            ข้าพเจ้ายินยอมให้สำนักงานสาธารณสุขจังหวัดนครนายกและหน่วยงานต้นสังกัด เก็บรวบรวม ใช้ และประมวลผลข้อมูลส่วนบุคคล รวมถึงข้อมูลสุขภาพของข้าพเจ้า เพื่อวัตถุประสงค์ในการประเมินความพร้อมและเฝ้าระวังความปลอดภัยในการปฏิบัติงาน ตาม พ.ร.บ. คุ้มครองข้อมูลส่วนบุคคล (PDPA) 
-                            <a href="https://nayok.moph.go.th/web/wp-content/uploads/2026/02/17-%E0%B8%84%E0%B8%B3%E0%B8%9B%E0%B8%A3%E0%B8%B0%E0%B8%81%E0%B8%B2%E0%B8%A8%E0%B8%84%E0%B8%B8%E0%B9%89%E0%B8%A1%E0%B8%84%E0%B8%A3%E0%B8%AD%E0%B8%87%E0%B8%82%E0%B9%89%E0%B8%AD%E0%B8%A1%E0%B8%B9%E0%B8%A5%E0%B8%AA%E0%B9%88%E0%B8%A7%E0%B8%99%E0%B8%9A%E0%B8%B8%E0%B8%84%E0%B8%84%E0%B8%A5.pdf" target="_blank" class="text-blue-700 font-bold underline hover:text-blue-900 ml-1">(อ่านประกาศคุ้มครองข้อมูลส่วนบุคคลที่นี่)</a>
-                        </span>
-                    </label>
-                </div>
-                <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg transition shadow-md mt-4">ยืนยันการลงทะเบียน</button>
-             </form>
-        </div>
-
-        <div id="viewDriver" class="hidden w-full max-w-lg bg-white rounded-xl shadow-lg p-6 mt-4 flex-grow">
-            <div class="border-b pb-4 mb-4 flex justify-between items-start">
                 <div>
-                    <h3 class="text-xl font-bold text-gray-800">ยินดีต้อนรับ, <span id="driverName" class="text-blue-600"></span></h3>
-                    <p class="text-sm text-gray-500" id="driverOrg"></p>
+                    <label class="block text-sm mb-1">Role (สิทธิ์เข้าถึง)</label>
+                    <select id="addRole" class="w-full border px-3 py-2 rounded bg-blue-50" required onchange="toggleAddDriverFields()">
+                        <option value="provincial_admin" id="optAddProvAdmin">Admin จังหวัด</option>
+                        <option value="provincial_audit" id="optAddProvAudit">Audit จังหวัด</option>
+                        <option value="exec_ppho" id="optAddExec">ผู้บริหาร สสจ.</option>
+                        <option value="super_admin" id="optAddSuper">Super Admin</option>
+                        <option value="hospital_director" id="optAddDir">ผอ.รพ.</option>
+                        <option value="hospital_admin" id="optAddAdmin">Admin รพ. / สสจ.</option>
+                        <option value="driver" id="optAddDriver">พนักงานขับรถประจำ</option>
+                        <option value="staff" id="optAddStaff">เจ้าหน้าที่ (ขับรถยามจำเป็น)</option>
+                    </select>
                 </div>
-                <div id="driverActionArea" class="flex flex-col items-end"></div>
-            </div>
-            
-            <div class="bg-blue-50 rounded-lg p-4 mb-6 border border-blue-100 relative">
-                <h4 class="font-semibold text-blue-800 mb-2">แบบประเมินความพร้อมก่อนปฏิบัติงาน</h4>
-                <p id="staffExemptNotice" class="text-xs text-blue-600 hidden mb-2 font-medium">✨ คุณเข้าสู่ระบบด้วยสิทธิ์ "เจ้าหน้าที่" กรุณาทำแบบประเมินเฉพาะวันที่ได้รับคำสั่งให้ปฏิบัติหน้าที่ขับรถยนต์ราชการเท่านั้น</p>
+                <div id="addDriverExtraFields" class="hidden space-y-3 border-t pt-3 mt-2 border-gray-200">
+                    <div><label class="block text-sm mb-1 text-blue-800 font-bold">ข้อมูลสุขภาพ (สำหรับผู้ขับขี่)</label></div>
+                    <div><label class="block text-sm mb-1">วัน/เดือน/ปีเกิด</label><input type="date" id="addDob" class="w-full px-3 py-2 border rounded"></div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div><label class="block text-sm mb-1">โรคประจำตัว</label><input type="text" id="addChronic" class="w-full border px-3 py-2 rounded" placeholder="-"></div>
+                        <div><label class="block text-sm mb-1">ยาที่ใช้ประจำ</label><input type="text" id="addMeds" class="w-full border px-3 py-2 rounded" placeholder="-"></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-sm mb-1">การสูบบุหรี่</label>
+                            <select id="addSmoking" class="w-full border px-3 py-2 rounded">
+                                <option value="ไม่สูบ">ไม่สูบ</option>
+                                <option value="สูบเป็นครั้งคราว">สูบเป็นครั้งคราว</option>
+                                <option value="สูบเป็นประจำ">สูบเป็นประจำ</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm mb-1">การดื่มแอลกอฮอล์</label>
+                            <select id="addAlcohol" class="w-full border px-3 py-2 rounded">
+                                <option value="ไม่ดื่ม">ไม่ดื่ม</option>
+                                <option value="ดื่มสังสรรค์">ดื่มสังสรรค์บ้าง</option>
+                                <option value="ดื่มเป็นประจำ">ดื่มเป็นประจำ</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2 mt-4">
+                    <button type="button" onclick="document.getElementById('modalAddUser').classList.add('hidden')" class="px-4 py-2 bg-gray-200 rounded">ยกเลิก</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded">บันทึกเพิ่มผู้ใช้</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="modalEditUser" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
+            <h3 class="text-xl font-bold mb-4">แก้ไขข้อมูลผู้ใช้งาน</h3>
+             <form id="formEditUser" class="space-y-3">
+                <input type="hidden" id="editOldPhone">
+                <input type="hidden" id="editOldName">
+                <input type="hidden" id="editOldOrg">
+                <input type="hidden" id="editUserId">
                 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
-                    <button id="btnOpenForm" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2.5 rounded-lg shadow">เริ่มทำแบบประเมิน</button>
-                    <button onclick="requestDriverOTP()" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-2.5 rounded-lg shadow flex items-center justify-center gap-1">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg> สร้างรหัสให้ผู้โดยสาร
-                    </button>
-                </div>
-            </div>
-            
-            <div class="flex justify-between items-center mb-3">
-                <h4 class="font-semibold text-gray-700">ประวัติการประเมินล่าสุด</h4>
-                <button id="btnHealthAnalysis" onclick="openHealthAnalysis()" class="hidden text-xs bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-3 py-1.5 rounded border border-indigo-300 transition shadow-sm font-bold flex items-center gap-1">วิเคราะห์สุขภาพ</button>
-                <button onclick="if(appUser) loadDriverHistory();" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-1 rounded border transition shadow-sm flex items-center gap-1" title="รีเฟรชประวัติ">🔄</button>
-            </div>
-            <div class="space-y-3" id="driverHistory"></div>
-        </div>
-
-        <div id="viewHealthForm" class="hidden w-full max-w-lg bg-white rounded-xl shadow-lg p-6 mt-4 flex-grow">
-            <div class="flex justify-between items-center border-b pb-3 mb-4">
-                <h3 class="text-xl font-bold text-gray-800">แบบประเมินความพร้อม</h3>
-                <button type="button" onclick="switchView('viewDriver')" class="text-gray-400 hover:text-gray-600">ปิด</button>
-            </div>
-            <div id="adminTargetDriverContainer" class="hidden mb-4 bg-indigo-50 p-3 rounded-lg border border-indigo-200">
-                <label class="block text-sm font-bold text-indigo-800 mb-1">เลือกผู้ที่ต้องการประเมินแทน</label>
-                <select id="adminTargetDriver" class="w-full px-3 py-2 border rounded-lg text-sm focus:ring-indigo-500"></select>
-            </div>
-            <form id="healthForm" class="space-y-4">
-                <div class="grid grid-cols-2 gap-4">
-                    <div><label class="block text-sm font-medium text-gray-700 mb-1">วันที่ประเมิน</label><input type="date" id="inputDate" class="w-full px-3 py-2 border rounded-lg bg-gray-50" readonly required></div>
-                    <div><label class="block text-sm font-medium text-gray-700 mb-1">ช่วงเวลา</label><select id="inputTimeSlot" class="w-full px-3 py-2 border rounded-lg" required></select></div>
-                </div>
-                <hr class="border-gray-100">
-                <div class="grid grid-cols-2 gap-4">
-                    <div><label class="block text-sm font-medium text-gray-700 mb-1">ชั่วโมงการนอน (ชม.)</label><input type="number" id="inputSleep" step="0.5" class="w-full px-3 py-2 border rounded-lg" required></div>
-                    <div><label class="block text-sm font-medium text-gray-700 mb-1">อุณหภูมิร่างกาย (°C)</label><input type="number" id="inputTemp" step="0.1" class="w-full px-3 py-2 border rounded-lg" required></div>
-                </div>
-                <div class="bg-yellow-50 p-3 rounded-lg border border-yellow-100">
-                    <div class="grid grid-cols-2 gap-4 mb-3">
-                        <div><label class="block text-xs font-bold text-gray-800 mb-1">ความดันตัวบน (Systolic)</label><input type="number" id="inputSys" class="w-full px-3 py-2 border rounded-lg font-medium" required></div>
-                        <div><label class="block text-xs font-bold text-gray-800 mb-1">ความดันตัวล่าง (Diastolic)</label><input type="number" id="inputDia" class="w-full px-3 py-2 border rounded-lg font-medium" required></div>
-                    </div>
-                    <div><label class="block text-xs font-bold text-gray-800 mb-1">ชีพจร (ครั้ง/นาที)</label><input type="number" id="inputPulse" class="w-full px-3 py-2 border rounded-lg font-medium" required></div>
+                <div id="editSelfAlert" class="hidden bg-yellow-50 text-yellow-800 text-xs p-2 rounded border border-yellow-200 mb-2"><b>หมายเหตุ:</b> การแก้ไขชื่อ เบอร์โทร หรือหน่วยงาน จะต้องรอการอนุมัติ ส่วน Email จะมีผลทันที</div>
+                <div id="editOtherAlert" class="hidden bg-blue-50 text-blue-800 text-xs p-2 rounded border border-blue-200 mb-2"><b>จำกัดสิทธิ์:</b> คุณสามารถแก้ไขได้เฉพาะข้อมูล Email เท่านั้น</div>
+                
+                <div><label class="block text-sm mb-1">ชื่อ-สกุล</label><input type="text" id="editName" class="w-full border px-3 py-2 rounded font-medium" required></div>
+                <div><label class="block text-sm mb-1">เบอร์โทรศัพท์</label><input type="tel" id="editPhone" maxlength="10" class="w-full border px-3 py-2 rounded font-mono" required></div>
+                <div><label class="block text-sm mb-1 text-blue-700 font-bold">Email</label><input type="email" id="editEmail" class="w-full border px-3 py-2 rounded focus:ring-blue-500"></div>
+                <div>
+                    <label class="block text-sm mb-1">หน่วยงาน</label>
+                     <select id="editOrg" class="w-full border px-3 py-2 rounded" required>
+                        <option value="สำนักงานสาธารณสุขจังหวัดนครนายก (สสจ.)">สำนักงานสาธารณสุขจังหวัดนครนายก (สสจ.)</option>
+                        <option value="โรงพยาบาลนครนายก">โรงพยาบาลนครนายก</option>
+                        <option value="โรงพยาบาลปากพลี">โรงพยาบาลปากพลี</option>
+                        <option value="โรงพยาบาลบ้านนา">โรงพยาบาลบ้านนา</option>
+                        <option value="โรงพยาบาลองครักษ์">โรงพยาบาลองครักษ์</option>
+                    </select>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">ระดับความอ่อนล้า (0-10)</label>
-                    <input type="range" id="inputFatigue" min="0" max="10" value="0" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer" oninput="document.getElementById('fatigueVal').innerText = this.value">
-                    <div class="flex justify-between text-xs text-gray-500 mt-1"><span>สดชื่น (0)</span><span id="fatigueVal" class="font-bold text-blue-600">0</span><span>ล้ามาก (10)</span></div>
+                    <label class="block text-sm mb-1">Role</label>
+                    <select id="editRole" class="w-full border px-3 py-2 rounded bg-blue-50" required>
+                        <option value="provincial_admin" id="optEditProvAdmin">Admin จังหวัด</option>
+                        <option value="provincial_audit" id="optEditProvAudit">Audit จังหวัด</option>
+                        <option value="exec_ppho" id="optEditExec">ผู้บริหาร สสจ.</option>
+                        <option value="hospital_director" id="optEditDir">ผอ.รพ.</option>
+                        <option value="hospital_admin" id="optEditAdmin">Admin รพ. / สสจ.</option>
+                        <option value="driver" id="optEditDriver">พนักงานขับรถประจำ</option>
+                        <option value="staff" id="optEditStaff">เจ้าหน้าที่ (ขับรถจำเป็น)</option>
+                        <option value="super_admin" id="optEditSuper">Super Admin</option>
+                    </select>
                 </div>
-                <hr class="border-gray-100">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">อาการผิดปกติวันนี้ (ถ้ามี)</label>
-                    <div class="grid grid-cols-2 gap-2 text-sm text-gray-700">
-                        <label class="flex items-center cursor-pointer"><input type="checkbox" name="symptomItem" value="เวียนหัว" class="mr-2 w-4 h-4 text-blue-600"> เวียนหัว</label>
-                        <label class="flex items-center cursor-pointer"><input type="checkbox" name="symptomItem" value="หน้ามืด" class="mr-2 w-4 h-4 text-blue-600"> หน้ามืด</label>
-                        <label class="flex items-center cursor-pointer"><input type="checkbox" name="symptomItem" value="เจ็บหน้าอก" class="mr-2 w-4 h-4 text-blue-600"> เจ็บหน้าอก</label>
-                        <label class="flex items-center cursor-pointer"><input type="checkbox" name="symptomItem" value="หอบเหนื่อย" class="mr-2 w-4 h-4 text-blue-600"> หอบเหนื่อย</label>
-                        <label class="flex items-center cursor-pointer"><input type="checkbox" name="symptomItem" value="ตาพร่ามัว" class="mr-2 w-4 h-4 text-blue-600"> ตาพร่ามัว</label>
-                    </div>
+                <div class="flex justify-end gap-2 mt-4">
+                    <button type="button" onclick="document.getElementById('modalEditUser').classList.add('hidden')" class="px-4 py-2 bg-gray-200 rounded">ยกเลิก</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded shadow-sm">บันทึกข้อมูล</button>
                 </div>
-                <hr class="border-gray-100">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">ความเสี่ยงร้ายแรง (งดทำงาน)</label>
-                    <div class="space-y-2" id="divCriticalRisks"></div>
-                </div>
-                <hr class="border-gray-100">
-                <div class="bg-blue-50 p-3 rounded-lg border border-blue-100">
-                    <label class="block text-sm font-bold text-blue-800 mb-1">📷 ถ่ายรูปหลักฐานผลตรวจความดัน <span class="text-red-500">*</span></label>
-                    <input type="file" id="inputEvidence" accept="image/*" capture="environment" class="w-full px-3 py-2 border rounded-lg bg-white text-sm" required>
-                    <img id="previewEvidence" class="hidden mt-2 max-h-40 rounded border shadow-sm mx-auto">
-                    <input type="hidden" id="inputEvidenceBase64">
-                    <input type="hidden" id="inputEvidenceMimeType">
-                </div>
-                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition shadow mt-4 text-lg">บันทึกผลการประเมิน</button>
-             </form>
-        </div>
-
-        <div id="viewEditDriverReq" class="hidden w-full max-w-md bg-white rounded-xl shadow-lg p-6 mt-4 flex-grow">
-            <div class="flex justify-between items-center border-b pb-3 mb-4">
-                <h3 class="text-xl font-bold text-gray-800">ขอแก้ไขข้อมูลส่วนตัว</h3>
-                <button type="button" onclick="switchView('viewDriver')" class="text-gray-400 hover:text-gray-600">ปิด</button>
-            </div>
-            <form id="editReqForm" class="space-y-4">
-                <div class="bg-yellow-50 text-yellow-800 text-sm p-3 rounded-lg border border-yellow-200"><b>หมายเหตุ:</b> การแก้ไขจะถูกส่งให้ <b>ผู้ดูแลระดับสูง</b> เป็นผู้อนุมัติ</div>
-                <div><label class="block text-sm font-medium text-gray-700 mb-1">อีเมล (ใหม่)</label><input type="email" id="reqEmailForm" class="w-full px-3 py-2 border rounded-lg bg-gray-50" placeholder="ระบุอีเมลใหม่ (ถ้ามี)"></div>
-                <div><label class="block text-sm font-medium text-gray-700 mb-1">เบอร์โทรศัพท์ใหม่</label><input type="tel" id="reqPhoneForm" maxlength="10" class="w-full px-3 py-2 border rounded-lg bg-gray-50" required></div>
-                <div id="driverOnlyReqFields">
-                    <div><label class="block text-sm font-medium text-gray-700 mb-1">โรคประจำตัว (ใหม่)</label><input type="text" id="reqChronicForm" class="w-full px-3 py-2 border rounded-lg bg-gray-50" placeholder="ถ้าไม่มีให้ใส่ -"></div>
-                    <div><label class="block text-sm font-medium text-gray-700 mb-1">ยาที่ใช้ประจำ (ใหม่)</label><input type="text" id="reqMedsForm" class="w-full px-3 py-2 border rounded-lg bg-gray-50" placeholder="ถ้าไม่มีให้ใส่ -"></div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">การสูบบุหรี่ (ใหม่)</label>
-                        <select id="reqSmokingForm" class="w-full px-3 py-2 border rounded-lg bg-gray-50">
-                            <option value="ไม่สูบ">ไม่สูบ</option>
-                            <option value="สูบเป็นครั้งคราว">สูบเป็นครั้งคราว</option>
-                            <option value="สูบเป็นประจำ">สูบเป็นประจำ</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">การดื่มแอลกอฮอล์ (ใหม่)</label>
-                        <select id="reqAlcoholForm" class="w-full px-3 py-2 border rounded-lg bg-gray-50">
-                            <option value="ไม่ดื่ม">ไม่ดื่ม</option>
-                            <option value="ดื่มสังสรรค์">ดื่มสังสรรค์บ้าง</option>
-                            <option value="ดื่มเป็นประจำ">ดื่มเป็นประจำ</option>
-                        </select>
-                    </div>
-                </div>
-                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg mt-4 shadow-md">ส่งคำขอแก้ไขข้อมูล</button>
             </form>
         </div>
+    </div>
 
-        <div id="viewAdminEditReq" class="hidden w-full bg-white rounded-xl shadow-lg p-6 mt-4 flex-grow">
-            <h3 class="text-2xl font-bold text-gray-800 mb-6">รายการขอแก้ไขข้อมูลส่วนตัว</h3>
-            <div class="flex flex-col md:flex-row gap-2 mb-4">
-                <input type="text" id="filterReqSearch" placeholder="ค้นหาชื่อ, เบอร์โทร..." class="border rounded-lg px-3 py-2 text-sm w-full md:w-1/3 focus:ring-blue-500" oninput="applyReqFilter()">
-                <select id="filterReqStatus" class="border rounded-lg px-3 py-2 text-sm w-full md:w-1/4 focus:ring-blue-500" onchange="applyReqFilter()">
-                    <option value="ALL">ทุกสถานะ</option>
-                    <option value="PENDING">รออนุมัติ</option>
-                    <option value="APPROVED">อนุมัติแล้ว</option>
-                    <option value="REJECTED">ไม่อนุมัติ</option>
-                    <option value="CANCELLED">ยกเลิกแล้ว</option>
-                </select>
+    <div id="modalViewProfile" class="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center hidden">
+        <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b pb-3 mb-4">
+                <h3 class="text-xl font-bold text-gray-800">ข้อมูลส่วนบุคคล</h3>
+                <button type="button" onclick="document.getElementById('modalViewProfile').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">ปิด</button>
             </div>
-            <div class="overflow-x-auto border rounded-lg shadow-sm">
-                <table class="w-full text-sm text-left">
-                    <thead class="bg-gray-100 text-gray-700 border-b-2 border-gray-300">
-                        <tr><th class="px-4 py-3 w-16 text-center">ลำดับที่</th><th class="px-4 py-3">วันที่ขอ</th><th class="px-4 py-3">ผู้ขอแก้ไข / หน่วยงาน</th><th class="px-4 py-3">ข้อมูลติดต่อ (เบอร์ / อีเมล)</th><th class="px-4 py-3">สุขภาพ (โรค / ยา)</th><th class="px-4 py-3">พฤติกรรม (บุหรี่ / สุรา)</th><th class="px-4 py-3">สถานะ</th><th class="px-4 py-3 text-center">จัดการ</th></tr>
-                    </thead>
-                    <tbody id="adminEditReqList" class="divide-y"></tbody>
-                </table>
+            <div id="viewProfileContent" class="space-y-4"></div>
+            <div class="mt-6 pt-4 border-t flex justify-end">
+                <button onclick="document.getElementById('modalViewProfile').classList.add('hidden')" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-lg font-medium transition">ปิดหน้าต่าง</button>
             </div>
         </div>
+    </div>
 
-        <div id="viewUserManagement" class="hidden w-full bg-white rounded-xl shadow-lg p-6 mt-4 flex-grow">
-            <div class="flex justify-between items-center border-b pb-4 mb-6">
-                <div><h3 class="text-2xl font-bold text-gray-800">จัดการผู้ใช้งานในระบบ</h3></div>
-                <div class="flex gap-2">
-                    <button id="btnOpenAddUser" class="hidden bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg text-sm transition shadow">+ เพิ่มผู้ใช้ใหม่</button>
-                    <button onclick="loadAdminUsers()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg transition border text-sm">รีเฟรช</button>
-                </div>
-            </div>
-            <div class="flex flex-col md:flex-row gap-2 mb-4">
-                <input type="text" id="filterUserSearch" placeholder="ค้นหาชื่อ, เบอร์โทร..." class="border rounded-lg px-3 py-2 text-sm w-full md:w-1/3 focus:ring-blue-500" oninput="applyUserFilter()">
-                <select id="filterUserRole" class="border rounded-lg px-3 py-2 text-sm w-full md:w-1/4 focus:ring-blue-500" onchange="applyUserFilter()">
-                    <option value="ALL">ทุกตำแหน่ง</option>
-                    <option value="provincial_admin">Admin จังหวัด</option>
-                    <option value="provincial_audit">Audit จังหวัด</option>
-                    <option value="hospital_admin">Admin รพ. / สสจ.</option>
-                    <option value="hospital_director">ผอ.รพ.</option>
-                    <option value="exec_ppho">ผู้บริหาร สสจ.</option>
-                    <option value="super_admin">Super Admin</option>
-                    <option value="driver">พนักงานขับรถประจำ</option>
-                    <option value="staff">เจ้าหน้าที่ (ขับรถจำเป็น)</option>
-                </select>
-                <select id="filterUserStatus" class="border rounded-lg px-3 py-2 text-sm w-full md:w-1/4 focus:ring-blue-500" onchange="applyUserFilter()">
-                    <option value="ALL">ทุกสถานะ</option>
-                    <option value="PENDING">รออนุมัติ (PENDING)</option>
-                    <option value="APPROVED">อนุมัติแล้ว (APPROVED)</option>
-                    <option value="REJECTED">ไม่อนุมัติ (REJECTED)</option>
-                    <option value="SUSPENDED">ระงับใช้งาน (SUSPENDED)</option>
-                </select>
-            </div>
-            <div class="overflow-x-auto rounded-lg">
-                <table class="w-full text-sm text-left shadow-sm border">
-                    <thead class="bg-gray-100 text-gray-700 border-b-2 border-gray-300">
-                        <tr><th class="px-4 py-3 w-16 text-center">ลำดับที่</th><th class="px-4 py-3">ชื่อ-สกุล</th><th class="px-4 py-3">เบอร์โทรศัพท์ / รหัส PIN</th><th class="px-4 py-3">Email</th><th class="px-4 py-3">สิทธิ์ระดับ</th><th class="px-4 py-3">สถานะ</th><th class="px-4 py-3 text-center">จัดการ</th></tr>
-                    </thead>
-                    <tbody id="adminUserList" class="divide-y bg-white"></tbody>
-                </table>
-            </div>
-        </div>
-
-        <div id="viewAuditLog" class="hidden w-full bg-white rounded-xl shadow-lg p-6 mt-4 flex-grow">
-            <div class="flex justify-between items-center border-b pb-4 mb-6">
-                <div>
-                    <h3 class="text-2xl font-bold text-gray-800">ประวัติการใช้งานระบบ (Audit Log)</h3>
-                    <p class="text-sm text-gray-500">บันทึกการดำเนินการที่สำคัญในระบบ (อ่านอย่างเดียว)</p>
-                </div>
-                <button onclick="loadAuditLogs()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg border text-sm transition">รีเฟรช</button>
-            </div>
-            <div class="flex flex-col md:flex-row gap-2 mb-4">
-                <input type="text" id="filterLogSearch" placeholder="ค้นหาผู้ดำเนินการ, เป้าหมาย..." class="border rounded-lg px-3 py-2 text-sm w-full md:w-1/3 focus:ring-blue-500" oninput="applyLogFilter()">
-                <select id="filterLogAction" class="border rounded-lg px-3 py-2 text-sm w-full md:w-1/4 focus:ring-blue-500" onchange="applyLogFilter()">
-                    <option value="ALL">ทุกการกระทำ</option>
-                    <option value="LOGIN_SUCCESS">เข้าสู่ระบบสำเร็จ</option>
-                    <option value="SUBMIT_HEALTH_CHECK">ส่งแบบประเมินสุขภาพ</option>
-                    <option value="REGISTER_USER">สมัครสมาชิกใหม่</option>
-                    <option value="ADD_USER">เพิ่มผู้ใช้งานระบบ</option>
-                    <option value="UPDATE_USER_STATUS">ปรับเปลี่ยนสถานะ</option>
-                    <option value="EDIT_USER">แก้ไขข้อมูลผู้ใช้</option>
-                    <option value="APPROVE_EDIT_REQUEST">อนุมัติแก้ไขข้อมูลส่วนตัว</option>
-                    <option value="REJECT_EDIT_REQUEST">ไม่อนุมัติคำขอแก้ไข</option>
-                    <option value="VIEW_PERSONAL_DATA">เปิดดูข้อมูลส่วนบุคคล</option>
-                    <option value="DELETE_USER">ลบผู้ใช้งาน</option>
-                    <option value="UPDATE_SETTINGS">แก้ไขตั้งค่าระบบ</option>
-                    <option value="CLEAR_DATABASE">ล้างฐานข้อมูลระบบ</option>
-                    <option value="SEED_ADMINS">นำเข้าผู้ดูแลระบบ</option>
-                    <option value="EXPORT_REPORT">ส่งออกรายงาน</option>
-                    <option value="REPAIR_DATABASE">ซ่อมแซมฐานข้อมูล</option>
-                </select>
-            </div>
-            <div class="overflow-x-auto border rounded-lg shadow-sm max-h-[600px] overflow-y-auto">
-                <table class="w-full text-sm text-left">
-                    <thead class="bg-gray-100 text-gray-700 sticky top-0 border-b-2 border-gray-300">
-                        <tr><th class="px-4 py-3 w-16 text-center">ลำดับที่</th><th class="px-4 py-3">วัน/เวลา</th><th class="px-4 py-3">ผู้ดำเนินการ</th><th class="px-4 py-3">ตำแหน่ง</th><th class="px-4 py-3">การกระทำ (Action)</th><th class="px-4 py-3">เป้าหมาย/ข้อมูล</th><th class="px-4 py-3">หน่วยงาน</th><th class="px-4 py-3">ผลลัพธ์</th></tr>
-                    </thead>
-                    <tbody id="auditLogList" class="divide-y bg-white"></tbody>
-                </table>
-            </div>
-        </div>
-
-        <div id="viewSettings" class="hidden w-full bg-white rounded-xl shadow-lg p-6 mt-4 flex-grow">
-            <h3 class="text-2xl font-bold text-gray-800 mb-6 border-b pb-4">ตั้งค่าระบบ</h3>
-            <form id="formSystemSettings" class="space-y-6 max-w-4xl">
-                <div class="bg-gray-50 p-4 rounded-lg border">
-                    <h4 class="font-bold text-blue-800 mb-4 border-b pb-2">ตั้งค่าแบบฟอร์มประเมิน</h4>
-                    <div class="mb-4">
-                        <label class="block text-sm font-bold text-gray-700 mb-1">ช่วงเวลาประเมิน (Time Slots)</label>
-                        <p class="text-xs text-gray-500 mb-2">คั่นด้วยเครื่องหมายจุลภาค (,)</p>
-                        <textarea id="set_timeSlots" rows="2" class="w-full border rounded-lg px-3 py-2 focus:ring-blue-500" required></textarea>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-bold text-gray-700 mb-1">หัวข้อความเสี่ยงร้ายแรง (RED)</label>
-                        <p class="text-xs text-gray-500 mb-2">คั่นด้วยเครื่องหมายจุลภาค (,)</p>
-                        <textarea id="set_criticalRisks" rows="3" class="w-full border rounded-lg px-3 py-2 focus:ring-blue-500" required></textarea>
-                    </div>
-                </div>
-                <div class="bg-yellow-50 p-5 rounded-lg border border-yellow-200 shadow-sm">
-                    <h4 class="font-bold text-yellow-800 mb-4 border-b border-yellow-300 pb-2">ตั้งค่าเกณฑ์ประเมินสุขภาพ (Scoring Criteria)</h4>
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">อุณหภูมิ มีไข้สูง (RED) >=</label><input type="number" step="0.1" id="sc_tempHigh" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
-                        <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">อุณหภูมิ มีไข้ต่ำ (AMBER) >=</label><input type="number" step="0.1" id="sc_tempLow" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
-                        <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">ความดัน Sys (RED) >=</label><input type="number" id="sc_sysRed" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
-                        <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">ความดัน Dia (RED) >=</label><input type="number" id="sc_diaRed" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
-                        <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">ความดัน Sys (AMBER) >=</label><input type="number" id="sc_sysAmber" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
-                        <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">ความดัน Dia (AMBER) >=</label><input type="number" id="sc_diaAmber" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
-                        <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">ชีพจรต่ำสุด (Min) <</label><input type="number" id="sc_pulseMin" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
-                        <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">ชีพจรสูงสุด (Max) ></label><input type="number" id="sc_pulseMax" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
-                        <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">ระดับอ่อนล้า (RED) >=</label><input type="number" id="sc_fatigueRed" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
-                        <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">ระดับอ่อนล้า (AMBER) >=</label><input type="number" id="sc_fatigueAmber" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
-                        <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">ชั่วโมงการนอนน้อยกว่า <</label><input type="number" step="0.5" id="sc_sleepMin" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
-                    </div>
-                </div>
-                <div class="bg-indigo-50 p-4 rounded-lg border border-indigo-100">
-                    <h4 class="font-bold text-indigo-800 mb-4 border-b border-indigo-200 pb-2">ตั้งค่าลิงก์คู่มือการใช้งาน (Manual URLs)</h4>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div><label class="block text-sm font-medium mb-1">พนักงานขับรถ / เจ้าหน้าที่</label><input type="url" id="set_url_driver" class="w-full border rounded px-3 py-2 text-sm"></div>
-                        <div><label class="block text-sm font-medium mb-1">Admin รพ. / สสจ.</label><input type="url" id="set_url_hospital_admin" class="w-full border rounded px-3 py-2 text-sm"></div>
-                        <div><label class="block text-sm font-medium mb-1">ผอ. โรงพยาบาล</label><input type="url" id="set_url_hospital_director" class="w-full border rounded px-3 py-2 text-sm"></div>
-                        <div><label class="block text-sm font-medium mb-1">ผู้บริหาร สสจ.</label><input type="url" id="set_url_exec_ppho" class="w-full border rounded px-3 py-2 text-sm"></div>
-                        <div><label class="block text-sm font-medium mb-1">Admin/Audit จังหวัด</label><input type="url" id="set_url_provincial_admin" class="w-full border rounded px-3 py-2 text-sm"></div>
-                        <div class="md:col-span-2"><label class="block text-sm font-medium mb-1">Super Admin</label><input type="url" id="set_url_super_admin" class="w-full border rounded px-3 py-2 text-sm"></div>
-                    </div>
-                </div>
-                <div class="bg-blue-50 p-5 rounded-lg border border-blue-200 shadow-sm mt-6">
-                    <h4 class="font-bold text-blue-800 mb-4 border-b border-blue-300 pb-2 flex items-center gap-2">ตั้งค่าการแจ้งเตือนผ่าน Telegram (แยกตามหน่วยงาน)</h4>
-                    <div class="mb-4">
-                        <label class="flex items-center cursor-pointer"><input type="checkbox" id="tg_enabled" class="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"><span class="ml-2 text-gray-800 font-bold">เปิดใช้งานระบบแจ้งเตือน Telegram</span></label>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="md:col-span-2"><label class="block text-sm font-bold text-gray-700 mb-1">Bot Token</label><input type="text" id="tg_botToken" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-blue-500"></div>
-                        <div class="md:col-span-2"><label class="block text-sm font-bold text-gray-700 mb-1">Global Chat ID</label><input type="text" id="tg_globalChatId" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-blue-500"></div>
-                        <div class="md:col-span-2 mt-2 border-t border-blue-200 pt-4"><p class="text-sm font-bold text-gray-800 mb-2">Chat ID แยกตามหน่วยงาน</p></div>
-                        <div><label class="block text-xs font-medium text-gray-700 mb-1">สสจ. นครนายก</label><input type="text" id="tg_org_1" class="w-full border rounded px-3 py-1.5 text-sm"></div>
-                        <div><label class="block text-xs font-medium text-gray-700 mb-1">รพ. นครนายก</label><input type="text" id="tg_org_2" class="w-full border rounded px-3 py-1.5 text-sm"></div>
-                        <div><label class="block text-xs font-medium text-gray-700 mb-1">รพ. ปากพลี</label><input type="text" id="tg_org_3" class="w-full border rounded px-3 py-1.5 text-sm"></div>
-                        <div><label class="block text-xs font-medium text-gray-700 mb-1">รพ. บ้านนา</label><input type="text" id="tg_org_4" class="w-full border rounded px-3 py-1.5 text-sm"></div>
-                        <div><label class="block text-xs font-medium text-gray-700 mb-1">รพ. องครักษ์</label><input type="text" id="tg_org_5" class="w-full border rounded px-3 py-1.5 text-sm"></div>
-                    </div>
-                </div>
-                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-8 py-3 rounded-lg transition shadow w-full md:w-auto mt-6">บันทึกการตั้งค่าระบบ</button>
-            </form>
-            <div class="bg-red-50 p-5 rounded-lg border border-red-200 mt-10 max-w-3xl">
-                <h4 class="font-bold text-red-800 mb-2 border-b border-red-200 pb-2 flex items-center gap-2">เครื่องมือสำหรับนักพัฒนา (Developer Tools)</h4>
-                <div class="flex flex-col md:flex-row gap-2">
-                    <button type="button" onclick="seedInitialAdmins()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-2.5 rounded-lg transition shadow text-sm">นำเข้าผู้ดูแลระบบเริ่มต้น</button>
-                    <button type="button" onclick="generateMockData()" class="bg-green-600 hover:bg-green-700 text-white font-bold px-6 py-2.5 rounded-lg transition shadow text-sm">สร้างข้อมูลทดสอบ (25 รายการ)</button>
-                    <button type="button" onclick="clearDatabaseConfirm()" class="bg-gray-800 hover:bg-gray-900 text-white font-bold px-6 py-2.5 rounded-lg transition shadow text-sm">⚠️ ล้างฐานข้อมูล</button>
-                    <button type="button" onclick="repairDatabaseConfirm()" class="bg-orange-500 hover:bg-orange-600 text-white font-bold px-6 py-2.5 rounded-lg transition shadow text-sm">🔧 ซ่อมแซม/จัดเรียงฐานข้อมูล</button>
-                </div>
-            </div>
-        </div>
-    </main>
     <script>
-        // 🚀 อัปเดตลิงก์ API ล่าสุดที่คุณเอิร์ทส่งมา
-        const API_URL = "https://script.google.com/macros/s/AKfycbxnURSmrkk7KcMX9-ZLaX8FxG7L2shTkxaaC5QatqSohIXPvG7pFX7Ote3UKnV_Xhrr/exec"; 
+        const API_URL = "https://script.google.com/macros/s/AKfycbzPsmOjoCyzsa459DgNpC6oupSyExXi3jV4y5F7Iochg53uN2qwPTzU1kwpZ82KCeqd/exec"; 
 
         const api = {
             run: function(action, payload = {}) {
@@ -669,7 +2979,7 @@
                     console.error("API Error:", err);
                     Swal.fire({
                         title: 'การเชื่อมต่อถูกปฏิเสธ',
-                        html: 'ระบบไม่สามารถดึงข้อมูลจากฐานข้อมูลได้<br><br><b>วิธีแก้ไข:</b><br>โปรดตรวจสอบการตั้งค่า Deploy ใน Google Apps Script ว่าได้เลือกเป็น <b>"เวอร์ชันใหม่ (New Version)"</b> และ Who has access เป็น <b>"Anyone"</b> แล้วหรือไม่',
+                        html: 'ระบบไม่สามารถดึงข้อมูลจากฐานข้อมูลได้<br><br><b>วิธีแก้ไข:</b><br>โปรดตรวจสอบการตั้งค่า Deploy ใน Google Apps Script ตรงช่อง <b>Who has access</b> ว่าได้ตั้งเป็น <b>"ทุกคน (Anyone)"</b> แล้วหรือไม่',
                         icon: 'error'
                     });
                     throw err;
@@ -685,7 +2995,6 @@
             scoringCriteria: null, 
             telegramConfig: null 
         };
-        
         let dashChartInstance = null; 
         let barChartInstance = null;
         
@@ -738,7 +3047,7 @@
         const views = [
             'viewAdmin', 'viewLogin', 'viewRegister', 'viewDriver', 
             'viewHealthForm', 'viewEditDriverReq', 'viewAdminEditReq', 
-            'viewUserManagement', 'viewSettings', 'viewAuditLog', 'viewPassenger'
+            'viewUserManagement', 'viewSettings', 'viewAuditLog'
         ];
         
         let dateEl = document.getElementById('adminDateNow');
@@ -847,7 +3156,7 @@
         }
 
         function openManual() {
-            if (!appUser || !globalSettings || !globalSettings.manualUrls) {
+            if (!appUser || !globalSettings.manualUrls) {
                 return;
             }
             let userRoleKey = appUser.role === 'provincial_audit' ? 'provincial_admin' : appUser.role;
@@ -872,11 +3181,8 @@
             
             if (token) {
                 api.run('getInitialData').then(res => {
-                    if (res.ok && res.currentUser && res.currentUser.role !== 'guest') {
-                        if (res.settings) {
-                            globalSettings = res.settings; 
-                        }
-                        
+                    if (res.ok && res.currentUser.role !== 'guest') {
+                        globalSettings = res.settings; 
                         updateEditReqBadge(res.pendingReqs); 
                         updateUsersBadge(res.pendingUsers); 
                         
@@ -957,12 +3263,11 @@
             }
         }
 
-        // 💡 ใส่เกราะป้องกัน Try-Catch หรือ Check Null ในการดึงข้อมูลตั้งค่า (แก้บัคชนกำแพง)
         function renderDynamicHealthForm() {
             let elTS = document.getElementById('inputTimeSlot'); 
             if (elTS) {
                 let optionsHtml = '<option value="">เลือกช่วงเวลา...</option>';
-                if (globalSettings && globalSettings.timeSlots && Array.isArray(globalSettings.timeSlots)) {
+                if (globalSettings.timeSlots) {
                     globalSettings.timeSlots.forEach(t => {
                         optionsHtml += `<option value="${t}">${t}</option>`;
                     });
@@ -973,7 +3278,7 @@
             let elCR = document.getElementById('divCriticalRisks'); 
             if (elCR) {
                 let risksHtml = '';
-                if (globalSettings && globalSettings.criticalRisks && Array.isArray(globalSettings.criticalRisks)) {
+                if (globalSettings.criticalRisks) {
                     globalSettings.criticalRisks.forEach(r => {
                         risksHtml += `<label class="flex items-center p-3 border border-red-200 bg-red-50 rounded-lg cursor-pointer"><input type="checkbox" name="criticalRiskItem" value="${r}" class="w-5 h-5 text-red-600 flex-shrink-0"><span class="ml-3 text-red-800 text-sm font-medium">${r}</span></label>`;
                     });
@@ -983,23 +3288,19 @@
 
             let setTS = document.getElementById('set_timeSlots'); 
             if (setTS) {
-                if (globalSettings && globalSettings.timeSlots && Array.isArray(globalSettings.timeSlots)) {
+                if (globalSettings.timeSlots) {
                     setTS.value = globalSettings.timeSlots.join(',');
-                } else {
-                    setTS.value = '';
                 }
             }
 
             let setCR = document.getElementById('set_criticalRisks'); 
             if (setCR) {
-                if (globalSettings && globalSettings.criticalRisks && Array.isArray(globalSettings.criticalRisks)) {
+                if (globalSettings.criticalRisks) {
                     setCR.value = globalSettings.criticalRisks.join(',');
-                } else {
-                    setCR.value = '';
                 }
             }
 
-            if (globalSettings && globalSettings.manualUrls) { 
+            if (globalSettings.manualUrls) { 
                 let roles = ['driver','hospital_admin','hospital_director','exec_ppho','super_admin', 'provincial_admin'];
                 roles.forEach(r => { 
                     let el = document.getElementById('set_url_' + r); 
@@ -1013,7 +3314,7 @@
                 }); 
             }
 
-            if (globalSettings && globalSettings.scoringCriteria) { 
+            if (globalSettings.scoringCriteria) { 
                 const sc = globalSettings.scoringCriteria; 
                 let scFields = ['sc_tempHigh','sc_tempLow','sc_sysRed','sc_diaRed','sc_sysAmber','sc_diaAmber','sc_pulseMin','sc_pulseMax','sc_fatigueRed','sc_fatigueAmber','sc_sleepMin'];
                 scFields.forEach(id => { 
@@ -1025,44 +3326,60 @@
                 }); 
             }
             
-            if (globalSettings && globalSettings.telegramConfig) {
+            if (globalSettings.telegramConfig) {
                 const tg = globalSettings.telegramConfig;
-                
                 let elEn = document.getElementById('tg_enabled'); 
                 if (elEn) {
-                    elEn.checked = tg.enabled || false;
+                    elEn.checked = tg.enabled;
                 }
 
                 let elBt = document.getElementById('tg_botToken'); 
                 if (elBt) {
-                    elBt.value = tg.botToken || '';
+                    if (tg.botToken) {
+                        elBt.value = tg.botToken;
+                    } else {
+                        elBt.value = '';
+                    }
                 }
 
                 let elGl = document.getElementById('tg_globalChatId'); 
                 if (elGl) {
-                    elGl.value = tg.globalChatId || '';
+                    if (tg.globalChatId) {
+                        elGl.value = tg.globalChatId;
+                    } else {
+                        elGl.value = '';
+                    }
                 }
                 
                 if (tg.orgChatIds) {
                     let e1 = document.getElementById('tg_org_1'); 
-                    if (e1) e1.value = tg.orgChatIds['สำนักงานสาธารณสุขจังหวัดนครนายก (สสจ.)'] || '';
+                    if (e1) {
+                        e1.value = tg.orgChatIds['สำนักงานสาธารณสุขจังหวัดนครนายก (สสจ.)'] || '';
+                    }
                     
                     let e2 = document.getElementById('tg_org_2'); 
-                    if (e2) e2.value = tg.orgChatIds['โรงพยาบาลนครนายก'] || '';
+                    if (e2) {
+                        e2.value = tg.orgChatIds['โรงพยาบาลนครนายก'] || '';
+                    }
                     
                     let e3 = document.getElementById('tg_org_3'); 
-                    if (e3) e3.value = tg.orgChatIds['โรงพยาบาลปากพลี'] || '';
+                    if (e3) {
+                        e3.value = tg.orgChatIds['โรงพยาบาลปากพลี'] || '';
+                    }
                     
                     let e4 = document.getElementById('tg_org_4'); 
-                    if (e4) e4.value = tg.orgChatIds['โรงพยาบาลบ้านนา'] || '';
+                    if (e4) {
+                        e4.value = tg.orgChatIds['โรงพยาบาลบ้านนา'] || '';
+                    }
                     
                     let e5 = document.getElementById('tg_org_5'); 
-                    if (e5) e5.value = tg.orgChatIds['โรงพยาบาลองครักษ์'] || '';
+                    if (e5) {
+                        e5.value = tg.orgChatIds['โรงพยาบาลองครักษ์'] || '';
+                    }
                 }
             }
         }
 
-        // ================= PERSONAL SETTINGS =================
         function openPersonalSettings() {
             if (!appUser) {
                 return;
@@ -1112,137 +3429,6 @@
             };
         }
 
-        // ================= PASSENGER / OTP LOGIC =================
-        
-        function openPassengerMode() {
-            showLoader("กำลังโหลดข้อมูลคนขับรถ...");
-            api.run('getPublicDriverList').then(res => {
-                hideLoader();
-                if (res.ok) {
-                    const selectEl = document.getElementById('passengerDriverSelect');
-                    if (selectEl) {
-                        let html = '<option value="">-- กรุณาเลือกพนักงานขับรถ --</option>';
-                        res.drivers.forEach(d => {
-                            html += `<option value="${d.id}">${d.name} (${d.org})</option>`;
-                        });
-                        selectEl.innerHTML = html;
-                    }
-                    
-                    let pinInput = document.getElementById('passengerPinInput');
-                    if (pinInput) {
-                        pinInput.value = '';
-                    }
-                    
-                    switchView('viewPassenger');
-                } else {
-                    Swal.fire('เกิดข้อผิดพลาด', res.error, 'error');
-                }
-            }).catch(err => {
-                hideLoader();
-                Swal.fire('เกิดข้อผิดพลาด', err.message, 'error');
-            });
-        }
-        
-        let passForm = document.getElementById('passengerForm');
-        if (passForm) {
-            passForm.onsubmit = function(e) {
-                e.preventDefault();
-                const driverId = document.getElementById('passengerDriverSelect').value;
-                const pin = document.getElementById('passengerPinInput').value;
-                
-                if (!driverId || !pin) {
-                    return Swal.fire('แจ้งเตือน', 'กรุณาเลือกคนขับและกรอกรหัส PIN ให้ครบถ้วน', 'warning');
-                }
-                
-                showLoader("กำลังตรวจสอบข้อมูลความพร้อม...");
-                api.run('verifyTempPin', { driverId: driverId, pin: pin }).then(res => {
-                    hideLoader();
-                    if (res.ok) {
-                        const d = res.data;
-                        let bandColor = '#10b981'; // Green
-                        let bandText = 'พร้อมปฏิบัติงาน';
-                        let icon = 'success';
-                        
-                        if (d.band === 'RED') {
-                            bandColor = '#ef4444'; // Red
-                            bandText = 'งดปฏิบัติงาน (มีความเสี่ยง)';
-                            icon = 'error';
-                        } else if (d.band === 'AMBER') {
-                            bandColor = '#f59e0b'; // Amber
-                            bandText = 'เฝ้าระวัง (มีความเสี่ยงเล็กน้อย)';
-                            icon = 'warning';
-                        }
-                        
-                        let reasonsHtml = 'ปกติ ไม่มีอาการผิดปกติ';
-                        if (d.reasons && d.reasons.length > 0) {
-                            reasonsHtml = d.reasons.join(', ');
-                        }
-                        
-                        Swal.fire({
-                            title: 'ผลการประเมินล่าสุด',
-                            icon: icon,
-                            html: `
-                                <div style="text-align: left; font-size: 14px; margin-top: 10px; background: #f9fafb; padding: 15px; border-radius: 8px; border: 1px solid #e5e7eb;">
-                                    <p><b>พนักงานขับรถ:</b> ${d.name}</p>
-                                    <p><b>หน่วยงาน:</b> ${d.org}</p>
-                                    <hr style="margin: 10px 0; border-color: #e5e7eb;">
-                                    <p><b>วันที่ประเมิน:</b> ${d.date} <span style="color: #6b7280; font-size: 12px;">(${d.timeSlot})</span></p>
-                                    <p style="margin-top: 8px;"><b>สถานะความพร้อม:</b> <span style="color: ${bandColor}; font-weight: bold; background-color: #f3f4f6; padding: 2px 6px; border-radius: 4px;">${bandText}</span></p>
-                                    <p style="margin-top: 8px;"><b>ชั่วโมงการนอน:</b> ${d.sleepHours} ชม.</p>
-                                    <p><b>ระดับความอ่อนล้า:</b> ${d.fatigue}/10</p>
-                                    <p style="color: #ef4444; margin-top: 10px;"><b>ข้อควรระวัง/อาการ:</b> ${reasonsHtml}</p>
-                                </div>
-                            `,
-                            confirmButtonText: 'ปิดหน้าต่าง',
-                            confirmButtonColor: '#059669'
-                        });
-                        
-                        let pinInput = document.getElementById('passengerPinInput');
-                        if (pinInput) {
-                            pinInput.value = '';
-                        }
-                    } else {
-                        Swal.fire('ตรวจสอบไม่ผ่าน', res.error, 'error');
-                    }
-                }).catch(err => {
-                    hideLoader();
-                    Swal.fire('ข้อผิดพลาด', err.message, 'error');
-                });
-            };
-        }
-        
-        function requestDriverOTP() {
-            if (!appUser) {
-                return;
-            }
-            
-            showLoader("กำลังสร้างรหัส OTP...");
-            api.run('generateTempPin').then(res => {
-                hideLoader();
-                if (res.ok) {
-                    Swal.fire({
-                        title: 'รหัสผ่านสำหรับผู้โดยสาร',
-                        html: `
-                            <p style="margin-bottom: 10px;">แจ้งรหัสนี้แก่ผู้โดยสารเพื่อดูประวัติสุขภาพของคุณ</p>
-                            <div style="background: #ecfdf5; border: 2px dashed #10b981; padding: 15px; border-radius: 10px; margin: 15px 0;">
-                                <span style="font-size: 48px; font-weight: bold; letter-spacing: 10px; color: #059669;">${res.otp}</span>
-                            </div>
-                            <span style="font-size: 13px; color: #ef4444; font-weight: bold;">(รหัสมีอายุการใช้งาน 5 นาที)</span>
-                        `,
-                        icon: 'info',
-                        confirmButtonText: 'ตกลง',
-                        confirmButtonColor: '#0ea5e9'
-                    });
-                } else {
-                    Swal.fire('ข้อผิดพลาด', res.error, 'error');
-                }
-            }).catch(err => {
-                hideLoader();
-                Swal.fire('ข้อผิดพลาด', err.message, 'error');
-            });
-        }
-
-        // ================= AUTHENTICATION =================
         let btnNavLoginEl = document.getElementById('btnNavLogin');
         if (btnNavLoginEl) { 
             btnNavLoginEl.onclick = function() { 
@@ -1321,32 +3507,20 @@
                 
                 api.run('login', { phone: phone, pin: pin }).then(res => {
                     if (res.ok) { 
-                        
-                        // 💡 เด้งแจ้งเตือนล็อกอินสำเร็จทันที
-                        Swal.fire({
-                            title: 'เข้าสู่ระบบสำเร็จ!',
-                            icon: 'success',
-                            timer: 1500,
-                            showConfirmButton: false
-                        });
-
                         localStorage.setItem('dhr_session', res.sessionToken); 
                         showLoader("กำลังดึงข้อมูลส่วนบุคคล...");
                         
                         api.run('getInitialData').then(initRes => { 
                             hideLoader();
-                            if (initRes.ok && initRes.currentUser) { 
-                                if (initRes.settings) {
-                                    globalSettings = initRes.settings; 
-                                }
+                            if (initRes.ok) { 
+                                globalSettings = initRes.settings; 
                                 renderDynamicHealthForm(); 
                                 updateEditReqBadge(initRes.pendingReqs); 
                                 updateUsersBadge(initRes.pendingUsers); 
                                 
-                                // 💡 แก้ไขบัคเงียบ: ใช้ตัวแปร initRes.currentUser.phone แทน res.user.phone ป้องกัน undefined
                                 if (initRes.auditLogCount !== undefined) {
                                     localStorage.setItem('backendAuditCount', initRes.auditLogCount);
-                                    let localCount = parseInt(localStorage.getItem('localAuditCount_' + initRes.currentUser.phone) || '0');
+                                    let localCount = parseInt(localStorage.getItem('localAuditCount_' + res.user.phone) || '0');
                                     let diff = initRes.auditLogCount - localCount;
                                     
                                     if (diff > 0) {
@@ -1356,12 +3530,10 @@
                                     }
                                 }
                                 handleLoginSuccess(initRes.currentUser);
-                            } else {
-                                Swal.fire('เกิดข้อผิดพลาด', 'ดึงข้อมูลไม่สำเร็จ กรุณาลองใหม่', 'error');
-                            }
+                            } 
                         }).catch(err => { 
                             hideLoader(); 
-                            Swal.fire('ข้อผิดพลาดการดึงข้อมูล', err.message, 'error'); 
+                            Swal.fire('ข้อผิดพลาด', 'ดึงข้อมูลไม่สำเร็จ', 'error'); 
                         });
                     } else { 
                         hideLoader(); 
@@ -1369,7 +3541,97 @@
                     }
                 }).catch(err => { 
                     hideLoader(); 
-                    Swal.fire('ข้อผิดพลาดการเชื่อมต่อ', err.message, 'error');
+                });
+                return false;
+            };
+        }
+
+        function toggleRegFields() {
+            const role = document.getElementById('regRole').value;
+            const staffFields = document.getElementById('staffExtraFields');
+            const authFile = document.getElementById('regAuthFile');
+            
+            if (role === 'staff') {
+                staffFields.classList.remove('hidden');
+                authFile.required = true;
+            } else {
+                staffFields.classList.add('hidden');
+                authFile.required = false;
+            }
+        }
+
+        let regAuthFileEl = document.getElementById('regAuthFile');
+        if (regAuthFileEl) {
+            regAuthFileEl.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (!file) {
+                    return;
+                }
+                
+                if (file.type !== "application/pdf") {
+                    Swal.fire('ประเภทไฟล์ไม่ถูกต้อง', 'กรุณาอัปโหลดไฟล์ในรูปแบบ PDF เท่านั้น', 'warning');
+                    this.value = ''; 
+                    return;
+                }
+
+                if (file.size > 5 * 1024 * 1024) {
+                    Swal.fire('ขนาดไฟล์เกิน', 'กรุณาอัปโหลดไฟล์ขนาดไม่เกิน 5MB', 'warning');
+                    this.value = ''; 
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const base64String = event.target.result.split(',')[1];
+                    document.getElementById('regAuthFileBase64').value = base64String;
+                    document.getElementById('regAuthFileName').value = file.name;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        let regFormEl = document.getElementById('registerForm');
+        if (regFormEl) {
+            regFormEl.onsubmit = function(e) {
+                e.preventDefault();
+                const payload = { 
+                    phone: document.getElementById('regPhone').value, 
+                    firstName: document.getElementById('regFirstName').value, 
+                    lastName: document.getElementById('regLastName').value, 
+                    org: document.getElementById('regOrg').value, 
+                    dob: document.getElementById('regDob').value, 
+                    chronicDisease: document.getElementById('regChronic').value, 
+                    regularMeds: document.getElementById('regMeds').value, 
+                    smoking: document.getElementById('regSmoking').value, 
+                    alcohol: document.getElementById('regAlcohol').value, 
+                    email: document.getElementById('regEmail').value, 
+                    pdpaConsent: document.getElementById('regPdpa').checked,
+                    regRole: document.getElementById('regRole').value, 
+                    position: document.getElementById('regPosition').value, 
+                    department: document.getElementById('regDepartment').value,
+                    authFileBase64: document.getElementById('regAuthFileBase64').value, 
+                    authFileName: document.getElementById('regAuthFileName').value
+                };
+                
+                showLoader("กำลังอัปโหลดไฟล์และลงทะเบียน...");
+                api.run('registerUser', payload).then(res => {
+                    hideLoader();
+                    if (res.ok) { 
+                        Swal.fire({ 
+                            title: 'ลงทะเบียนสำเร็จ!', 
+                            html: `<b>รหัส PIN ของคุณคือ: <span style="color:red; font-size:24px">${res.generatedPin}</span></b><br><br>กรุณาจดจำรหัสนี้ไว้ และรอ Admin รพ. อนุมัติสิทธิ์`, 
+                            icon: 'success' 
+                        }).then(() => { 
+                            document.getElementById('registerForm').reset(); 
+                            document.getElementById('regAuthFileBase64').value = ""; 
+                            document.getElementById('regAuthFileName').value = ""; 
+                            switchView('viewLogin'); 
+                        }); 
+                    } else { 
+                        Swal.fire('ข้อมูลผิดพลาด', res.error, 'error'); 
+                    }
+                }).catch(err => { 
+                    hideLoader(); 
                 });
                 return false;
             };
@@ -3014,6 +5276,51 @@
             tbody.innerHTML = html;
         }
 
+        // 💡 จัดการปุ่ม Export Report (ส่งออกรายงาน) รองรับภาษาไทยใน Excel
+        let fExport = document.getElementById('formExport');
+        if (fExport) {
+            fExport.onsubmit = function(e) {
+                e.preventDefault();
+                const startDate = document.getElementById('exportStartDate').value;
+                const endDate = document.getElementById('exportEndDate').value;
+
+                if (!startDate || !endDate) {
+                    return Swal.fire('แจ้งเตือน', 'กรุณาเลือกช่วงวันที่ให้ครบถ้วน', 'warning');
+                }
+
+                showLoader("กำลังดึงข้อมูลรายงาน...");
+                api.run('exportReport', { startDate: startDate, endDate: endDate }).then(res => {
+                    hideLoader();
+                    if (res.ok) {
+                        // เพิ่ม BOM \uFEFF ให้ Excel อ่านภาษาไทยได้สมบูรณ์
+                        const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), res.csvData], { type: 'text/csv;charset=utf-8;' });
+                        const link = document.createElement("a");
+                        const url = URL.createObjectURL(blob);
+                        
+                        link.setAttribute("href", url);
+                        link.setAttribute("download", `DHR_Report_${startDate}_to_${endDate}.csv`);
+                        link.style.visibility = 'hidden';
+                        
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+
+                        let modExport = document.getElementById('modalExport');
+                        if (modExport) {
+                            modExport.classList.add('hidden');
+                        }
+
+                        Swal.fire('สำเร็จ', 'ดาวน์โหลดรายงานเรียบร้อยแล้ว', 'success');
+                    } else {
+                        Swal.fire('ข้อผิดพลาด', res.error, 'error');
+                    }
+                }).catch(err => {
+                    hideLoader();
+                    Swal.fire('ข้อผิดพลาด', err.message, 'error');
+                });
+            };
+        }
+
         function seedInitialAdmins() {
             if (!confirm("ระบบจะทำการดึงข้อมูลผู้ดูแลระบบเริ่มต้น (ที่ตั้งค่าไว้ในโค้ด) กลับเข้าสู่ระบบ ยืนยันหรือไม่?")) {
                 return;
@@ -4075,6 +6382,7 @@
             }
         }
         
+        // 💡 ฟังก์ชันใหม่: แคปภาพ Dashboard เป็นรูปภาพ A4
         function downloadDashboardImage() {
             showLoader("กำลังเตรียมรูปภาพ...");
             
@@ -4142,7 +6450,3 @@
     </script>
 </body>
 </html>
-
-    <footer class="w-full bg-gray-100 text-center text-xs text-gray-500 py-4 border-t mt-auto">
-        พัฒนาและดูแลระบบโดย กลุ่มงานสุขภาพดิจิทัล สำนักงานสาธารณสุขจังหวัดนครนายก
-    </footer>
