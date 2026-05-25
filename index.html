@@ -320,7 +320,7 @@
             <div class="flex justify-between items-start border-b pb-3 mb-4">
                 <div>
                     <h3 class="text-xl font-bold text-gray-800">ตรวจสอบความพร้อมผู้ขับขี่</h3>
-                    <p class="text-xs text-gray-500 mt-1">สำหรับผู้โดยสาร โดยต้องได้รับ OTP จากเบอร์มือถือของผู้ขับขี่ก่อนดูข้อมูล</p>
+                    <p class="text-xs text-gray-500 mt-1">สำหรับผู้โดยสาร โดยต้องได้รับ OTP จากผู้ขับขี่ก่อนดูข้อมูล</p>
                 </div>
                 <button type="button" onclick="goToHome()" class="text-gray-400 hover:text-gray-600">ปิด</button>
             </div>
@@ -348,7 +348,7 @@
                         <label class="block text-sm font-medium text-gray-700 mb-1">วัตถุประสงค์</label>
                         <input type="text" id="passengerPurpose" class="w-full px-4 py-2 border rounded-lg focus:ring-emerald-500" value="ตรวจสอบความพร้อมก่อนเดินทาง">
                     </div>
-                    <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-lg transition shadow">ส่ง OTP ไปยังเบอร์ผู้ขับขี่</button>
+                    <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-lg transition shadow">ส่งคำขอ OTP ให้ผู้ขับขี่</button>
                 </form>
             </div>
 
@@ -503,6 +503,18 @@
                 <h4 class="font-semibold text-blue-800 mb-2">แบบประเมินความพร้อมก่อนปฏิบัติงาน</h4>
                 <p id="staffExemptNotice" class="text-xs text-blue-600 hidden mb-2 font-medium">✨ คุณเข้าสู่ระบบด้วยสิทธิ์ "เจ้าหน้าที่" กรุณาทำแบบประเมินเฉพาะวันที่ได้รับคำสั่งให้ปฏิบัติหน้าที่ขับรถยนต์ราชการเท่านั้น</p>
                 <button id="btnOpenForm" class="w-full bg-green-500 hover:bg-green-600 text-white font-medium py-2 rounded-lg shadow mt-2">เริ่มทำแบบประเมินวันนี้</button>
+            </div>
+            <div id="driverPassengerOtpPanel" class="bg-amber-50 rounded-lg p-4 mb-6 border border-amber-200">
+                <div class="flex justify-between items-start gap-3 mb-2">
+                    <div>
+                        <h4 class="font-semibold text-amber-900">คำขอ OTP จากผู้โดยสาร</h4>
+                        <p class="text-xs text-amber-700 mt-1">แจ้งรหัสเฉพาะเมื่อคุณยินยอมให้ดูประวัติผลประเมินแบบสรุป</p>
+                    </div>
+                    <button type="button" onclick="loadDriverPassengerOtpRequests()" class="text-xs bg-white hover:bg-amber-100 text-amber-800 px-2 py-1 rounded border border-amber-200 transition">รีเฟรช</button>
+                </div>
+                <div id="driverPassengerOtpList" class="space-y-3">
+                    <p class="text-sm text-amber-700">กำลังโหลดคำขอ...</p>
+                </div>
             </div>
             <div class="flex justify-between items-center mb-3">
                 <h4 class="font-semibold text-gray-700">ประวัติการประเมินล่าสุด</h4>
@@ -787,67 +799,9 @@
                 </div>
 
                 <div class="bg-emerald-50 p-5 rounded-lg border border-emerald-200 shadow-sm mt-6">
-                    <h4 class="font-bold text-emerald-800 mb-4 border-b border-emerald-300 pb-2">ตั้งค่า SMS OTP สำหรับผู้โดยสาร</h4>
-                    <div class="mb-4">
-                        <label class="flex items-center cursor-pointer">
-                            <input type="checkbox" id="smsotp_enabled" class="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500">
-                            <span class="ml-2 text-gray-800 font-bold">เปิดใช้งาน SMS OTP สำหรับการดูประวัติผู้ขับขี่</span>
-                        </label>
-                    </div>
-                    <div class="mb-4">
-                        <label class="block text-sm font-bold text-gray-700 mb-1">SMS OTP Provider</label>
-                        <select id="smsotp_provider" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-emerald-500">
-                            <option value="ThaiBulkSMS">ThaiBulkSMS</option>
-                            <option value="AWS_SNS">AWS SNS</option>
-                        </select>
-                    </div>
-                    <div id="thaiBulkSmsFields" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-bold text-gray-700 mb-1">ThaiBulkSMS API Key</label>
-                            <input type="password" id="smsotp_key" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-emerald-500" placeholder="ใส่ API Key เมื่อบันทึกครั้งแรกหรือเมื่อต้องการเปลี่ยน">
-                            <p class="text-[10px] text-gray-500 mt-1" id="smsotp_key_status"></p>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-bold text-gray-700 mb-1">ThaiBulkSMS API Secret</label>
-                            <input type="password" id="smsotp_secret" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-emerald-500" placeholder="ใส่ API Secret เมื่อบันทึกครั้งแรกหรือเมื่อต้องการเปลี่ยน">
-                            <p class="text-[10px] text-gray-500 mt-1" id="smsotp_secret_status"></p>
-                        </div>
-                        <div class="md:col-span-2 bg-white border border-emerald-100 rounded-lg p-3 text-xs text-gray-600">
-                            ระบบจะบันทึก Key/Secret ไว้ใน Script Properties ของ Apps Script และไม่แสดงค่ากลับมาบนหน้าจอหลังบันทึก<br>
-                            <b>สำคัญ:</b> ใน ThaiBulkSMS OTP Console ต้องตั้ง Message Template ให้มีตัวแปร <code>{xxxx}</code> อยู่ในข้อความ มิฉะนั้น SMS จะไม่แสดงรหัส OTP
-                        </div>
-                    </div>
-                    <div id="awsSnsFields" class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 hidden">
-                        <div>
-                            <label class="block text-sm font-bold text-gray-700 mb-1">AWS Access Key ID</label>
-                            <input type="password" id="awssns_accessKeyId" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-emerald-500" placeholder="ใส่ Access Key เมื่อบันทึกครั้งแรกหรือเมื่อต้องการเปลี่ยน">
-                            <p class="text-[10px] text-gray-500 mt-1" id="awssns_accessKey_status"></p>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-bold text-gray-700 mb-1">AWS Secret Access Key</label>
-                            <input type="password" id="awssns_secretAccessKey" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-emerald-500" placeholder="ใส่ Secret Key เมื่อบันทึกครั้งแรกหรือเมื่อต้องการเปลี่ยน">
-                            <p class="text-[10px] text-gray-500 mt-1" id="awssns_secretKey_status"></p>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-bold text-gray-700 mb-1">AWS Region</label>
-                            <input type="text" id="awssns_region" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-emerald-500" value="ap-southeast-1" placeholder="เช่น ap-southeast-1">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-bold text-gray-700 mb-1">Sender ID</label>
-                            <input type="text" id="awssns_senderId" maxlength="11" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-emerald-500" value="DHR" placeholder="เช่น DHR">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-bold text-gray-700 mb-1">Max Price ต่อ SMS (USD)</label>
-                            <input type="number" step="0.0001" min="0" id="awssns_maxPrice" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-emerald-500" placeholder="ไม่ใส่ = ให้ AWS คิดตามจริง">
-                        </div>
-                        <div class="md:col-span-2">
-                            <label class="block text-sm font-bold text-gray-700 mb-1">ข้อความ OTP</label>
-                            <input type="text" id="awssns_template" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-emerald-500" value="DHR OTP: {otp}. Valid 10 min.">
-                            <p class="text-[10px] text-gray-500 mt-1">ต้องมี <code>{otp}</code> เพื่อให้ระบบแทนรหัส OTP อัตโนมัติ</p>
-                        </div>
-                        <div class="md:col-span-2 bg-white border border-emerald-100 rounded-lg p-3 text-xs text-gray-600">
-                            AWS SNS จะใช้เบอร์รูปแบบสากล เช่น <code>+669xxxxxxxx</code> และบัญชีใหม่อาจต้อง verify เบอร์ใน SMS sandbox ก่อนทดสอบ
-                        </div>
+                    <h4 class="font-bold text-emerald-800 mb-3 border-b border-emerald-300 pb-2">ระบบ OTP สำหรับผู้โดยสาร</h4>
+                    <div class="bg-white border border-emerald-100 rounded-lg p-3 text-sm text-gray-700">
+                        ระบบเปลี่ยนเป็น In-app OTP แล้ว ไม่มีการส่ง SMS ผ่าน ThaiBulkSMS หรือ AWS SNS ผู้โดยสารส่งคำขอ แล้วพนักงานขับรถต้องเปิดโปรแกรมเพื่อดูรหัส OTP และแจ้งรหัสเมื่อยินยอมเท่านั้น
                     </div>
                 </div>
 
@@ -1336,10 +1290,7 @@
             criticalRisks: [], 
             manualUrls: {}, 
             scoringCriteria: null, 
-            telegramConfig: null,
-            smsOtpProvider: 'ThaiBulkSMS',
-            awsSnsConfig: null,
-            thaiBulkSmsConfig: null 
+            telegramConfig: null
         };
         let dashChartInstance = null; 
         let barChartInstance = null;
@@ -1352,6 +1303,7 @@
         let lastLoginCredentials = null;
         let passengerRequestId = null;
         let passengerAccessToken = null;
+        let passengerOtpRefreshTimer = null;
         
         const ACTION_TH = { 
             'LOGIN_SUCCESS': 'เข้าสู่ระบบสำเร็จ', 
@@ -1370,6 +1322,7 @@
             'VIEW_PERSONAL_DATA': 'เปิดดูข้อมูลส่วนบุคคล', 
             'PASSENGER_OTP_REQUEST': 'ผู้โดยสารขอ OTP',
             'PASSENGER_ACCESS_GRANTED': 'ผู้โดยสารยืนยัน OTP สำเร็จ',
+            'PASSENGER_OTP_REJECTED': 'ผู้ขับขี่ปฏิเสธคำขอ OTP',
             'PASSENGER_HISTORY_VIEW': 'ผู้โดยสารเปิดดูประวัติ',
             'DELETE_USER': 'ลบผู้ใช้งาน',
             'EXPORT_REPORT': 'ส่งออกรายงาน',
@@ -1433,6 +1386,16 @@
             }
             const months = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
             return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear() + 543}`;
+        }
+
+        function escapeHtml(value) {
+            return String(value || '').replace(/[&<>"']/g, ch => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            }[ch]));
         }
 
         function getTodayInputValue() {
@@ -1663,6 +1626,7 @@
         function showLoggedOutDashboard() {
             localStorage.removeItem(STORAGE_KEYS.session);
             appUser = null;
+            stopPassengerOtpRefresh();
             loadAdminDashboard();
             showLoginButton();
         }
@@ -1898,6 +1862,119 @@
             }).join('');
         }
 
+        function renderDriverPassengerOtpRequests(requests) {
+            const list = document.getElementById('driverPassengerOtpList');
+            
+            if (!list) {
+                return;
+            }
+            if (!requests || requests.length === 0) {
+                list.innerHTML = '<p class="text-sm text-amber-700 bg-white border border-amber-100 rounded-lg p-3">ยังไม่มีคำขอ OTP ที่รอการยินยอม</p>';
+                return;
+            }
+            
+            list.innerHTML = requests.map(req => {
+                const expiresText = req.expiresAt
+                    ? new Date(req.expiresAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.'
+                    : '-';
+                const requesterPhone = req.requesterPhone ? `<span class="text-gray-500">(${escapeHtml(req.requesterPhone)})</span>` : '';
+                const requesterName = escapeHtml(req.requesterName || 'ผู้โดยสาร');
+                const purpose = escapeHtml(req.purpose || 'ตรวจสอบความพร้อมก่อนเดินทาง');
+                const otp = escapeHtml(req.otp || '------');
+                
+                return `
+                    <div class="bg-white border border-amber-200 rounded-lg p-3 shadow-sm">
+                        <div class="flex justify-between items-start gap-3">
+                            <div>
+                                <p class="text-xs text-gray-500">ผู้ขอดู: <b class="text-gray-800">${requesterName}</b> ${requesterPhone}</p>
+                                <p class="text-xs text-gray-500 mt-1">วัตถุประสงค์: ${purpose}</p>
+                                <p class="text-xs text-red-600 mt-1 font-medium">หมดอายุ ${expiresText}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-[10px] text-gray-500 font-bold uppercase">OTP</p>
+                                <p class="text-2xl font-black tracking-widest text-amber-700">${otp}</p>
+                            </div>
+                        </div>
+                        <div class="mt-3 pt-2 border-t border-amber-100 flex justify-between items-center gap-2">
+                            <p class="text-[11px] text-amber-800">บอกรหัสนี้เฉพาะเมื่อยินยอมให้ดูประวัติ</p>
+                            <button type="button" onclick="rejectPassengerOtpRequest('${escapeHtml(req.requestId)}')" class="text-xs bg-red-50 hover:bg-red-100 text-red-600 px-2 py-1 rounded border border-red-200 transition">ปฏิเสธ</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function loadDriverPassengerOtpRequests() {
+            if (!appUser || (appUser.role !== 'driver' && appUser.role !== 'staff')) {
+                return;
+            }
+            
+            const list = document.getElementById('driverPassengerOtpList');
+            if (list) {
+                list.innerHTML = '<p class="text-sm text-amber-700 bg-white border border-amber-100 rounded-lg p-3">กำลังโหลดคำขอ OTP...</p>';
+            }
+            
+            api.run('getMyPassengerOtpRequests').then(res => {
+                if (res.ok) {
+                    renderDriverPassengerOtpRequests(res.requests || []);
+                } else if (list) {
+                    list.innerHTML = `<p class="text-sm text-red-600 bg-white border border-red-100 rounded-lg p-3">${escapeHtml(res.error || 'ไม่สามารถโหลดคำขอ OTP ได้')}</p>`;
+                }
+            }).catch(err => {
+                console.error(err);
+                if (list) {
+                    list.innerHTML = '<p class="text-sm text-red-600 bg-white border border-red-100 rounded-lg p-3">ไม่สามารถโหลดคำขอ OTP ได้</p>';
+                }
+            });
+        }
+
+        function startPassengerOtpRefresh() {
+            if (passengerOtpRefreshTimer) {
+                clearInterval(passengerOtpRefreshTimer);
+            }
+            loadDriverPassengerOtpRequests();
+            passengerOtpRefreshTimer = setInterval(() => {
+                loadDriverPassengerOtpRequests();
+            }, 30000);
+        }
+
+        function stopPassengerOtpRefresh() {
+            if (passengerOtpRefreshTimer) {
+                clearInterval(passengerOtpRefreshTimer);
+                passengerOtpRefreshTimer = null;
+            }
+        }
+
+        function rejectPassengerOtpRequest(requestId) {
+            Swal.fire({
+                title: 'ปฏิเสธคำขอ OTP?',
+                text: 'ผู้โดยสารจะไม่สามารถใช้รหัสนี้เพื่อดูประวัติได้',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'ปฏิเสธคำขอ',
+                cancelButtonText: 'ยกเลิก',
+                confirmButtonColor: '#dc2626'
+            }).then(result => {
+                if (!result.isConfirmed) {
+                    return;
+                }
+                
+                showLoader('กำลังปฏิเสธคำขอ...');
+                api.run('rejectMyPassengerOtpRequest', { requestId: requestId }).then(res => {
+                    hideLoader();
+                    if (res.ok) {
+                        loadDriverPassengerOtpRequests();
+                        Swal.fire('สำเร็จ', 'ปฏิเสธคำขอ OTP แล้ว', 'success');
+                    } else {
+                        Swal.fire('ข้อผิดพลาด', res.error, 'error');
+                    }
+                }).catch(err => {
+                    hideLoader();
+                    Swal.fire('ข้อผิดพลาด', err.message, 'error');
+                });
+            });
+        }
+
         function renderDynamicHealthForm() {
             let elTS = document.getElementById('inputTimeSlot'); 
             if (elTS) {
@@ -1965,60 +2042,6 @@
                 }); 
             }
 
-            if (globalSettings.thaiBulkSmsConfig) {
-                const sms = globalSettings.thaiBulkSmsConfig;
-                let smsEnabled = document.getElementById('smsotp_enabled');
-                if (smsEnabled) {
-                    smsEnabled.checked = !!sms.enabled;
-                }
-                let keyStatus = document.getElementById('smsotp_key_status');
-                if (keyStatus) {
-                    keyStatus.innerText = sms.keySaved ? 'บันทึก API Key แล้ว' : 'ยังไม่ได้บันทึก API Key';
-                }
-                let secretStatus = document.getElementById('smsotp_secret_status');
-                if (secretStatus) {
-                    secretStatus.innerText = sms.secretSaved ? 'บันทึก API Secret แล้ว' : 'ยังไม่ได้บันทึก API Secret';
-                }
-            }
-
-            const smsProvider = globalSettings.smsOtpProvider || 'ThaiBulkSMS';
-            let providerEl = document.getElementById('smsotp_provider');
-            if (providerEl) {
-                providerEl.value = smsProvider;
-            }
-            if (globalSettings.awsSnsConfig) {
-                const aws = globalSettings.awsSnsConfig;
-                let smsEnabled = document.getElementById('smsotp_enabled');
-                if (smsEnabled && smsProvider === 'AWS_SNS') {
-                    smsEnabled.checked = !!aws.enabled;
-                }
-                let awsAccessStatus = document.getElementById('awssns_accessKey_status');
-                if (awsAccessStatus) {
-                    awsAccessStatus.innerText = aws.accessKeySaved ? 'บันทึก Access Key แล้ว' : 'ยังไม่ได้บันทึก Access Key';
-                }
-                let awsSecretStatus = document.getElementById('awssns_secretKey_status');
-                if (awsSecretStatus) {
-                    awsSecretStatus.innerText = aws.secretKeySaved ? 'บันทึก Secret Key แล้ว' : 'ยังไม่ได้บันทึก Secret Key';
-                }
-                let awsRegion = document.getElementById('awssns_region');
-                if (awsRegion) {
-                    awsRegion.value = aws.region || 'ap-southeast-1';
-                }
-                let awsSenderId = document.getElementById('awssns_senderId');
-                if (awsSenderId) {
-                    awsSenderId.value = aws.senderId || 'DHR';
-                }
-                let awsMaxPrice = document.getElementById('awssns_maxPrice');
-                if (awsMaxPrice) {
-                    awsMaxPrice.value = aws.maxPrice || '';
-                }
-                let awsTemplate = document.getElementById('awssns_template');
-                if (awsTemplate) {
-                    awsTemplate.value = aws.messageTemplate || 'DHR OTP: {otp}. Valid 10 min.';
-                }
-            }
-            toggleSmsProviderFields();
-            
             if (globalSettings.telegramConfig) {
                 const tg = globalSettings.telegramConfig;
                 let elEn = document.getElementById('tg_enabled'); 
@@ -2070,19 +2093,6 @@
                         e5.value = tg.orgChatIds['โรงพยาบาลองครักษ์'] || '';
                     }
                 }
-            }
-        }
-
-        function toggleSmsProviderFields() {
-            const provider = getInputValue('smsotp_provider') || 'ThaiBulkSMS';
-            const thaiFields = document.getElementById('thaiBulkSmsFields');
-            const awsFields = document.getElementById('awsSnsFields');
-            
-            if (thaiFields) {
-                thaiFields.classList.toggle('hidden', provider === 'AWS_SNS');
-            }
-            if (awsFields) {
-                awsFields.classList.toggle('hidden', provider !== 'AWS_SNS');
             }
         }
 
@@ -2144,21 +2154,6 @@
                             'โรงพยาบาลบ้านนา': getInputValue('tg_org_4'),
                             'โรงพยาบาลองครักษ์': getInputValue('tg_org_5')
                         }
-                    },
-                    smsOtpProvider: getInputValue('smsotp_provider') || 'ThaiBulkSMS',
-                    thaiBulkSmsConfig: {
-                        enabled: getCheckboxValue('smsotp_enabled'),
-                        key: getInputValue('smsotp_key'),
-                        secret: getInputValue('smsotp_secret')
-                    },
-                    awsSnsConfig: {
-                        enabled: getCheckboxValue('smsotp_enabled'),
-                        accessKeyId: getInputValue('awssns_accessKeyId'),
-                        secretAccessKey: getInputValue('awssns_secretAccessKey'),
-                        region: getInputValue('awssns_region') || 'ap-southeast-1',
-                        senderId: getInputValue('awssns_senderId') || 'DHR',
-                        maxPrice: getInputValue('awssns_maxPrice'),
-                        messageTemplate: getInputValue('awssns_template') || 'DHR OTP: {otp}. Valid 10 min.'
                     }
                 };
                 
@@ -2171,32 +2166,6 @@
                         globalSettings.manualUrls = payload.manualUrls;
                         globalSettings.scoringCriteria = payload.scoringCriteria;
                         globalSettings.telegramConfig = payload.telegramConfig;
-                        globalSettings.smsOtpProvider = payload.smsOtpProvider;
-                        if (!globalSettings.thaiBulkSmsConfig) {
-                            globalSettings.thaiBulkSmsConfig = {};
-                        }
-                        globalSettings.thaiBulkSmsConfig.enabled = payload.thaiBulkSmsConfig.enabled;
-                        globalSettings.thaiBulkSmsConfig.keySaved = globalSettings.thaiBulkSmsConfig.keySaved || !!payload.thaiBulkSmsConfig.key;
-                        globalSettings.thaiBulkSmsConfig.secretSaved = globalSettings.thaiBulkSmsConfig.secretSaved || !!payload.thaiBulkSmsConfig.secret;
-                        if (!globalSettings.awsSnsConfig) {
-                            globalSettings.awsSnsConfig = {};
-                        }
-                        globalSettings.awsSnsConfig.enabled = payload.awsSnsConfig.enabled;
-                        globalSettings.awsSnsConfig.accessKeySaved = globalSettings.awsSnsConfig.accessKeySaved || !!payload.awsSnsConfig.accessKeyId;
-                        globalSettings.awsSnsConfig.secretKeySaved = globalSettings.awsSnsConfig.secretKeySaved || !!payload.awsSnsConfig.secretAccessKey;
-                        globalSettings.awsSnsConfig.region = payload.awsSnsConfig.region;
-                        globalSettings.awsSnsConfig.senderId = payload.awsSnsConfig.senderId;
-                        globalSettings.awsSnsConfig.maxPrice = payload.awsSnsConfig.maxPrice;
-                        globalSettings.awsSnsConfig.messageTemplate = payload.awsSnsConfig.messageTemplate;
-                        
-                        let keyInput = document.getElementById('smsotp_key');
-                        let secretInput = document.getElementById('smsotp_secret');
-                        let awsAccessInput = document.getElementById('awssns_accessKeyId');
-                        let awsSecretInput = document.getElementById('awssns_secretAccessKey');
-                        if (keyInput) keyInput.value = '';
-                        if (secretInput) secretInput.value = '';
-                        if (awsAccessInput) awsAccessInput.value = '';
-                        if (awsSecretInput) awsSecretInput.value = '';
                         renderDynamicHealthForm();
                         Swal.fire('สำเร็จ', 'บันทึกการตั้งค่าระบบเรียบร้อยแล้ว', 'success');
                     } else {
@@ -2206,13 +2175,6 @@
                     hideLoader();
                     Swal.fire('ข้อผิดพลาด', err.message, 'error');
                 });
-            };
-        }
-
-        let smsProviderSelect = document.getElementById('smsotp_provider');
-        if (smsProviderSelect) {
-            smsProviderSelect.onchange = function() {
-                toggleSmsProviderFields();
             };
         }
 
@@ -2319,7 +2281,7 @@
                     userAgent: navigator.userAgent
                 };
                 
-                showLoader("กำลังส่ง OTP ไปยังเบอร์ผู้ขับขี่...");
+                showLoader("กำลังส่งคำขอ OTP ให้ผู้ขับขี่...");
                 api.run('requestPassengerOtp', payload).then(res => {
                     hideLoader();
                     if (res.ok) {
@@ -2330,10 +2292,10 @@
                         if (requestStep) requestStep.classList.add('hidden');
                         if (verifyStep) verifyStep.classList.remove('hidden');
                         if (summary) {
-                            summary.innerHTML = `ส่ง OTP ไปยังเบอร์ผู้ขับขี่ ${res.maskedDriverPhone} แล้ว กรุณาขอรหัสจากผู้ขับขี่เพื่อยืนยันความยินยอมภายใน ${res.expiresMinutes || 10} นาที`;
+                            summary.innerHTML = `ส่งคำขอไปยังผู้ขับขี่เบอร์ ${res.maskedDriverPhone} แล้ว กรุณาให้ผู้ขับขี่เปิดโปรแกรมเพื่อดูรหัส OTP และแจ้งรหัสเมื่อยินยอมภายใน ${res.expiresMinutes || 10} นาที`;
                         }
                     } else {
-                        Swal.fire('ไม่สามารถส่ง OTP ได้', res.error, 'error');
+                        Swal.fire('ไม่สามารถส่งคำขอ OTP ได้', res.error, 'error');
                     }
                 }).catch(err => {
                     hideLoader();
@@ -2386,6 +2348,7 @@
             btnLogoutEl.onclick = function() {
                 localStorage.removeItem(STORAGE_KEYS.session); 
                 appUser = null; 
+                stopPassengerOtpRefresh();
                 
                 let fLogin = document.getElementById('loginForm'); 
                 if (fLogin) {
@@ -2669,7 +2632,9 @@
                 }
                 switchView('viewDriver'); 
                 loadDriverHistory();
+                startPassengerOtpRefresh();
             } else {
+                stopPassengerOtpRefresh();
                 let nDash = document.getElementById('btnNavDash'); 
                 if (nDash) {
                     nDash.classList.remove('hidden'); 
