@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     
@@ -331,8 +332,9 @@
                 </div>
                 <form id="passengerOtpRequestForm" class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">เบอร์โทรศัพท์ผู้ขับขี่ (10 หลัก)</label>
-                        <input type="tel" id="passengerDriverPhone" maxlength="10" class="w-full px-4 py-2 border rounded-lg focus:ring-emerald-500" required>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">รหัสอ้างอิง 3 ตัวท้าย หรือเบอร์ผู้ขับขี่ 10 หลัก</label>
+                        <input type="tel" id="passengerDriverPhone" maxlength="10" class="w-full px-4 py-2 border rounded-lg focus:ring-emerald-500" placeholder="เช่น 874 หรือ 0934560874" required>
+                        <p class="text-[11px] text-gray-500 mt-1">รหัสอ้างอิงคือเบอร์มือถือ 3 ตัวท้ายของผู้ขับขี่/เจ้าหน้าที่</p>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div>
@@ -503,6 +505,23 @@
                 <h4 class="font-semibold text-blue-800 mb-2">แบบประเมินความพร้อมก่อนปฏิบัติงาน</h4>
                 <p id="staffExemptNotice" class="text-xs text-blue-600 hidden mb-2 font-medium">✨ คุณเข้าสู่ระบบด้วยสิทธิ์ "เจ้าหน้าที่" กรุณาทำแบบประเมินเฉพาะวันที่ได้รับคำสั่งให้ปฏิบัติหน้าที่ขับรถยนต์ราชการเท่านั้น</p>
                 <button id="btnOpenForm" class="w-full bg-green-500 hover:bg-green-600 text-white font-medium py-2 rounded-lg shadow mt-2">เริ่มทำแบบประเมินวันนี้</button>
+            </div>
+            <div id="driverPublicAccessCard" class="bg-white rounded-lg p-4 mb-6 border border-gray-200 shadow-sm">
+                <div class="flex flex-col md:flex-row gap-4 items-center md:items-start">
+                    <div class="flex-1 w-full">
+                        <p class="text-xs text-gray-500 font-bold uppercase">รหัสอ้างอิงผู้ขับขี่</p>
+                        <div class="flex items-center gap-3 mt-1">
+                            <span id="driverRefCodeText" class="text-4xl font-black tracking-widest text-blue-700">---</span>
+                            <span class="text-xs text-gray-500">เบอร์มือถือ<br>3 ตัวท้าย</span>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2">ผู้ตรวจสอบใช้รหัสนี้หรือสแกน QR เพื่อส่งคำขอ OTP ให้คุณยินยอมในโปรแกรม</p>
+                        <div class="flex flex-wrap gap-2 mt-3">
+                            <button type="button" onclick="copyDriverAccessLink()" class="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded border border-blue-200 transition">คัดลอกลิงก์</button>
+                            <button type="button" onclick="printDriverAccessQr()" class="text-xs bg-gray-50 hover:bg-gray-100 text-gray-700 px-3 py-1.5 rounded border border-gray-200 transition">พิมพ์ QR</button>
+                        </div>
+                    </div>
+                    <div id="driverAccessQr" class="bg-white border border-gray-200 rounded-lg p-2 min-w-[144px] min-h-[144px] flex items-center justify-center"></div>
+                </div>
             </div>
             <div id="driverPassengerOtpPanel" class="bg-amber-50 rounded-lg p-4 mb-6 border border-amber-200">
                 <div class="flex justify-between items-start gap-3 mb-2">
@@ -1304,6 +1323,9 @@
         let passengerRequestId = null;
         let passengerAccessToken = null;
         let passengerOtpRefreshTimer = null;
+        let passengerDriverPublicKey = '';
+        let passengerPrefilledIdentifier = '';
+        let currentDriverAccessUrl = '';
         
         const ACTION_TH = { 
             'LOGIN_SUCCESS': 'เข้าสู่ระบบสำเร็จ', 
@@ -1396,6 +1418,135 @@
                 '"': '&quot;',
                 "'": '&#039;'
             }[ch]));
+        }
+
+        function getDriverRefCodeFromPhone(phone) {
+            const digits = String(phone || '').replace(/\D/g, '');
+            return digits.length >= 3 ? digits.slice(-3) : '';
+        }
+
+        function buildPassengerAccessUrl(driverCode, driverPublicKey) {
+            const baseUrl = window.location.origin + window.location.pathname;
+            const params = new URLSearchParams();
+            params.set('view', 'passenger');
+            params.set('driverCode', driverCode || '');
+            if (driverPublicKey) {
+                params.set('driverKey', driverPublicKey);
+            }
+            return `${baseUrl}?${params.toString()}`;
+        }
+
+        function renderQrCode(container, text, size = 144) {
+            if (!container) {
+                return;
+            }
+            container.innerHTML = '';
+            
+            if (window.QRCode) {
+                new QRCode(container, {
+                    text: text,
+                    width: size,
+                    height: size,
+                    correctLevel: QRCode.CorrectLevel.M
+                });
+            } else {
+                const img = document.createElement('img');
+                img.width = size;
+                img.height = size;
+                img.alt = 'QR Code';
+                img.src = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(text)}`;
+                container.appendChild(img);
+            }
+        }
+
+        function renderDriverAccessCard(user) {
+            if (!user || (user.role !== 'driver' && user.role !== 'staff')) {
+                return;
+            }
+            
+            const refCode = user.driverRefCode || getDriverRefCodeFromPhone(user.phone);
+            const publicKey = user.driverPublicKey || '';
+            currentDriverAccessUrl = buildPassengerAccessUrl(refCode, publicKey);
+            
+            const refEl = document.getElementById('driverRefCodeText');
+            if (refEl) {
+                refEl.innerText = refCode || '---';
+            }
+            
+            renderQrCode(document.getElementById('driverAccessQr'), currentDriverAccessUrl, 144);
+        }
+
+        function copyDriverAccessLink() {
+            if (!currentDriverAccessUrl) {
+                return;
+            }
+            
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(currentDriverAccessUrl).then(() => {
+                    Swal.fire('คัดลอกแล้ว', 'คัดลอกลิงก์ตรวจสอบผู้ขับขี่แล้ว', 'success');
+                }).catch(() => {
+                    Swal.fire('ลิงก์ตรวจสอบ', currentDriverAccessUrl, 'info');
+                });
+            } else {
+                Swal.fire('ลิงก์ตรวจสอบ', currentDriverAccessUrl, 'info');
+            }
+        }
+
+        function printDriverAccessQr() {
+            const printArea = document.getElementById('printArea');
+            const qrBox = document.getElementById('driverAccessQr');
+            const refCode = appUser ? (appUser.driverRefCode || getDriverRefCodeFromPhone(appUser.phone)) : '';
+            
+            if (!printArea || !qrBox || !currentDriverAccessUrl) {
+                return;
+            }
+            
+            printArea.innerHTML = `
+                <div style="font-family:'Noto Sans Thai',sans-serif;max-width:420px;margin:0 auto;text-align:center;border:1px solid #ddd;padding:24px;border-radius:12px;">
+                    <h2 style="margin:0 0 8px;font-size:22px;">QR ตรวจสอบความพร้อมผู้ขับขี่</h2>
+                    <p style="margin:0 0 12px;color:#555;">${escapeHtml(appUser.displayName || '')}</p>
+                    <div style="font-size:48px;font-weight:900;letter-spacing:8px;color:#1d4ed8;margin-bottom:8px;">${escapeHtml(refCode)}</div>
+                    <p style="font-size:13px;color:#555;margin:0 0 16px;">รหัสอ้างอิงคือเบอร์มือถือ 3 ตัวท้าย</p>
+                    <div style="display:flex;justify-content:center;margin-bottom:16px;">${qrBox.innerHTML}</div>
+                    <p style="font-size:12px;color:#666;margin:0;">สแกนเพื่อส่งคำขอ OTP ให้ผู้ขับขี่ยินยอมในโปรแกรม</p>
+                </div>
+            `;
+            window.print();
+        }
+
+        function showAdminDriverQr(userId) {
+            const user = cachedUsers.find(u => String(u.userId) === String(userId));
+            
+            if (!user) {
+                return;
+            }
+            
+            const refCode = user.driverRefCode || getDriverRefCodeFromPhone(user.phone);
+            const url = buildPassengerAccessUrl(refCode, user.driverPublicKey || '');
+            const qrId = 'adminDriverQrPreview';
+            
+            Swal.fire({
+                title: 'QR ตรวจสอบผู้ขับขี่',
+                html: `
+                    <div class="text-center">
+                        <p class="font-bold text-gray-800">${escapeHtml(user.displayName)}</p>
+                        <p class="text-xs text-gray-500 mb-2">${escapeHtml(user.org || '')}</p>
+                        <div class="text-4xl font-black tracking-widest text-blue-700 mb-2">${escapeHtml(refCode)}</div>
+                        <div id="${qrId}" class="flex justify-center bg-white p-2"></div>
+                        <p class="text-xs text-gray-500 mt-3 break-all">${escapeHtml(url)}</p>
+                    </div>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'คัดลอกลิงก์',
+                cancelButtonText: 'ปิด',
+                didOpen: () => {
+                    renderQrCode(document.getElementById(qrId), url, 180);
+                }
+            }).then(result => {
+                if (result.isConfirmed && navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(url);
+                }
+            });
         }
 
         function getTodayInputValue() {
@@ -1707,7 +1858,7 @@
             switchView('viewAdmin');
             syncRememberLoginFields();
             const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.has('driverPhone') || urlParams.has('driver') || urlParams.has('phone') || urlParams.get('view') === 'passenger') {
+            if (urlParams.has('driverPhone') || urlParams.has('driver') || urlParams.has('phone') || urlParams.has('driverCode') || urlParams.has('driverRef') || urlParams.get('view') === 'passenger') {
                 openPassengerAccess();
                 showLoginButton();
                 return;
@@ -1803,10 +1954,17 @@
 
         function prefillPassengerDriverFromUrl() {
             const params = new URLSearchParams(window.location.search);
+            const publicKey = params.get('driverKey') || params.get('driverPublicKey') || '';
+            const code = params.get('driverCode') || params.get('driverRef') || params.get('ref') || '';
             const phone = params.get('driverPhone') || params.get('driver') || params.get('phone');
+            const identifier = code || phone;
             const input = document.getElementById('passengerDriverPhone');
-            if (phone && input) {
-                input.value = String(phone).replace(/\D/g, '').slice(0, 10);
+            
+            passengerDriverPublicKey = publicKey;
+            passengerPrefilledIdentifier = String(identifier || '').replace(/\D/g, '').slice(0, 10);
+            
+            if (identifier && input) {
+                input.value = passengerPrefilledIdentifier;
             }
         }
 
@@ -2263,23 +2421,36 @@
             };
         }
 
+        let passengerDriverInput = document.getElementById('passengerDriverPhone');
+        if (passengerDriverInput) {
+            passengerDriverInput.oninput = function() {
+                const currentValue = String(this.value || '').replace(/\D/g, '').slice(0, 10);
+                if (currentValue !== passengerPrefilledIdentifier) {
+                    passengerDriverPublicKey = '';
+                }
+            };
+        }
+
         let passengerOtpRequestForm = document.getElementById('passengerOtpRequestForm');
         if (passengerOtpRequestForm) {
             passengerOtpRequestForm.onsubmit = function(e) {
                 e.preventDefault();
                 
-                const driverPhone = getInputValue('passengerDriverPhone').replace(/\D/g, '');
-                if (!driverPhone || driverPhone.length !== 10) {
-                    return Swal.fire('แจ้งเตือน', 'กรุณากรอกเบอร์โทรศัพท์ผู้ขับขี่ 10 หลัก', 'warning');
+                const driverIdentifier = getInputValue('passengerDriverPhone').replace(/\D/g, '');
+                if (!driverIdentifier || (driverIdentifier.length !== 3 && driverIdentifier.length !== 10)) {
+                    return Swal.fire('แจ้งเตือน', 'กรุณากรอกรหัสอ้างอิง 3 ตัวท้าย หรือเบอร์โทรศัพท์ผู้ขับขี่ 10 หลัก', 'warning');
                 }
                 
                 const payload = {
-                    driverPhone: driverPhone,
+                    driverIdentifier: driverIdentifier,
                     requesterName: getInputValue('passengerRequesterName'),
                     requesterPhone: getInputValue('passengerRequesterPhone').replace(/\D/g, ''),
                     purpose: getInputValue('passengerPurpose') || 'ตรวจสอบความพร้อมก่อนเดินทาง',
                     userAgent: navigator.userAgent
                 };
+                if (passengerDriverPublicKey && driverIdentifier === passengerPrefilledIdentifier) {
+                    payload.driverPublicKey = passengerDriverPublicKey;
+                }
                 
                 showLoader("กำลังส่งคำขอ OTP ให้ผู้ขับขี่...");
                 api.run('requestPassengerOtp', payload).then(res => {
@@ -2292,7 +2463,7 @@
                         if (requestStep) requestStep.classList.add('hidden');
                         if (verifyStep) verifyStep.classList.remove('hidden');
                         if (summary) {
-                            summary.innerHTML = `ส่งคำขอไปยังผู้ขับขี่เบอร์ ${res.maskedDriverPhone} แล้ว กรุณาให้ผู้ขับขี่เปิดโปรแกรมเพื่อดูรหัส OTP และแจ้งรหัสเมื่อยินยอมภายใน ${res.expiresMinutes || 10} นาที`;
+                            summary.innerHTML = `ส่งคำขอไปยังผู้ขับขี่รหัสอ้างอิง ${res.driverRefCode || driverIdentifier} แล้ว กรุณาให้ผู้ขับขี่เปิดโปรแกรมเพื่อดูรหัส OTP และแจ้งรหัสเมื่อยินยอมภายใน ${res.expiresMinutes || 10} นาที`;
                         }
                     } else {
                         Swal.fire('ไม่สามารถส่งคำขอ OTP ได้', res.error, 'error');
@@ -2566,6 +2737,8 @@
                         notice.classList.add('hidden'); 
                     }
                 }
+
+                renderDriverAccessCard(user);
 
                 const actionArea = document.getElementById('driverActionArea');
                 if (actionArea) {
@@ -4541,8 +4714,10 @@
                     }
 
                     let btnView = '';
+                    let btnQr = '';
                     if (u.role === 'driver' || u.role === 'staff') {
                         btnView = `<button onclick="confirmViewProfile('${u.userId}', '${u.displayName}')" class="bg-indigo-500 hover:bg-indigo-600 text-white px-2 py-1 rounded text-[10px] font-medium shadow-sm transition mr-1">ดูข้อมูล</button>`;
+                        btnQr = `<button onclick="showAdminDriverQr('${u.userId}')" class="bg-emerald-500 hover:bg-emerald-600 text-white px-2 py-1 rounded text-[10px] font-medium shadow-sm transition mr-1">QR</button>`;
                     }
 
                     let btnDelete = '';
@@ -4566,12 +4741,16 @@
 
                     let uEmailDisplay = '-';
                     if (u.email) uEmailDisplay = u.email;
+                    let refDisplay = '';
+                    if (u.role === 'driver' || u.role === 'staff') {
+                        refDisplay = `<br><span class="inline-block mt-1 text-[10px] bg-blue-50 text-blue-700 border border-blue-100 px-1.5 py-0.5 rounded">Ref: ${u.driverRefCode || getDriverRefCodeFromPhone(u.phone)}</span>`;
+                    }
 
                     html += `
                         <tr class="border-b hover:bg-gray-50 bg-white">
                             <td class="px-4 py-3 text-center text-gray-500 font-bold">${index + 1}</td>
                             <td class="px-4 py-3 font-medium text-gray-800">${u.displayName}</td>
-                            <td class="px-4 py-3 font-mono text-sm text-gray-600">${u.phone}${pinBtn}</td>
+                            <td class="px-4 py-3 font-mono text-sm text-gray-600">${u.phone}${refDisplay}${pinBtn}</td>
                             <td class="px-4 py-3 text-xs text-gray-500">${uEmailDisplay}</td>
                             <td class="px-4 py-3 text-xs">
                                 <span class="bg-gray-100 border border-gray-200 text-gray-700 px-2 py-0.5 rounded font-medium">${roleThText}</span>
@@ -4579,7 +4758,7 @@
                             <td class="px-4 py-3">
                                 <span class="px-2 py-1 rounded text-[10px] font-bold ${statusClass}">${u.status}</span>
                             </td>
-                            <td class="px-4 py-3 text-center whitespace-nowrap">${btnStatus}${btnEdit}${btnView}${btnDelete}</td>
+                            <td class="px-4 py-3 text-center whitespace-nowrap">${btnStatus}${btnEdit}${btnView}${btnQr}${btnDelete}</td>
                         </tr>
                     `;
                 });
