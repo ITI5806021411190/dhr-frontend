@@ -304,6 +304,10 @@
                     <label class="block text-sm font-medium text-gray-700 mb-1">รหัส PIN (6 หลัก)</label>
                     <input type="password" id="inputPin" maxlength="6" class="w-full px-4 py-2 border rounded-lg focus:ring-blue-500" required>
                 </div>
+                <label class="flex items-start gap-2 text-sm text-gray-700 cursor-pointer bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+                    <input type="checkbox" id="rememberLogin" class="mt-0.5 w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
+                    <span class="font-medium leading-5">จำข้อมูลเพื่อเข้าสู่ระบบครั้งถัดไปอัตโนมัติ</span>
+                </label>
                 <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg transition shadow-md">เข้าสู่ระบบ</button>
             </form>
             <div class="mt-6 text-center border-t pt-4">
@@ -840,6 +844,13 @@
                     </label>
                     <p class="text-xs text-gray-500 mt-2 ml-7">หากเปิดใช้งาน ระบบจะส่งข้อความแจ้งเตือนต่างๆ (เช่น ผลการอนุมัติ หรือสถานะประเมิน) ไปยัง Email ที่ท่านได้ลงทะเบียนไว้</p>
                 </div>
+                <div class="bg-green-50 p-4 rounded-lg border border-green-100">
+                    <label class="flex items-center cursor-pointer">
+                        <input type="checkbox" id="userAutoLogin" class="w-5 h-5 text-green-600 rounded focus:ring-green-500">
+                        <span class="ml-2 text-gray-800 font-bold">เข้าสู่ระบบอัตโนมัติ</span>
+                    </label>
+                    <p class="text-xs text-gray-500 mt-2 ml-7">เปิดใช้เฉพาะอุปกรณ์ส่วนตัว เพื่อให้ระบบจำข้อมูลเข้าสู่ระบบไว้ในเครื่องนี้</p>
+                </div>
                 <div class="flex justify-end gap-2 mt-4">
                     <button type="button" onclick="document.getElementById('modalPersonalSettings').classList.add('hidden')" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded transition font-medium">ปิด</button>
                     <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded shadow-sm transition font-medium">บันทึกการตั้งค่า</button>
@@ -1157,10 +1168,15 @@
 
     <script>
         const API_URL = "https://script.google.com/macros/s/AKfycbxnURSmrkk7KcMX9-ZLaX8FxG7L2shTkxaaC5QatqSohIXPvG7pFX7Ote3UKnV_Xhrr/exec"; 
+        const STORAGE_KEYS = {
+            session: 'dhr_session',
+            savedLogin: 'dhr_saved_login',
+            autoLogin: 'dhr_auto_login'
+        };
 
         const api = {
             run: function(action, payload = {}) {
-                const token = localStorage.getItem('dhr_session');
+                const token = localStorage.getItem(STORAGE_KEYS.session);
                 return fetch(API_URL, {
                     method: 'POST',
                     body: JSON.stringify({ 
@@ -1203,6 +1219,7 @@
         let cachedLogs = []; 
         let cachedMyRole = ''; 
         let cachedHistory = []; 
+        let lastLoginCredentials = null;
         
         const ACTION_TH = { 
             'LOGIN_SUCCESS': 'เข้าสู่ระบบสำเร็จ', 
@@ -1283,6 +1300,55 @@
             return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear() + 543}`;
         }
 
+        function getTodayInputValue() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function getCurrentTimeSlotLabel() {
+            const timeStr = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+            return `เวลาปัจจุบัน (${timeStr} น.)`;
+        }
+
+        function isCurrentTimeSlotValue(value) {
+            return String(value || '').includes('เวลาปัจจุบัน');
+        }
+
+        function setDefaultTimeSlot() {
+            const elTS = document.getElementById('inputTimeSlot');
+            if (!elTS) {
+                return;
+            }
+
+            const options = Array.from(elTS.options);
+            const currentOption = options.find(opt => isCurrentTimeSlotValue(opt.value));
+            if (currentOption) {
+                elTS.value = currentOption.value;
+                return;
+            }
+
+            const firstOption = options.find(opt => opt.value);
+            if (firstOption) {
+                elTS.value = firstOption.value;
+                return;
+            }
+
+            elTS.innerHTML = `<option value="เวลาปัจจุบัน">เวลาปัจจุบัน</option>`;
+            elTS.value = 'เวลาปัจจุบัน';
+        }
+
+        function resolveSelectedTimeSlot() {
+            const elTS = document.getElementById('inputTimeSlot');
+            const selectedValue = elTS ? elTS.value : '';
+            if (!selectedValue || isCurrentTimeSlotValue(selectedValue)) {
+                return getCurrentTimeSlotLabel();
+            }
+            return selectedValue;
+        }
+
         function switchView(viewId) {
             views.forEach(v => { 
                 let el = document.getElementById(v); 
@@ -1341,7 +1407,7 @@
         }
 
         function goToHome() {
-            const token = localStorage.getItem('dhr_session');
+            const token = localStorage.getItem(STORAGE_KEYS.session);
             if (token && appUser) { 
                 if (appUser.role === 'driver' || appUser.role === 'staff') {
                     switchView('viewDriver'); 
@@ -1371,55 +1437,200 @@
             }
         }
 
+        function showLoginButton() {
+            let btnL = document.getElementById('btnNavLogin');
+            if (btnL) {
+                btnL.classList.remove('hidden');
+            }
+        }
+
+        function getSavedLogin() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEYS.savedLogin);
+                if (!raw) {
+                    return null;
+                }
+                const saved = JSON.parse(raw);
+                if (saved && saved.phone && saved.pin) {
+                    return saved;
+                }
+            } catch (err) {
+                localStorage.removeItem(STORAGE_KEYS.savedLogin);
+            }
+            return null;
+        }
+
+        function isAutoLoginEnabled() {
+            return localStorage.getItem(STORAGE_KEYS.autoLogin) === 'true' && !!getSavedLogin();
+        }
+
+        function clearSavedLogin() {
+            localStorage.removeItem(STORAGE_KEYS.savedLogin);
+            localStorage.removeItem(STORAGE_KEYS.autoLogin);
+            syncRememberLoginFields();
+        }
+
+        function saveLoginPreference(phone, pin, enabled) {
+            if (enabled) {
+                localStorage.setItem(STORAGE_KEYS.savedLogin, JSON.stringify({ phone: phone, pin: pin }));
+                localStorage.setItem(STORAGE_KEYS.autoLogin, 'true');
+            } else {
+                localStorage.removeItem(STORAGE_KEYS.savedLogin);
+                localStorage.removeItem(STORAGE_KEYS.autoLogin);
+            }
+            syncRememberLoginFields();
+        }
+
+        function syncRememberLoginFields() {
+            const saved = getSavedLogin();
+            const enabled = isAutoLoginEnabled();
+            const rememberEl = document.getElementById('rememberLogin');
+            const autoEl = document.getElementById('userAutoLogin');
+            const phoneEl = document.getElementById('inputPhone');
+            const pinEl = document.getElementById('inputPin');
+
+            if (rememberEl) {
+                rememberEl.checked = enabled;
+            }
+            if (autoEl) {
+                autoEl.checked = enabled;
+            }
+            if (saved && enabled) {
+                if (phoneEl) {
+                    phoneEl.value = saved.phone;
+                }
+                if (pinEl) {
+                    pinEl.value = saved.pin;
+                }
+            }
+        }
+
+        function applyInitialLoginData(res, auditPhone) {
+            globalSettings = res.settings || globalSettings;
+            updateEditReqBadge(res.pendingReqs); 
+            updateUsersBadge(res.pendingUsers); 
+            
+            if (res.auditLogCount !== undefined) {
+                localStorage.setItem('backendAuditCount', res.auditLogCount);
+                let localCount = parseInt(localStorage.getItem('localAuditCount_' + auditPhone) || '0');
+                let diff = res.auditLogCount - localCount;
+                if (diff > 0) {
+                    updateAuditBadge(diff);
+                } else {
+                    updateAuditBadge(0);
+                }
+            }
+            
+            renderDynamicHealthForm(); 
+            handleLoginSuccess(res.currentUser);
+        }
+
+        function showLoggedOutDashboard() {
+            localStorage.removeItem(STORAGE_KEYS.session);
+            appUser = null;
+            loadAdminDashboard();
+            showLoginButton();
+        }
+
+        function loginWithCredentials(phone, pin, options = {}) {
+            const remember = !!options.remember;
+            const auto = !!options.auto;
+            showLoader(auto ? "กำลังเข้าสู่ระบบอัตโนมัติ..." : "กำลังตรวจสอบข้อมูลและเข้าสู่ระบบ...");
+
+            return api.run('login', { phone: phone, pin: pin }).then(res => {
+                if (!res.ok) {
+                    hideLoader();
+                    if (auto) {
+                        clearSavedLogin();
+                        showLoggedOutDashboard();
+                    } else {
+                        Swal.fire('ข้อมูลไม่ถูกต้อง', res.error, 'error');
+                    }
+                    return false;
+                }
+
+                lastLoginCredentials = { phone: phone, pin: pin };
+                localStorage.setItem(STORAGE_KEYS.session, res.sessionToken); 
+                saveLoginPreference(phone, pin, remember || auto);
+                showLoader("กำลังดึงข้อมูลส่วนบุคคล...");
+                
+                return api.run('getInitialData').then(initRes => { 
+                    hideLoader();
+                    if (initRes.ok) { 
+                        let auditPhone = phone;
+                        if (initRes.currentUser && initRes.currentUser.phone) {
+                            auditPhone = initRes.currentUser.phone;
+                        } else if (res.user && res.user.phone) {
+                            auditPhone = res.user.phone;
+                        }
+                        applyInitialLoginData(initRes, auditPhone);
+                        return true;
+                    }
+
+                    localStorage.removeItem(STORAGE_KEYS.session);
+                    if (auto) {
+                        clearSavedLogin();
+                        showLoggedOutDashboard();
+                    } else {
+                        Swal.fire('ข้อผิดพลาด', initRes.error || 'ดึงข้อมูลไม่สำเร็จ', 'error'); 
+                    }
+                    return false;
+                });
+            }).catch(err => { 
+                hideLoader(); 
+                if (auto) {
+                    showLoggedOutDashboard();
+                } else {
+                    Swal.fire('ข้อผิดพลาด', err.message || 'เข้าสู่ระบบไม่สำเร็จ', 'error'); 
+                }
+                return false;
+            });
+        }
+
+        function attemptSavedAutoLogin() {
+            if (!isAutoLoginEnabled()) {
+                return false;
+            }
+            const saved = getSavedLogin();
+            if (!saved) {
+                return false;
+            }
+            localStorage.removeItem(STORAGE_KEYS.session);
+            loginWithCredentials(saved.phone, saved.pin, { remember: true, auto: true });
+            return true;
+        }
+
         window.onload = function() {
             if (API_URL.includes("ใส่_URL")) {
                 return Swal.fire('ตั้งค่าไม่สมบูรณ์', 'กรุณานำลิงก์ /exec มาใส่ในตัวแปร API_URL ที่บรรทัดแรกของ Javascript ด้วยครับ', 'error');
             }
             
             switchView('viewAdmin');
-            const token = localStorage.getItem('dhr_session');
+            syncRememberLoginFields();
+            const token = localStorage.getItem(STORAGE_KEYS.session);
             
             if (token) {
                 api.run('getInitialData').then(res => {
                     if (res.ok && res.currentUser.role !== 'guest') {
-                        globalSettings = res.settings; 
-                        updateEditReqBadge(res.pendingReqs); 
-                        updateUsersBadge(res.pendingUsers); 
-                        
-                        if (res.auditLogCount !== undefined) {
-                            localStorage.setItem('backendAuditCount', res.auditLogCount);
-                            let localCount = parseInt(localStorage.getItem('localAuditCount_' + res.currentUser.phone) || '0');
-                            
-                            let diff = res.auditLogCount - localCount;
-                            if (diff > 0) {
-                                updateAuditBadge(diff);
-                            } else {
-                                updateAuditBadge(0);
-                            }
-                        }
-                        
-                        renderDynamicHealthForm(); 
-                        handleLoginSuccess(res.currentUser);
+                        applyInitialLoginData(res, res.currentUser.phone);
                     } else { 
-                        localStorage.removeItem('dhr_session'); 
-                        loadAdminDashboard(); 
-                        let btnL = document.getElementById('btnNavLogin'); 
-                        if (btnL) {
-                            btnL.classList.remove('hidden'); 
+                        localStorage.removeItem(STORAGE_KEYS.session); 
+                        if (!attemptSavedAutoLogin()) {
+                            loadAdminDashboard(); 
+                            showLoginButton();
                         }
                     }
                 }).catch(err => { 
-                    loadAdminDashboard(); 
-                    let btnL = document.getElementById('btnNavLogin'); 
-                    if (btnL) {
-                        btnL.classList.remove('hidden'); 
+                    localStorage.removeItem(STORAGE_KEYS.session);
+                    if (!attemptSavedAutoLogin()) {
+                        loadAdminDashboard(); 
+                        showLoginButton();
                     }
                 });
             } else { 
-                loadAdminDashboard(); 
-                let btnL = document.getElementById('btnNavLogin'); 
-                if (btnL) {
-                    btnL.classList.remove('hidden'); 
+                if (!attemptSavedAutoLogin()) {
+                    loadAdminDashboard(); 
+                    showLoginButton();
                 }
             }
         };
@@ -1466,13 +1677,17 @@
         function renderDynamicHealthForm() {
             let elTS = document.getElementById('inputTimeSlot'); 
             if (elTS) {
-                let optionsHtml = '<option value="">เลือกช่วงเวลา...</option>';
-                if (globalSettings.timeSlots) {
+                let optionsHtml = '';
+                if (globalSettings.timeSlots && globalSettings.timeSlots.length > 0) {
                     globalSettings.timeSlots.forEach(t => {
-                        optionsHtml += `<option value="${t}">${t}</option>`;
+                        const slot = String(t || '').trim();
+                        if (slot) {
+                            optionsHtml += `<option value="${slot}">${slot}</option>`;
+                        }
                     });
                 }
                 elTS.innerHTML = optionsHtml;
+                setDefaultTimeSlot();
             }
 
             let elCR = document.getElementById('divCriticalRisks'); 
@@ -1593,6 +1808,7 @@
                     elToggle.checked = false;
                 }
             }
+            syncRememberLoginFields();
             
             let modal = document.getElementById('modalPersonalSettings');
             if (modal) {
@@ -1605,6 +1821,17 @@
             fPersonal.onsubmit = function(e) {
                 e.preventDefault();
                 const isEnabled = document.getElementById('userEmailNotif').checked;
+                const autoLoginEl = document.getElementById('userAutoLogin');
+                const autoLoginEnabled = autoLoginEl ? autoLoginEl.checked : false;
+                const savedLogin = getSavedLogin();
+                const credentialsToSave = savedLogin || lastLoginCredentials;
+                
+                if (autoLoginEnabled && !credentialsToSave) {
+                    if (autoLoginEl) {
+                        autoLoginEl.checked = false;
+                    }
+                    return Swal.fire('ยังไม่มีข้อมูลเข้าสู่ระบบที่บันทึกไว้', 'กรุณาเข้าสู่ระบบอีกครั้งโดยเลือก "จำข้อมูล" ก่อนเปิดใช้งานเข้าสู่ระบบอัตโนมัติ', 'warning');
+                }
                 
                 showLoader("กำลังบันทึกการตั้งค่า...");
                 api.run('updateEmailNotif', { isEnabled: isEnabled }).then(res => {
@@ -1612,6 +1839,11 @@
                     if (res.ok) {
                         if (appUser) {
                             appUser.emailNotif = isEnabled;
+                        }
+                        if (autoLoginEnabled && credentialsToSave) {
+                            saveLoginPreference(credentialsToSave.phone, credentialsToSave.pin, true);
+                        } else {
+                            clearSavedLogin();
                         }
                         Swal.fire('สำเร็จ', 'บันทึกการตั้งค่าส่วนตัวเรียบร้อยแล้ว', 'success');
                         
@@ -1636,6 +1868,7 @@
                 if (fLogin) {
                     fLogin.reset(); 
                 }
+                syncRememberLoginFields();
                 switchView('viewLogin'); 
             }; 
         }
@@ -1643,13 +1876,14 @@
         let btnLogoutEl = document.getElementById('btnLogout');
         if (btnLogoutEl) {
             btnLogoutEl.onclick = function() {
-                localStorage.removeItem('dhr_session'); 
+                localStorage.removeItem(STORAGE_KEYS.session); 
                 appUser = null; 
                 
                 let fLogin = document.getElementById('loginForm'); 
                 if (fLogin) {
                     fLogin.reset();
                 }
+                syncRememberLoginFields();
                 
                 let fHealth = document.getElementById('healthForm'); 
                 if (fHealth) {
@@ -1695,6 +1929,8 @@
                 e.preventDefault(); 
                 let phone = document.getElementById('inputPhone').value; 
                 let pin = document.getElementById('inputPin').value;
+                let rememberEl = document.getElementById('rememberLogin');
+                let remember = rememberEl ? rememberEl.checked : false;
                 
                 if (!phone || phone.length !== 10) {
                     return Swal.fire('แจ้งเตือน', 'กรุณากรอกเบอร์โทรศัพท์ 10 หลัก', 'warning');
@@ -1703,45 +1939,7 @@
                     return Swal.fire('แจ้งเตือน', 'กรุณากรอกรหัส PIN 6 หลัก', 'warning');
                 }
 
-                showLoader("กำลังตรวจสอบข้อมูลและเข้าสู่ระบบ...");
-                
-                api.run('login', { phone: phone, pin: pin }).then(res => {
-                    if (res.ok) { 
-                        localStorage.setItem('dhr_session', res.sessionToken); 
-                        showLoader("กำลังดึงข้อมูลส่วนบุคคล...");
-                        
-                        api.run('getInitialData').then(initRes => { 
-                            hideLoader();
-                            if (initRes.ok) { 
-                                globalSettings = initRes.settings; 
-                                renderDynamicHealthForm(); 
-                                updateEditReqBadge(initRes.pendingReqs); 
-                                updateUsersBadge(initRes.pendingUsers); 
-                                
-                                if (initRes.auditLogCount !== undefined) {
-                                    localStorage.setItem('backendAuditCount', initRes.auditLogCount);
-                                    let localCount = parseInt(localStorage.getItem('localAuditCount_' + res.user.phone) || '0');
-                                    let diff = initRes.auditLogCount - localCount;
-                                    
-                                    if (diff > 0) {
-                                        updateAuditBadge(diff);
-                                    } else {
-                                        updateAuditBadge(0);
-                                    }
-                                }
-                                handleLoginSuccess(initRes.currentUser);
-                            } 
-                        }).catch(err => { 
-                            hideLoader(); 
-                            Swal.fire('ข้อผิดพลาด', 'ดึงข้อมูลไม่สำเร็จ', 'error'); 
-                        });
-                    } else { 
-                        hideLoader(); 
-                        Swal.fire('ข้อมูลไม่ถูกต้อง', res.error, 'error'); 
-                    }
-                }).catch(err => { 
-                    hideLoader(); 
-                });
+                loginWithCredentials(phone, pin, { remember: remember });
                 return false;
             };
         }
@@ -1874,8 +2072,6 @@
                 }
             }
 
-            const token = localStorage.getItem('dhr_session');
-            
             if (user.role === 'driver' || user.role === 'staff') {
                 let dName = document.getElementById('driverName'); 
                 if (dName) {
@@ -2112,8 +2308,9 @@
 
                     let iDate = document.getElementById('inputDate'); 
                     if (iDate) {
-                        iDate.value = new Date().toISOString().split('T')[0]; 
+                        iDate.value = getTodayInputValue(); 
                     }
+                    setDefaultTimeSlot();
 
                     switchView('viewHealthForm');
                 } else { 
@@ -2140,8 +2337,9 @@
 
                 let iDate = document.getElementById('inputDate'); 
                 if (iDate) {
-                    iDate.value = new Date().toISOString().split('T')[0]; 
+                    iDate.value = getTodayInputValue(); 
                 }
+                setDefaultTimeSlot();
 
                 switchView('viewHealthForm'); 
             };
@@ -2170,11 +2368,7 @@
                     tOrg = selectedOption.getAttribute('data-org');
                 }
                 
-                let tSlot = document.getElementById('inputTimeSlot').value;
-                if (tSlot.includes('เวลาปัจจุบัน')) {
-                    const timeStr = new Date().toLocaleTimeString('th-TH', {hour: '2-digit', minute: '2-digit'}); 
-                    tSlot = `เวลาปัจจุบัน (${timeStr} น.)`;
-                }
+                let tSlot = resolveSelectedTimeSlot();
                 
                 const cRisksList = [];
                 document.querySelectorAll('input[name="criticalRiskItem"]:checked').forEach(cb => {
@@ -2207,6 +2401,11 @@
                     hideLoader();
                     if (res.ok) { 
                         document.getElementById('healthForm').reset(); 
+                        let iDate = document.getElementById('inputDate');
+                        if (iDate) {
+                            iDate.value = getTodayInputValue();
+                        }
+                        setDefaultTimeSlot();
                         
                         let previewEv = document.getElementById('previewEvidence');
                         if (previewEv) {
