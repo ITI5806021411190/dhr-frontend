@@ -96,6 +96,7 @@
                 <button id="btnNavManual" onclick="openManual()" class="hidden text-sm bg-indigo-500 hover:bg-indigo-600 px-3 py-1 rounded transition shadow flex items-center gap-1 ml-2 flex-shrink-0">คู่มือ</button>
                 <button id="btnNavProfile" onclick="openPersonalSettings()" class="hidden text-sm bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded transition shadow flex items-center gap-1 ml-1 flex-shrink-0 border border-indigo-400">ตั้งค่าส่วนตัว</button>
                 <button id="btnLogout" class="hidden text-sm bg-blue-700 hover:bg-blue-800 px-3 py-1 rounded transition shadow flex-shrink-0">ออกจากระบบ</button>
+                <button id="btnNavPassenger" class="text-sm bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-3 py-1.5 rounded-full transition shadow-sm whitespace-nowrap flex-shrink-0">ตรวจสอบคนขับ</button>
                 <button id="btnNavLogin" class="text-sm bg-white text-blue-600 hover:bg-blue-50 font-semibold px-4 py-1.5 rounded-full transition shadow-sm whitespace-nowrap flex-shrink-0 ml-auto md:ml-0">เข้าสู่ระบบ</button>
             </div>
         </div>
@@ -312,6 +313,67 @@
             </form>
             <div class="mt-6 text-center border-t pt-4">
                 <p class="text-sm text-gray-500">ผู้ขับขี่ใหม่? <button type="button" onclick="switchView('viewRegister')" class="text-blue-600 font-medium hover:underline">ลงทะเบียนที่นี่</button></p>
+            </div>
+        </div>
+
+        <div id="viewPassengerAccess" class="hidden w-full max-w-lg bg-white rounded-xl shadow-lg p-6 mt-4 flex-grow">
+            <div class="flex justify-between items-start border-b pb-3 mb-4">
+                <div>
+                    <h3 class="text-xl font-bold text-gray-800">ตรวจสอบความพร้อมผู้ขับขี่</h3>
+                    <p class="text-xs text-gray-500 mt-1">สำหรับผู้โดยสาร โดยต้องได้รับ OTP จากเบอร์มือถือของผู้ขับขี่ก่อนดูข้อมูล</p>
+                </div>
+                <button type="button" onclick="goToHome()" class="text-gray-400 hover:text-gray-600">ปิด</button>
+            </div>
+
+            <div id="passengerStepRequest" class="space-y-4">
+                <div class="bg-emerald-50 border border-emerald-100 rounded-lg p-4 text-sm text-emerald-900">
+                    ระบบจะแสดงเฉพาะประวัติผลประเมินแบบสรุป และสิทธิ์เข้าดูจะหมดอายุอัตโนมัติ
+                </div>
+                <form id="passengerOtpRequestForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">เบอร์โทรศัพท์ผู้ขับขี่ (10 หลัก)</label>
+                        <input type="tel" id="passengerDriverPhone" maxlength="10" class="w-full px-4 py-2 border rounded-lg focus:ring-emerald-500" required>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อผู้ขอดู (ถ้ามี)</label>
+                            <input type="text" id="passengerRequesterName" class="w-full px-4 py-2 border rounded-lg focus:ring-emerald-500" placeholder="เช่น ผู้โดยสาร / เจ้าหน้าที่">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">เบอร์ติดต่อผู้ขอดู (ถ้ามี)</label>
+                            <input type="tel" id="passengerRequesterPhone" maxlength="10" class="w-full px-4 py-2 border rounded-lg focus:ring-emerald-500">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">วัตถุประสงค์</label>
+                        <input type="text" id="passengerPurpose" class="w-full px-4 py-2 border rounded-lg focus:ring-emerald-500" value="ตรวจสอบความพร้อมก่อนเดินทาง">
+                    </div>
+                    <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-lg transition shadow">ส่ง OTP ไปยังเบอร์ผู้ขับขี่</button>
+                </form>
+            </div>
+
+            <div id="passengerStepVerify" class="hidden space-y-4">
+                <div class="bg-blue-50 border border-blue-100 rounded-lg p-4 text-sm text-blue-900" id="passengerOtpSummary"></div>
+                <form id="passengerOtpVerifyForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">รหัส OTP ที่ได้รับจากผู้ขับขี่</label>
+                        <input type="tel" id="passengerOtpCode" maxlength="6" class="w-full px-4 py-2 border rounded-lg text-center text-xl tracking-widest font-bold focus:ring-blue-500" required>
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition shadow">ยืนยันและดูประวัติ</button>
+                    <button type="button" onclick="resetPassengerAccess()" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 rounded-lg transition border">เริ่มใหม่</button>
+                </form>
+            </div>
+
+            <div id="passengerStepResult" class="hidden space-y-4">
+                <div id="passengerDriverSummary" class="bg-gray-50 border rounded-lg p-4"></div>
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <h4 class="font-bold text-gray-800">ประวัติผลประเมินล่าสุด</h4>
+                        <span id="passengerAccessExpiry" class="text-xs text-gray-500"></span>
+                    </div>
+                    <div id="passengerHistoryList" class="space-y-3"></div>
+                </div>
+                <button type="button" onclick="resetPassengerAccess()" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 rounded-lg transition border">ปิด/เริ่มคำขอใหม่</button>
             </div>
         </div>
 
@@ -721,6 +783,31 @@
                         <div><label class="block text-sm font-medium mb-1">ผู้บริหาร สสจ.</label><input type="url" id="set_url_exec_ppho" class="w-full border rounded px-3 py-2 text-sm" placeholder="https://..."></div>
                         <div><label class="block text-sm font-medium mb-1">Admin/Audit จังหวัด</label><input type="url" id="set_url_provincial_admin" class="w-full border rounded px-3 py-2 text-sm" placeholder="https://..."></div>
                         <div class="md:col-span-2"><label class="block text-sm font-medium mb-1">Super Admin</label><input type="url" id="set_url_super_admin" class="w-full border rounded px-3 py-2 text-sm" placeholder="https://..."></div>
+                    </div>
+                </div>
+
+                <div class="bg-emerald-50 p-5 rounded-lg border border-emerald-200 shadow-sm mt-6">
+                    <h4 class="font-bold text-emerald-800 mb-4 border-b border-emerald-300 pb-2">ตั้งค่า ThaiBulkSMS OTP สำหรับผู้โดยสาร</h4>
+                    <div class="mb-4">
+                        <label class="flex items-center cursor-pointer">
+                            <input type="checkbox" id="smsotp_enabled" class="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500">
+                            <span class="ml-2 text-gray-800 font-bold">เปิดใช้งาน SMS OTP สำหรับการดูประวัติผู้ขับขี่</span>
+                        </label>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 mb-1">ThaiBulkSMS API Key</label>
+                            <input type="password" id="smsotp_key" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-emerald-500" placeholder="ใส่ API Key เมื่อบันทึกครั้งแรกหรือเมื่อต้องการเปลี่ยน">
+                            <p class="text-[10px] text-gray-500 mt-1" id="smsotp_key_status"></p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 mb-1">ThaiBulkSMS API Secret</label>
+                            <input type="password" id="smsotp_secret" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-emerald-500" placeholder="ใส่ API Secret เมื่อบันทึกครั้งแรกหรือเมื่อต้องการเปลี่ยน">
+                            <p class="text-[10px] text-gray-500 mt-1" id="smsotp_secret_status"></p>
+                        </div>
+                        <div class="md:col-span-2 bg-white border border-emerald-100 rounded-lg p-3 text-xs text-gray-600">
+                            ระบบจะบันทึก Key/Secret ไว้ใน Script Properties ของ Apps Script และไม่แสดงค่ากลับมาบนหน้าจอหลังบันทึก
+                        </div>
                     </div>
                 </div>
 
@@ -1209,7 +1296,8 @@
             criticalRisks: [], 
             manualUrls: {}, 
             scoringCriteria: null, 
-            telegramConfig: null 
+            telegramConfig: null,
+            thaiBulkSmsConfig: null 
         };
         let dashChartInstance = null; 
         let barChartInstance = null;
@@ -1220,6 +1308,8 @@
         let cachedMyRole = ''; 
         let cachedHistory = []; 
         let lastLoginCredentials = null;
+        let passengerRequestId = null;
+        let passengerAccessToken = null;
         
         const ACTION_TH = { 
             'LOGIN_SUCCESS': 'เข้าสู่ระบบสำเร็จ', 
@@ -1236,6 +1326,9 @@
             'REJECT_EDIT_REQUEST': 'ไม่อนุมัติคำขอแก้ไข', 
             'CANCEL_EDIT_REQUEST': 'ยกเลิกคำขอแก้ไข', 
             'VIEW_PERSONAL_DATA': 'เปิดดูข้อมูลส่วนบุคคล', 
+            'PASSENGER_OTP_REQUEST': 'ผู้โดยสารขอ OTP',
+            'PASSENGER_ACCESS_GRANTED': 'ผู้โดยสารยืนยัน OTP สำเร็จ',
+            'PASSENGER_HISTORY_VIEW': 'ผู้โดยสารเปิดดูประวัติ',
             'DELETE_USER': 'ลบผู้ใช้งาน',
             'EXPORT_REPORT': 'ส่งออกรายงาน',
             'REPAIR_DATABASE': 'ซ่อมแซมฐานข้อมูล'
@@ -1264,7 +1357,7 @@
         const views = [
             'viewAdmin', 'viewLogin', 'viewRegister', 'viewDriver', 
             'viewHealthForm', 'viewEditDriverReq', 'viewAdminEditReq', 
-            'viewUserManagement', 'viewSettings', 'viewAuditLog'
+            'viewUserManagement', 'viewSettings', 'viewAuditLog', 'viewPassengerAccess'
         ];
         
         let dateEl = document.getElementById('adminDateNow');
@@ -1607,6 +1700,13 @@
             
             switchView('viewAdmin');
             syncRememberLoginFields();
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has('driverPhone') || urlParams.has('driver') || urlParams.has('phone') || urlParams.get('view') === 'passenger') {
+                openPassengerAccess();
+                showLoginButton();
+                return;
+            }
+            
             const token = localStorage.getItem(STORAGE_KEYS.session);
             
             if (token) {
@@ -1672,6 +1772,88 @@
             } else {
                 badge.classList.add('hidden'); 
             }
+        }
+
+        function resetPassengerAccess() {
+            passengerRequestId = null;
+            passengerAccessToken = null;
+            
+            let requestStep = document.getElementById('passengerStepRequest');
+            let verifyStep = document.getElementById('passengerStepVerify');
+            let resultStep = document.getElementById('passengerStepResult');
+            let otpCode = document.getElementById('passengerOtpCode');
+            
+            if (requestStep) requestStep.classList.remove('hidden');
+            if (verifyStep) verifyStep.classList.add('hidden');
+            if (resultStep) resultStep.classList.add('hidden');
+            if (otpCode) otpCode.value = '';
+        }
+
+        function openPassengerAccess() {
+            resetPassengerAccess();
+            prefillPassengerDriverFromUrl();
+            switchView('viewPassengerAccess');
+        }
+
+        function prefillPassengerDriverFromUrl() {
+            const params = new URLSearchParams(window.location.search);
+            const phone = params.get('driverPhone') || params.get('driver') || params.get('phone');
+            const input = document.getElementById('passengerDriverPhone');
+            if (phone && input) {
+                input.value = String(phone).replace(/\D/g, '').slice(0, 10);
+            }
+        }
+
+        function bandLabel(band) {
+            if (band === 'RED') return 'งดขับ';
+            if (band === 'AMBER') return 'เฝ้าระวัง';
+            return 'พร้อม';
+        }
+
+        function bandBadgeClass(band) {
+            if (band === 'RED') return 'bg-red-100 text-red-700 border-red-200';
+            if (band === 'AMBER') return 'bg-amber-100 text-amber-700 border-amber-200';
+            return 'bg-green-100 text-green-700 border-green-200';
+        }
+
+        function renderPassengerHistory(driver, history, accessExpiresAt) {
+            const summary = document.getElementById('passengerDriverSummary');
+            const list = document.getElementById('passengerHistoryList');
+            const expiry = document.getElementById('passengerAccessExpiry');
+            
+            if (summary) {
+                summary.innerHTML = `
+                    <p class="text-sm text-gray-500">ผู้ขับขี่</p>
+                    <p class="text-lg font-bold text-gray-800">${driver.displayName || '-'}</p>
+                    <p class="text-sm text-gray-600">${driver.org || ''}</p>
+                    <p class="text-xs text-gray-500 mt-1">เบอร์: ${driver.maskedPhone || '-'}</p>
+                `;
+            }
+            if (expiry && accessExpiresAt) {
+                expiry.innerText = `หมดอายุ: ${new Date(accessExpiresAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.`;
+            }
+            if (!list) {
+                return;
+            }
+            if (!history || history.length === 0) {
+                list.innerHTML = '<p class="text-sm text-gray-400">ยังไม่มีประวัติการประเมิน</p>';
+                return;
+            }
+            
+            list.innerHTML = history.map(item => {
+                const reasons = item.reasons && item.reasons.length > 0
+                    ? `<p class="text-xs text-gray-500 mt-1">${item.reasons.join(', ')}</p>`
+                    : '<p class="text-xs text-gray-400 mt-1">ไม่พบเหตุผลความเสี่ยงเพิ่มเติม</p>';
+                return `
+                    <div class="p-3 border rounded-lg bg-gray-50 flex justify-between gap-3">
+                        <div>
+                            <p class="text-sm font-bold text-gray-800">${item.date || '-'} <span class="font-normal text-xs text-gray-500">${item.timeSlot || ''}</span></p>
+                            ${reasons}
+                        </div>
+                        <span class="px-2 py-1 text-xs font-bold rounded border h-fit ${bandBadgeClass(item.band)}">${bandLabel(item.band)}</span>
+                    </div>
+                `;
+            }).join('');
         }
 
         function renderDynamicHealthForm() {
@@ -1740,6 +1922,22 @@
                     }
                 }); 
             }
+
+            if (globalSettings.thaiBulkSmsConfig) {
+                const sms = globalSettings.thaiBulkSmsConfig;
+                let smsEnabled = document.getElementById('smsotp_enabled');
+                if (smsEnabled) {
+                    smsEnabled.checked = !!sms.enabled;
+                }
+                let keyStatus = document.getElementById('smsotp_key_status');
+                if (keyStatus) {
+                    keyStatus.innerText = sms.keySaved ? 'บันทึก API Key แล้ว' : 'ยังไม่ได้บันทึก API Key';
+                }
+                let secretStatus = document.getElementById('smsotp_secret_status');
+                if (secretStatus) {
+                    secretStatus.innerText = sms.secretSaved ? 'บันทึก API Secret แล้ว' : 'ยังไม่ได้บันทึก API Secret';
+                }
+            }
             
             if (globalSettings.telegramConfig) {
                 const tg = globalSettings.telegramConfig;
@@ -1793,6 +1991,104 @@
                     }
                 }
             }
+        }
+
+        function getInputValue(id) {
+            const el = document.getElementById(id);
+            return el ? el.value.trim() : '';
+        }
+
+        function getCheckboxValue(id) {
+            const el = document.getElementById(id);
+            return el ? el.checked : false;
+        }
+
+        function getNumberValue(id) {
+            const value = getInputValue(id);
+            if (value === '') {
+                return null;
+            }
+            return Number(value);
+        }
+
+        let fSystemSettings = document.getElementById('formSystemSettings');
+        if (fSystemSettings) {
+            fSystemSettings.onsubmit = function(e) {
+                e.preventDefault();
+                
+                const payload = {
+                    timeSlots: getInputValue('set_timeSlots').split(',').map(x => x.trim()).filter(Boolean),
+                    criticalRisks: getInputValue('set_criticalRisks').split(',').map(x => x.trim()).filter(Boolean),
+                    manualUrls: {
+                        driver: getInputValue('set_url_driver'),
+                        hospital_admin: getInputValue('set_url_hospital_admin'),
+                        hospital_director: getInputValue('set_url_hospital_director'),
+                        exec_ppho: getInputValue('set_url_exec_ppho'),
+                        provincial_admin: getInputValue('set_url_provincial_admin'),
+                        super_admin: getInputValue('set_url_super_admin')
+                    },
+                    scoringCriteria: {
+                        tempHigh: getNumberValue('sc_tempHigh'),
+                        tempLow: getNumberValue('sc_tempLow'),
+                        sysRed: getNumberValue('sc_sysRed'),
+                        diaRed: getNumberValue('sc_diaRed'),
+                        sysAmber: getNumberValue('sc_sysAmber'),
+                        diaAmber: getNumberValue('sc_diaAmber'),
+                        pulseMin: getNumberValue('sc_pulseMin'),
+                        pulseMax: getNumberValue('sc_pulseMax'),
+                        fatigueRed: getNumberValue('sc_fatigueRed'),
+                        fatigueAmber: getNumberValue('sc_fatigueAmber'),
+                        sleepMin: getNumberValue('sc_sleepMin')
+                    },
+                    telegramConfig: {
+                        enabled: getCheckboxValue('tg_enabled'),
+                        botToken: getInputValue('tg_botToken'),
+                        globalChatId: getInputValue('tg_globalChatId'),
+                        orgChatIds: {
+                            'สำนักงานสาธารณสุขจังหวัดนครนายก (สสจ.)': getInputValue('tg_org_1'),
+                            'โรงพยาบาลนครนายก': getInputValue('tg_org_2'),
+                            'โรงพยาบาลปากพลี': getInputValue('tg_org_3'),
+                            'โรงพยาบาลบ้านนา': getInputValue('tg_org_4'),
+                            'โรงพยาบาลองครักษ์': getInputValue('tg_org_5')
+                        }
+                    },
+                    thaiBulkSmsConfig: {
+                        enabled: getCheckboxValue('smsotp_enabled'),
+                        key: getInputValue('smsotp_key'),
+                        secret: getInputValue('smsotp_secret')
+                    }
+                };
+                
+                showLoader("กำลังบันทึกการตั้งค่าระบบ...");
+                api.run('saveSystemSettings', payload).then(res => {
+                    hideLoader();
+                    if (res.ok) {
+                        globalSettings.timeSlots = payload.timeSlots;
+                        globalSettings.criticalRisks = payload.criticalRisks;
+                        globalSettings.manualUrls = payload.manualUrls;
+                        globalSettings.scoringCriteria = payload.scoringCriteria;
+                        globalSettings.telegramConfig = payload.telegramConfig;
+                        if (!globalSettings.thaiBulkSmsConfig) {
+                            globalSettings.thaiBulkSmsConfig = {};
+                        }
+                        globalSettings.thaiBulkSmsConfig.enabled = payload.thaiBulkSmsConfig.enabled;
+                        globalSettings.thaiBulkSmsConfig.keySaved = globalSettings.thaiBulkSmsConfig.keySaved || !!payload.thaiBulkSmsConfig.key;
+                        globalSettings.thaiBulkSmsConfig.secretSaved = globalSettings.thaiBulkSmsConfig.secretSaved || !!payload.thaiBulkSmsConfig.secret;
+                        
+                        let keyInput = document.getElementById('smsotp_key');
+                        let secretInput = document.getElementById('smsotp_secret');
+                        if (keyInput) keyInput.value = '';
+                        if (secretInput) secretInput.value = '';
+                        renderDynamicHealthForm();
+                        Swal.fire('สำเร็จ', 'บันทึกการตั้งค่าระบบเรียบร้อยแล้ว', 'success');
+                    } else {
+                        Swal.fire('ข้อผิดพลาด', res.error, 'error');
+                    }
+                }).catch(err => {
+                    hideLoader();
+                    Swal.fire('ข้อผิดพลาด', err.message, 'error');
+                });
+            };
         }
 
         function openPersonalSettings() {
@@ -1871,6 +2167,93 @@
                 syncRememberLoginFields();
                 switchView('viewLogin'); 
             }; 
+        }
+
+        let btnNavPassengerEl = document.getElementById('btnNavPassenger');
+        if (btnNavPassengerEl) {
+            btnNavPassengerEl.onclick = function() {
+                openPassengerAccess();
+            };
+        }
+
+        let passengerOtpRequestForm = document.getElementById('passengerOtpRequestForm');
+        if (passengerOtpRequestForm) {
+            passengerOtpRequestForm.onsubmit = function(e) {
+                e.preventDefault();
+                
+                const driverPhone = getInputValue('passengerDriverPhone').replace(/\D/g, '');
+                if (!driverPhone || driverPhone.length !== 10) {
+                    return Swal.fire('แจ้งเตือน', 'กรุณากรอกเบอร์โทรศัพท์ผู้ขับขี่ 10 หลัก', 'warning');
+                }
+                
+                const payload = {
+                    driverPhone: driverPhone,
+                    requesterName: getInputValue('passengerRequesterName'),
+                    requesterPhone: getInputValue('passengerRequesterPhone').replace(/\D/g, ''),
+                    purpose: getInputValue('passengerPurpose') || 'ตรวจสอบความพร้อมก่อนเดินทาง',
+                    userAgent: navigator.userAgent
+                };
+                
+                showLoader("กำลังส่ง OTP ไปยังเบอร์ผู้ขับขี่...");
+                api.run('requestPassengerOtp', payload).then(res => {
+                    hideLoader();
+                    if (res.ok) {
+                        passengerRequestId = res.requestId;
+                        let requestStep = document.getElementById('passengerStepRequest');
+                        let verifyStep = document.getElementById('passengerStepVerify');
+                        let summary = document.getElementById('passengerOtpSummary');
+                        if (requestStep) requestStep.classList.add('hidden');
+                        if (verifyStep) verifyStep.classList.remove('hidden');
+                        if (summary) {
+                            summary.innerHTML = `ส่ง OTP ไปยังเบอร์ผู้ขับขี่ ${res.maskedDriverPhone} แล้ว กรุณาขอรหัสจากผู้ขับขี่เพื่อยืนยันความยินยอมภายใน ${res.expiresMinutes || 10} นาที`;
+                        }
+                    } else {
+                        Swal.fire('ไม่สามารถส่ง OTP ได้', res.error, 'error');
+                    }
+                }).catch(err => {
+                    hideLoader();
+                    Swal.fire('ข้อผิดพลาด', err.message, 'error');
+                });
+                return false;
+            };
+        }
+
+        let passengerOtpVerifyForm = document.getElementById('passengerOtpVerifyForm');
+        if (passengerOtpVerifyForm) {
+            passengerOtpVerifyForm.onsubmit = function(e) {
+                e.preventDefault();
+                
+                const otp = getInputValue('passengerOtpCode').replace(/\D/g, '');
+                if (!passengerRequestId) {
+                    return Swal.fire('แจ้งเตือน', 'กรุณาขอ OTP ก่อน', 'warning');
+                }
+                if (!otp || otp.length < 4) {
+                    return Swal.fire('แจ้งเตือน', 'กรุณากรอก OTP ให้ถูกต้อง', 'warning');
+                }
+                
+                showLoader("กำลังยืนยัน OTP...");
+                api.run('verifyPassengerOtp', {
+                    requestId: passengerRequestId,
+                    otp: otp,
+                    userAgent: navigator.userAgent
+                }).then(res => {
+                    hideLoader();
+                    if (res.ok) {
+                        passengerAccessToken = res.accessToken;
+                        let verifyStep = document.getElementById('passengerStepVerify');
+                        let resultStep = document.getElementById('passengerStepResult');
+                        if (verifyStep) verifyStep.classList.add('hidden');
+                        if (resultStep) resultStep.classList.remove('hidden');
+                        renderPassengerHistory(res.driver, res.history, res.accessExpiresAt);
+                    } else {
+                        Swal.fire('OTP ไม่ถูกต้อง', res.error, 'error');
+                    }
+                }).catch(err => {
+                    hideLoader();
+                    Swal.fire('ข้อผิดพลาด', err.message, 'error');
+                });
+                return false;
+            };
         }
         
         let btnLogoutEl = document.getElementById('btnLogout');
