@@ -787,14 +787,21 @@
                 </div>
 
                 <div class="bg-emerald-50 p-5 rounded-lg border border-emerald-200 shadow-sm mt-6">
-                    <h4 class="font-bold text-emerald-800 mb-4 border-b border-emerald-300 pb-2">ตั้งค่า ThaiBulkSMS OTP สำหรับผู้โดยสาร</h4>
+                    <h4 class="font-bold text-emerald-800 mb-4 border-b border-emerald-300 pb-2">ตั้งค่า SMS OTP สำหรับผู้โดยสาร</h4>
                     <div class="mb-4">
                         <label class="flex items-center cursor-pointer">
                             <input type="checkbox" id="smsotp_enabled" class="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500">
                             <span class="ml-2 text-gray-800 font-bold">เปิดใช้งาน SMS OTP สำหรับการดูประวัติผู้ขับขี่</span>
                         </label>
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="mb-4">
+                        <label class="block text-sm font-bold text-gray-700 mb-1">SMS OTP Provider</label>
+                        <select id="smsotp_provider" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-emerald-500">
+                            <option value="ThaiBulkSMS">ThaiBulkSMS</option>
+                            <option value="AWS_SNS">AWS SNS</option>
+                        </select>
+                    </div>
+                    <div id="thaiBulkSmsFields" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-bold text-gray-700 mb-1">ThaiBulkSMS API Key</label>
                             <input type="password" id="smsotp_key" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-emerald-500" placeholder="ใส่ API Key เมื่อบันทึกครั้งแรกหรือเมื่อต้องการเปลี่ยน">
@@ -808,6 +815,38 @@
                         <div class="md:col-span-2 bg-white border border-emerald-100 rounded-lg p-3 text-xs text-gray-600">
                             ระบบจะบันทึก Key/Secret ไว้ใน Script Properties ของ Apps Script และไม่แสดงค่ากลับมาบนหน้าจอหลังบันทึก<br>
                             <b>สำคัญ:</b> ใน ThaiBulkSMS OTP Console ต้องตั้ง Message Template ให้มีตัวแปร <code>{xxxx}</code> อยู่ในข้อความ มิฉะนั้น SMS จะไม่แสดงรหัส OTP
+                        </div>
+                    </div>
+                    <div id="awsSnsFields" class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 hidden">
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 mb-1">AWS Access Key ID</label>
+                            <input type="password" id="awssns_accessKeyId" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-emerald-500" placeholder="ใส่ Access Key เมื่อบันทึกครั้งแรกหรือเมื่อต้องการเปลี่ยน">
+                            <p class="text-[10px] text-gray-500 mt-1" id="awssns_accessKey_status"></p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 mb-1">AWS Secret Access Key</label>
+                            <input type="password" id="awssns_secretAccessKey" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-emerald-500" placeholder="ใส่ Secret Key เมื่อบันทึกครั้งแรกหรือเมื่อต้องการเปลี่ยน">
+                            <p class="text-[10px] text-gray-500 mt-1" id="awssns_secretKey_status"></p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 mb-1">AWS Region</label>
+                            <input type="text" id="awssns_region" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-emerald-500" value="ap-southeast-1" placeholder="เช่น ap-southeast-1">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 mb-1">Sender ID</label>
+                            <input type="text" id="awssns_senderId" maxlength="11" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-emerald-500" value="DHR" placeholder="เช่น DHR">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 mb-1">Max Price ต่อ SMS (USD)</label>
+                            <input type="number" step="0.0001" min="0" id="awssns_maxPrice" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-emerald-500" placeholder="ไม่ใส่ = ให้ AWS คิดตามจริง">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-bold text-gray-700 mb-1">ข้อความ OTP</label>
+                            <input type="text" id="awssns_template" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-emerald-500" value="DHR OTP: {otp}. Valid 10 min.">
+                            <p class="text-[10px] text-gray-500 mt-1">ต้องมี <code>{otp}</code> เพื่อให้ระบบแทนรหัส OTP อัตโนมัติ</p>
+                        </div>
+                        <div class="md:col-span-2 bg-white border border-emerald-100 rounded-lg p-3 text-xs text-gray-600">
+                            AWS SNS จะใช้เบอร์รูปแบบสากล เช่น <code>+669xxxxxxxx</code> และบัญชีใหม่อาจต้อง verify เบอร์ใน SMS sandbox ก่อนทดสอบ
                         </div>
                     </div>
                 </div>
@@ -1298,6 +1337,8 @@
             manualUrls: {}, 
             scoringCriteria: null, 
             telegramConfig: null,
+            smsOtpProvider: 'ThaiBulkSMS',
+            awsSnsConfig: null,
             thaiBulkSmsConfig: null 
         };
         let dashChartInstance = null; 
@@ -1939,6 +1980,44 @@
                     secretStatus.innerText = sms.secretSaved ? 'บันทึก API Secret แล้ว' : 'ยังไม่ได้บันทึก API Secret';
                 }
             }
+
+            const smsProvider = globalSettings.smsOtpProvider || 'ThaiBulkSMS';
+            let providerEl = document.getElementById('smsotp_provider');
+            if (providerEl) {
+                providerEl.value = smsProvider;
+            }
+            if (globalSettings.awsSnsConfig) {
+                const aws = globalSettings.awsSnsConfig;
+                let smsEnabled = document.getElementById('smsotp_enabled');
+                if (smsEnabled && smsProvider === 'AWS_SNS') {
+                    smsEnabled.checked = !!aws.enabled;
+                }
+                let awsAccessStatus = document.getElementById('awssns_accessKey_status');
+                if (awsAccessStatus) {
+                    awsAccessStatus.innerText = aws.accessKeySaved ? 'บันทึก Access Key แล้ว' : 'ยังไม่ได้บันทึก Access Key';
+                }
+                let awsSecretStatus = document.getElementById('awssns_secretKey_status');
+                if (awsSecretStatus) {
+                    awsSecretStatus.innerText = aws.secretKeySaved ? 'บันทึก Secret Key แล้ว' : 'ยังไม่ได้บันทึก Secret Key';
+                }
+                let awsRegion = document.getElementById('awssns_region');
+                if (awsRegion) {
+                    awsRegion.value = aws.region || 'ap-southeast-1';
+                }
+                let awsSenderId = document.getElementById('awssns_senderId');
+                if (awsSenderId) {
+                    awsSenderId.value = aws.senderId || 'DHR';
+                }
+                let awsMaxPrice = document.getElementById('awssns_maxPrice');
+                if (awsMaxPrice) {
+                    awsMaxPrice.value = aws.maxPrice || '';
+                }
+                let awsTemplate = document.getElementById('awssns_template');
+                if (awsTemplate) {
+                    awsTemplate.value = aws.messageTemplate || 'DHR OTP: {otp}. Valid 10 min.';
+                }
+            }
+            toggleSmsProviderFields();
             
             if (globalSettings.telegramConfig) {
                 const tg = globalSettings.telegramConfig;
@@ -1991,6 +2070,19 @@
                         e5.value = tg.orgChatIds['โรงพยาบาลองครักษ์'] || '';
                     }
                 }
+            }
+        }
+
+        function toggleSmsProviderFields() {
+            const provider = getInputValue('smsotp_provider') || 'ThaiBulkSMS';
+            const thaiFields = document.getElementById('thaiBulkSmsFields');
+            const awsFields = document.getElementById('awsSnsFields');
+            
+            if (thaiFields) {
+                thaiFields.classList.toggle('hidden', provider === 'AWS_SNS');
+            }
+            if (awsFields) {
+                awsFields.classList.toggle('hidden', provider !== 'AWS_SNS');
             }
         }
 
@@ -2053,10 +2145,20 @@
                             'โรงพยาบาลองครักษ์': getInputValue('tg_org_5')
                         }
                     },
+                    smsOtpProvider: getInputValue('smsotp_provider') || 'ThaiBulkSMS',
                     thaiBulkSmsConfig: {
                         enabled: getCheckboxValue('smsotp_enabled'),
                         key: getInputValue('smsotp_key'),
                         secret: getInputValue('smsotp_secret')
+                    },
+                    awsSnsConfig: {
+                        enabled: getCheckboxValue('smsotp_enabled'),
+                        accessKeyId: getInputValue('awssns_accessKeyId'),
+                        secretAccessKey: getInputValue('awssns_secretAccessKey'),
+                        region: getInputValue('awssns_region') || 'ap-southeast-1',
+                        senderId: getInputValue('awssns_senderId') || 'DHR',
+                        maxPrice: getInputValue('awssns_maxPrice'),
+                        messageTemplate: getInputValue('awssns_template') || 'DHR OTP: {otp}. Valid 10 min.'
                     }
                 };
                 
@@ -2069,17 +2171,32 @@
                         globalSettings.manualUrls = payload.manualUrls;
                         globalSettings.scoringCriteria = payload.scoringCriteria;
                         globalSettings.telegramConfig = payload.telegramConfig;
+                        globalSettings.smsOtpProvider = payload.smsOtpProvider;
                         if (!globalSettings.thaiBulkSmsConfig) {
                             globalSettings.thaiBulkSmsConfig = {};
                         }
                         globalSettings.thaiBulkSmsConfig.enabled = payload.thaiBulkSmsConfig.enabled;
                         globalSettings.thaiBulkSmsConfig.keySaved = globalSettings.thaiBulkSmsConfig.keySaved || !!payload.thaiBulkSmsConfig.key;
                         globalSettings.thaiBulkSmsConfig.secretSaved = globalSettings.thaiBulkSmsConfig.secretSaved || !!payload.thaiBulkSmsConfig.secret;
+                        if (!globalSettings.awsSnsConfig) {
+                            globalSettings.awsSnsConfig = {};
+                        }
+                        globalSettings.awsSnsConfig.enabled = payload.awsSnsConfig.enabled;
+                        globalSettings.awsSnsConfig.accessKeySaved = globalSettings.awsSnsConfig.accessKeySaved || !!payload.awsSnsConfig.accessKeyId;
+                        globalSettings.awsSnsConfig.secretKeySaved = globalSettings.awsSnsConfig.secretKeySaved || !!payload.awsSnsConfig.secretAccessKey;
+                        globalSettings.awsSnsConfig.region = payload.awsSnsConfig.region;
+                        globalSettings.awsSnsConfig.senderId = payload.awsSnsConfig.senderId;
+                        globalSettings.awsSnsConfig.maxPrice = payload.awsSnsConfig.maxPrice;
+                        globalSettings.awsSnsConfig.messageTemplate = payload.awsSnsConfig.messageTemplate;
                         
                         let keyInput = document.getElementById('smsotp_key');
                         let secretInput = document.getElementById('smsotp_secret');
+                        let awsAccessInput = document.getElementById('awssns_accessKeyId');
+                        let awsSecretInput = document.getElementById('awssns_secretAccessKey');
                         if (keyInput) keyInput.value = '';
                         if (secretInput) secretInput.value = '';
+                        if (awsAccessInput) awsAccessInput.value = '';
+                        if (awsSecretInput) awsSecretInput.value = '';
                         renderDynamicHealthForm();
                         Swal.fire('สำเร็จ', 'บันทึกการตั้งค่าระบบเรียบร้อยแล้ว', 'success');
                     } else {
@@ -2089,6 +2206,13 @@
                     hideLoader();
                     Swal.fire('ข้อผิดพลาด', err.message, 'error');
                 });
+            };
+        }
+
+        let smsProviderSelect = document.getElementById('smsotp_provider');
+        if (smsProviderSelect) {
+            smsProviderSelect.onchange = function() {
+                toggleSmsProviderFields();
             };
         }
 
