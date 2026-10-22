@@ -10,7 +10,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.14.0/dist/html2pdf.bundle.min.js"></script>
     
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -93,6 +93,11 @@
         .report-avoid-break {
             break-inside: avoid;
             page-break-inside: avoid;
+        }
+        .pdf-export p, .pdf-export li, .pdf-export td {
+            word-break: break-all;
+            overflow-wrap: break-word;
+            line-height: 1.7;
         }
         @media (max-width: 900px) {
             .report-page {
@@ -5942,15 +5947,19 @@
             }
             showLoader('กำลังสร้างไฟล์ PDF ภาษาไทย...');
             if (document.fonts && document.fonts.ready) await document.fonts.ready;
+            const exportSource = source.cloneNode(true);
+            exportSource.removeAttribute('id');
+            exportSource.classList.add('pdf-export');
+            Object.assign(exportSource.style, {width: '194mm', minHeight: '0', margin: '0', padding: '0', boxShadow: 'none'});
             const fileName = `DHR_Executive_Report_${lastExecutiveReport.period?.startDateText || 'all'}_${lastExecutiveReport.period?.endDateText || 'all'}.pdf`;
             return html2pdf().set({
                 margin: [8, 8, 12, 8],
                 filename: fileName,
                 image: { type: 'jpeg', quality: 0.96 },
-                html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+                html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
                 pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', '.report-avoid-break'] }
-            }).from(source).toPdf().get('pdf').then(pdf => {
+            }).from(exportSource).toPdf().get('pdf').then(pdf => {
                 const pages = pdf.internal.getNumberOfPages();
                 for (let page = 1; page <= pages; page++) {
                     pdf.setPage(page);
