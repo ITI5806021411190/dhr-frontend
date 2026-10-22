@@ -1277,13 +1277,22 @@
                     if (!res.ok) {
                         throw new Error("HTTP Status " + res.status);
                     }
-                    return res.json();
+                    return res.text().then(text => {
+                        try {
+                            return JSON.parse(text);
+                        } catch (error) {
+                            throw new Error('API ส่งผลลัพธ์ที่ไม่ใช่ JSON กรุณาตรวจสิทธิ์และการอนุญาตของ Apps Script แล้วลองใหม่');
+                        }
+                    });
                 })
                 .catch(err => {
-                    console.error("API Error:", err);
+                    const message = err instanceof TypeError
+                        ? 'เบราว์เซอร์เชื่อมต่อ API ไม่สำเร็จ กรุณาตรวจเครือข่ายแล้วลองใหม่ หากยังเกิดซ้ำ ให้ตรวจ Network/Console และการอนุญาต Apps Script'
+                        : err.message;
+                    console.error("API Error:", { action: action, message: message });
                     Swal.fire({
-                        title: 'การเชื่อมต่อถูกปฏิเสธ',
-                        html: 'ระบบไม่สามารถดึงข้อมูลจากฐานข้อมูลได้<br><br><b>วิธีแก้ไข:</b><br>โปรดตรวจสอบการตั้งค่า Deploy ใน Google Apps Script ตรงช่อง <b>Who has access</b> ว่าได้ตั้งเป็น <b>"ทุกคน (Anyone)"</b> แล้วหรือไม่',
+                        title: 'เชื่อมต่อ API ไม่สำเร็จ',
+                        text: message,
                         icon: 'error'
                     });
                     throw err;
@@ -5847,7 +5856,7 @@
                     ['การประเมิน', overview.assessmentCount || 0], ['บุคลากร', overview.personnelCount || 0], ['AMBER + RED', overview.riskCount || 0], ['ควรติดตาม', overview.followUpPersonnelCount || 0]
                 ].map(item => `<div class="border rounded p-2 bg-gray-50"><div class="text-xs">${item[0]}</div><div class="text-xl font-bold">${item[1]}</div></div>`).join('')}</div></section>
                 <section class="report-avoid-break mb-5"><h2 class="font-bold text-base mb-2">2. ตาราง GREEN, AMBER และ RED</h2><table><thead><tr><th>Band</th><th>จำนวน</th><th>ร้อยละจากการประเมิน</th></tr></thead><tbody>${bandRows.map(row => `<tr><td style="color:${row[2]};font-weight:bold">${row[0]}</td><td class="text-center">${row[1]}</td><td class="text-center">${overview.assessmentCount ? (row[1] * 100 / overview.assessmentCount).toFixed(1) : '0.0'}</td></tr>`).join('')}</tbody></table></section>
-                <section class="report-avoid-break mb-5"><h2 class="font-bold text-base mb-2">3. ตัวชี้วัดสุขภาพ</h2><table><thead><tr><th>ตัวชี้วัด</th><th>จำนวนค่าจริง</th><th>เฉลี่ย</th><th>ต่ำสุด</th><th>สูงสุด</th><th>หน่วย</th></tr></thead><tbody>${healthRows.map(row => `<tr><td>${row[0]}</td><td class="text-center">${reportValue(row[1]?.count)}</td><td class="text-center">${reportValue(row[1]?.average)}</td><td class="text-center">${reportValue(row[1]?.min)}</td><td class="text-center">${reportValue(row[1]?.max)}</td><td>${row[2]}</td></tr>`).join('')}</tbody></table></section>
+                <section class="report-avoid-break mb-5"><h2 class="font-bold text-base mb-2">3. ตัวชี้วัดสุขภาพ</h2><table><thead><tr><th>ตัวชี้วัด</th><th>ค่าที่ใช้</th><th>ค่าผิดช่วง/รูปแบบ</th><th>ไม่มีค่า</th><th>เฉลี่ย</th><th>ต่ำสุด</th><th>สูงสุด</th><th>หน่วย</th></tr></thead><tbody>${healthRows.map(row => `<tr><td>${row[0]}</td><td class="text-center">${reportValue(row[1]?.count)}</td><td class="text-center">${reportValue(row[1]?.excludedCount || 0)}</td><td class="text-center">${reportValue(row[1]?.missingCount || 0)}</td><td class="text-center">${reportValue(row[1]?.average)}</td><td class="text-center">${reportValue(row[1]?.min)}</td><td class="text-center">${reportValue(row[1]?.max)}</td><td>${row[2]}</td></tr>`).join('')}</tbody></table><p class="text-xs text-gray-600 mt-2">สถิติไม่รวมค่าว่าง ค่าที่ไม่ใช่ตัวเลข และค่าที่อยู่นอกช่วงตรวจคุณภาพข้อมูล: การนอน 0–24 ชั่วโมง อุณหภูมิ 30–45 °C และชีพจร 30–220 ครั้ง/นาที ข้อมูลต้นฉบับไม่ได้ถูกแก้ไข และจำนวนการประเมิน/ผลสีคงเดิม</p></section>
                 <section class="report-avoid-break mb-5"><h2 class="font-bold text-base mb-2">4. ปัจจัยเสี่ยงที่พบ</h2>${riskRows.length ? `<table><thead><tr><th>ปัจจัย</th><th>จำนวนครั้ง</th><th>ร้อยละ</th></tr></thead><tbody>${riskRows.map(item => `<tr><td>${escapeHtml(item.label)}</td><td class="text-center">${item.count}</td><td class="text-center">${item.percent}</td></tr>`).join('')}</tbody></table>` : '<p class="text-sm text-gray-500">ไม่พบปัจจัยเสี่ยงในช่วงที่เลือก</p>'}</section>
                 ${chartHtml}
                 <section class="mt-5"><h2 class="font-bold text-base mb-2">5. ตารางสรุปรายบุคคล</h2>${personRows.length ? `<table><thead><tr><th>ชื่อ</th><th>หน่วยงาน</th><th>ประเมิน</th><th>G/A/R</th><th>เสี่ยง (%)</th><th>ติดตาม</th></tr></thead><tbody>${personRows.map(person => `<tr><td>${escapeHtml(person.displayName)}</td><td>${escapeHtml(person.org)}</td><td class="text-center">${person.assessmentCount}</td><td class="text-center">${person.greenCount}/${person.amberCount}/${person.redCount}</td><td class="text-center">${person.riskPercent}</td><td>${followUpLabel(person.followUpLevel)}</td></tr>`).join('')}</tbody></table>` : '<p class="text-sm text-gray-500">รายงานนี้ไม่แสดงข้อมูลรายบุคคล หรือไม่พบข้อมูล</p>'}</section>
