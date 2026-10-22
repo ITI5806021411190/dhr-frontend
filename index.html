@@ -5816,6 +5816,45 @@
             }
         }
 
+        function createExecutiveChartImages(report) {
+            if (!report.includeCharts || typeof Chart !== 'function') return [];
+            const overview = report.overview || {};
+            const risks = report.risks || [];
+            const trend = report.trend || [];
+            const definitions = [
+                ['สัดส่วนผลประเมิน', 'doughnut', ['GREEN', 'AMBER', 'RED'], [
+                    {data: [overview.greenCount || 0, overview.amberCount || 0, overview.redCount || 0], backgroundColor: ['#22c55e', '#eab308', '#ef4444']}
+                ]],
+                ['แนวโน้มความเสี่ยง', 'bar', trend.map(item => item.label), [
+                    {label: 'GREEN', data: trend.map(item => item.green), backgroundColor: '#22c55e'},
+                    {label: 'AMBER', data: trend.map(item => item.amber), backgroundColor: '#eab308'},
+                    {label: 'RED', data: trend.map(item => item.red), backgroundColor: '#ef4444'}
+                ]],
+                ['ปัจจัยเสี่ยง', 'bar', risks.map(item => item.label), [
+                    {label: 'จำนวนครั้ง', data: risks.map(item => item.count), backgroundColor: '#2563eb'}
+                ]]
+            ];
+            return definitions.map(([title, type, labels, datasets]) => {
+                const canvas = document.createElement('canvas');
+                canvas.width = 900;
+                canvas.height = 360;
+                let chart;
+                try {
+                    chart = new Chart(canvas.getContext('2d'), {
+                        type: type,
+                        data: {labels: labels, datasets: datasets},
+                        options: {responsive: false, animation: false, devicePixelRatio: 1,
+                            plugins: {legend: {labels: {font: {family: "'Noto Sans Thai', sans-serif"}}}},
+                            ...(type === 'bar' ? {scales: {x: {stacked: true}, y: {stacked: true, beginAtZero: true}}} : {})}
+                    });
+                    const image = canvas.toDataURL('image/png');
+                    return image.startsWith('data:image/png') ? [title, image] : null;
+                } finally {
+                    if (chart) chart.destroy();
+                }
+            }).filter(Boolean);
+        }
+
         function renderExecutiveReportPreview(report) {
             lastExecutiveReport = report;
             const preview = document.getElementById('executiveReportPreview');
@@ -5840,11 +5879,7 @@
             const personRows = report.persons || [];
             const followUpRows = report.followUpCases || [];
             const quality = report.dataQuality;
-            const chartHtml = report.includeCharts ? `<div class="report-avoid-break mt-5"><h2 class="font-bold text-base mb-2">กราฟประกอบ</h2><div class="grid grid-cols-1 gap-3">${[
-                ['สัดส่วนผลประเมิน', captureChartImage('analyticsBandChart')],
-                ['แนวโน้มความเสี่ยง', captureChartImage('analyticsTrendChart')],
-                ['ปัจจัยเสี่ยง', captureChartImage('analyticsRiskChart')]
-            ].filter(item => item[1]).map(item => `<figure class="border rounded p-2"><figcaption class="text-xs font-bold mb-1">${item[0]}</figcaption><img src="${item[1]}" class="w-full max-h-72 object-contain"></figure>`).join('')}</div></div>` : '';
+            const chartHtml = report.includeCharts ? `<div class="mt-5"><h2 class="font-bold text-base mb-2">กราฟประกอบ</h2><div class="grid grid-cols-1 gap-3">${createExecutiveChartImages(report).map(item => `<figure class="report-avoid-break border rounded p-2"><figcaption class="text-xs font-bold mb-1">${item[0]}</figcaption><img src="${item[1]}" class="w-full max-h-72 object-contain"></figure>`).join('')}</div></div>` : '';
 
             preview.innerHTML = `
                 <header class="border-b-4 border-blue-700 pb-4 mb-5">
@@ -5884,7 +5919,7 @@
             }, 500);
         }
 
-        function downloadExecutivePdf() {
+        async function downloadExecutivePdf() {
             const source = document.getElementById('executiveReportPreview');
             if (!source || !lastExecutiveReport) return;
             if (typeof html2pdf !== 'function') {
@@ -5892,8 +5927,9 @@
                 return;
             }
             showLoader('กำลังสร้างไฟล์ PDF ภาษาไทย...');
+            if (document.fonts && document.fonts.ready) await document.fonts.ready;
             const fileName = `DHR_Executive_Report_${lastExecutiveReport.period?.startDateText || 'all'}_${lastExecutiveReport.period?.endDateText || 'all'}.pdf`;
-            html2pdf().set({
+            return html2pdf().set({
                 margin: [8, 8, 12, 8],
                 filename: fileName,
                 image: { type: 'jpeg', quality: 0.96 },
