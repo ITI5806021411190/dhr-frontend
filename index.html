@@ -10,6 +10,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -62,6 +63,43 @@
             padding: 20px;
             background-color: #f3f4f6; 
             margin: 0 auto;
+        }
+        .analytics-tab-button.active {
+            background: #2563eb;
+            color: #ffffff;
+            border-color: #2563eb;
+        }
+        .report-page {
+            width: 210mm;
+            min-height: 297mm;
+            margin: 0 auto;
+            padding: 14mm;
+            background: #ffffff;
+            color: #111827;
+            box-sizing: border-box;
+        }
+        .report-page table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+        .report-page th,
+        .report-page td {
+            border: 1px solid #d1d5db;
+            padding: 5px 6px;
+            font-size: 10px;
+            overflow-wrap: anywhere;
+        }
+        .report-avoid-break {
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
+        @media (max-width: 900px) {
+            .report-page {
+                width: 100%;
+                min-height: auto;
+                padding: 20px;
+            }
         }
     </style>
 </head>
@@ -128,18 +166,31 @@
                         ประเมินแทนผู้ขับขี่
                     </button>
                     
-                    <button id="btnExportReport" onclick="document.getElementById('modalExport').classList.remove('hidden')" class="hidden bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg text-sm transition shadow-sm flex items-center gap-1">
-                        ส่งออกรายงาน
+                    <button id="btnExportReport" onclick="openReportBuilder()" class="hidden bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg text-sm transition shadow-sm flex items-center gap-1">
+                        สร้างรายงาน
                     </button>
                     
-                    <div class="flex items-center gap-2 mt-2 md:mt-0 ml-auto border-l pl-4 border-gray-200">
-                        <span class="text-sm font-medium text-gray-600">ตัวกรอง:</span>
-                        <input type="date" id="adminDateFilter" class="border rounded-lg px-2 py-1.5 text-sm bg-gray-50 focus:ring-blue-500" onchange="document.getElementById('adminPeriodFilter').value=''; refreshAdminDashboard();">
-                        <select id="adminPeriodFilter" class="border rounded-lg px-2 py-1.5 text-sm bg-gray-50 focus:ring-blue-500" onchange="document.getElementById('adminDateFilter').value=''; refreshAdminDashboard();">
+                    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 mt-2 md:mt-0 w-full border-t md:border-t-0 pt-3 md:pt-0" id="analyticsFilterPanel">
+                        <select id="adminPeriodFilter" class="border rounded-lg px-2 py-1.5 text-sm bg-gray-50 focus:ring-blue-500" onchange="handleAnalyticsPeriodChange()">
                             <option value="today">วันนี้</option>
-                            <option value="7d">ย้อนหลัง 7 วัน</option>
-                            <option value="30d">ย้อนหลัง 30 วัน</option>
+                            <option value="yesterday">เมื่อวาน</option>
+                            <option value="date">เลือกวันที่</option>
+                            <option value="thisWeek">สัปดาห์นี้</option>
+                            <option value="lastWeek">สัปดาห์ก่อน</option>
+                            <option value="week">เลือกสัปดาห์</option>
+                            <option value="thisMonth">เดือนนี้</option>
+                            <option value="lastMonth">เดือนก่อน</option>
+                            <option value="month">เลือกเดือน</option>
+                            <option value="thisYear">ปีนี้</option>
+                            <option value="custom">กำหนดช่วงวันที่</option>
+                            <option value="all">ข้อมูลทั้งหมด</option>
                         </select>
+                        <input type="date" id="adminDateFilter" class="hidden border rounded-lg px-2 py-1.5 text-sm bg-gray-50 focus:ring-blue-500" aria-label="เลือกวันที่">
+                        <input type="week" id="adminWeekFilter" class="hidden border rounded-lg px-2 py-1.5 text-sm bg-gray-50 focus:ring-blue-500" aria-label="เลือกสัปดาห์">
+                        <input type="month" id="adminMonthFilter" class="hidden border rounded-lg px-2 py-1.5 text-sm bg-gray-50 focus:ring-blue-500" aria-label="เลือกเดือน">
+                        <input type="number" id="adminYearFilter" min="2020" max="2200" class="hidden border rounded-lg px-2 py-1.5 text-sm bg-gray-50 focus:ring-blue-500" aria-label="เลือกปี">
+                        <input type="date" id="adminStartDateFilter" class="hidden border rounded-lg px-2 py-1.5 text-sm bg-gray-50 focus:ring-blue-500" aria-label="วันที่เริ่มต้น">
+                        <input type="date" id="adminEndDateFilter" class="hidden border rounded-lg px-2 py-1.5 text-sm bg-gray-50 focus:ring-blue-500" aria-label="วันที่สิ้นสุด">
                         <select id="adminOrgFilter" class="border rounded-lg px-2 py-1.5 text-sm bg-gray-50 focus:ring-blue-500 w-32 truncate" title="เลือกหน่วยงาน">
                             <option value="ALL">ทุกหน่วยงาน</option>
                             <option value="สำนักงานสาธารณสุขจังหวัดนครนายก (สสจ.)">สสจ. นครนายก</option>
@@ -148,7 +199,18 @@
                             <option value="โรงพยาบาลบ้านนา">รพ. บ้านนา</option>
                             <option value="โรงพยาบาลองครักษ์">รพ. องครักษ์</option>
                         </select>
-                        <button onclick="refreshAdminDashboard()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1.5 rounded-lg transition border" title="รีเฟรชข้อมูล">🔄</button>
+                        <select id="adminRoleFilter" class="border rounded-lg px-2 py-1.5 text-sm bg-gray-50 focus:ring-blue-500" title="กรองประเภทบุคลากร">
+                            <option value="ALL">ทุกประเภท</option>
+                            <option value="driver">พนักงานขับรถ</option>
+                            <option value="staff">เจ้าหน้าที่</option>
+                        </select>
+                        <select id="adminBandFilter" class="border rounded-lg px-2 py-1.5 text-sm bg-gray-50 focus:ring-blue-500" title="กรองระดับความเสี่ยง">
+                            <option value="ALL">ทุก Band</option>
+                            <option value="GREEN">GREEN</option>
+                            <option value="AMBER">AMBER</option>
+                            <option value="RED">RED</option>
+                        </select>
+                        <button onclick="refreshAdminDashboard()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg transition border border-blue-700 font-bold" title="ใช้ตัวกรอง">แสดงผล</button>
                     </div>
                 </div>
             </div>
@@ -156,6 +218,32 @@
             <div id="publicAlert" class="bg-blue-50 border border-blue-200 text-blue-800 p-3 rounded-lg text-sm mb-6 flex items-start gap-2">
                 <span><b>มุมมองสาธารณะ:</b> คุณกำลังดูข้อมูลในโหมดผู้เยี่ยมชม ข้อมูลจะถูกเซ็นเซอร์ไว้ กรุณาเข้าสู่ระบบด้วยสิทธิ์ผู้ดูแลเพื่อดูข้อมูลฉบับเต็ม</span>
             </div>
+
+            <div class="flex gap-2 overflow-x-auto no-scrollbar mb-6 border-b pb-3" id="analyticsTabs" role="tablist" aria-label="ส่วนวิเคราะห์ข้อมูล">
+                <button type="button" class="analytics-tab-button active border rounded-full px-4 py-2 text-sm font-bold whitespace-nowrap" data-analytics-tab="overview" onclick="switchAnalyticsTab('overview')">ภาพรวม</button>
+                <button type="button" class="analytics-tab-button border rounded-full px-4 py-2 text-sm font-bold whitespace-nowrap" data-analytics-tab="trend" onclick="switchAnalyticsTab('trend')">แนวโน้ม</button>
+                <button type="button" class="analytics-tab-button border rounded-full px-4 py-2 text-sm font-bold whitespace-nowrap" data-analytics-tab="person" onclick="switchAnalyticsTab('person')">รายบุคคล</button>
+                <button type="button" class="analytics-tab-button border rounded-full px-4 py-2 text-sm font-bold whitespace-nowrap" data-analytics-tab="org" onclick="switchAnalyticsTab('org')">รายหน่วยงาน</button>
+                <button type="button" class="analytics-tab-button border rounded-full px-4 py-2 text-sm font-bold whitespace-nowrap" data-analytics-tab="quality" onclick="switchAnalyticsTab('quality')">คุณภาพข้อมูล</button>
+                <button type="button" class="analytics-tab-button border rounded-full px-4 py-2 text-sm font-bold whitespace-nowrap" data-analytics-tab="report" onclick="switchAnalyticsTab('report')">รายงาน</button>
+            </div>
+
+            <section id="analyticsTabOverview" data-analytics-panel="overview">
+                <div class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-3 mb-6">
+                    <div class="bg-sky-50 border border-sky-200 rounded-lg p-3"><p class="text-xs text-sky-800">จำนวนการประเมิน</p><p id="analyticsAssessmentCount" class="text-2xl font-bold text-sky-700">-</p></div>
+                    <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-3"><p class="text-xs text-indigo-800">จำนวนบุคลากร</p><p id="analyticsPersonnelCount" class="text-2xl font-bold text-indigo-700">-</p></div>
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-3"><p class="text-xs text-green-800">GREEN</p><p id="analyticsGreenCount" class="text-2xl font-bold text-green-700">-</p></div>
+                    <div class="bg-amber-50 border border-amber-200 rounded-lg p-3"><p class="text-xs text-amber-800">AMBER</p><p id="analyticsAmberCount" class="text-2xl font-bold text-amber-700">-</p></div>
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-3"><p class="text-xs text-red-800">RED</p><p id="analyticsRedCount" class="text-2xl font-bold text-red-700">-</p></div>
+                    <div class="bg-orange-50 border border-orange-200 rounded-lg p-3"><p class="text-xs text-orange-800">AMBER + RED</p><p id="analyticsRiskCount" class="text-2xl font-bold text-orange-700">-</p></div>
+                    <div class="bg-fuchsia-50 border border-fuchsia-200 rounded-lg p-3"><p class="text-xs text-fuchsia-800">ควรติดตาม</p><p id="analyticsFollowUpCount" class="text-2xl font-bold text-fuchsia-700">-</p></div>
+                    <div class="bg-slate-100 border border-slate-300 rounded-lg p-3"><p class="text-xs text-slate-700">ปัญหาคุณภาพข้อมูล</p><p id="analyticsQualityCount" class="text-2xl font-bold text-slate-700">-</p></div>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                    <div class="border rounded-lg p-4 bg-white"><h4 class="font-bold mb-3">สัดส่วน GREEN / AMBER / RED</h4><div class="h-72"><canvas id="analyticsBandChart"></canvas></div></div>
+                    <div class="border rounded-lg p-4 bg-white"><h4 class="font-bold mb-3">ปัจจัยเสี่ยงที่พบ</h4><div class="h-72"><canvas id="analyticsRiskChart"></canvas></div></div>
+                </div>
+                <h4 class="font-bold text-gray-700 mb-3">สถานะล่าสุดและรายการเดิมของระบบ</h4>
             
             <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8 w-full">
                 <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center flex flex-col justify-center shadow-sm">
@@ -290,6 +378,48 @@
                     </table>
                 </div>
             </div>
+            </section>
+
+            <section id="analyticsTabTrend" data-analytics-panel="trend" class="hidden space-y-6">
+                <div class="border rounded-lg p-4 bg-white"><h4 class="font-bold mb-3">แนวโน้ม GREEN / AMBER / RED</h4><div class="h-80"><canvas id="analyticsTrendChart"></canvas></div></div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="border rounded-lg p-4 bg-white"><h4 class="font-bold mb-3">ชั่วโมงการนอนเฉลี่ย</h4><div class="h-72"><canvas id="analyticsSleepChart"></canvas></div></div>
+                    <div class="border rounded-lg p-4 bg-white"><h4 class="font-bold mb-3">ความดันเฉลี่ย</h4><div class="h-72"><canvas id="analyticsBloodPressureChart"></canvas></div></div>
+                </div>
+            </section>
+
+            <section id="analyticsTabPerson" data-analytics-panel="person" class="hidden">
+                <div class="overflow-x-auto border rounded-lg shadow-sm">
+                    <table class="w-full text-sm text-left min-w-[1100px]">
+                        <thead class="bg-indigo-700 text-white"><tr><th class="px-3 py-2">ชื่อ</th><th class="px-3 py-2">หน่วยงาน</th><th class="px-3 py-2 text-center">ประเมิน</th><th class="px-3 py-2 text-center">G/A/R</th><th class="px-3 py-2 text-center">เสี่ยง (%)</th><th class="px-3 py-2 text-center">นอนเฉลี่ย</th><th class="px-3 py-2 text-center">ความดันเฉลี่ย</th><th class="px-3 py-2">ระดับติดตาม</th><th class="px-3 py-2">สรุป</th></tr></thead>
+                        <tbody id="analyticsPersonTable" class="divide-y"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="analyticsTabOrg" data-analytics-panel="org" class="hidden space-y-6">
+                <div class="border rounded-lg p-4 bg-white"><h4 class="font-bold mb-3">เปรียบเทียบผลตามหน่วยงาน</h4><div class="h-80"><canvas id="analyticsOrgChart"></canvas></div></div>
+                <div class="overflow-x-auto border rounded-lg shadow-sm"><table class="w-full text-sm text-left min-w-[850px]"><thead class="bg-blue-700 text-white"><tr><th class="px-3 py-2">หน่วยงาน</th><th class="px-3 py-2 text-center">บุคลากร</th><th class="px-3 py-2 text-center">การประเมิน</th><th class="px-3 py-2 text-center">GREEN</th><th class="px-3 py-2 text-center">AMBER</th><th class="px-3 py-2 text-center">RED</th><th class="px-3 py-2 text-center">เสี่ยง (%)</th><th class="px-3 py-2 text-center">นอนเฉลี่ย</th></tr></thead><tbody id="analyticsOrgTable" class="divide-y"></tbody></table></div>
+            </section>
+
+            <section id="analyticsTabQuality" data-analytics-panel="quality" class="hidden space-y-5">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-4"><p class="text-xs text-red-700">ปัญหาทั้งหมด</p><p id="qualityTotalIssues" class="text-2xl font-bold text-red-700">-</p></div>
+                    <div class="bg-orange-50 border border-orange-200 rounded-lg p-4"><p class="text-xs text-orange-700">ระดับสูง</p><p id="qualityHighIssues" class="text-2xl font-bold text-orange-700">-</p></div>
+                    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4"><p class="text-xs text-yellow-700">ระดับกลาง</p><p id="qualityMediumIssues" class="text-2xl font-bold text-yellow-700">-</p></div>
+                    <div class="bg-gray-100 border border-gray-300 rounded-lg p-4"><p class="text-xs text-gray-700">รายการที่ได้รับผลกระทบ</p><p id="qualityAffectedRecords" class="text-2xl font-bold text-gray-700">-</p></div>
+                </div>
+                <div class="bg-blue-50 border border-blue-200 text-blue-800 rounded-lg p-3 text-sm">ระบบรายงานปัญหาเท่านั้นและไม่แก้ไขข้อมูลต้นฉบับอัตโนมัติ</div>
+                <div class="overflow-x-auto border rounded-lg shadow-sm"><table class="w-full text-sm text-left min-w-[900px]"><thead class="bg-slate-700 text-white"><tr><th class="px-3 py-2">ระดับ</th><th class="px-3 py-2">ประเภท</th><th class="px-3 py-2">Record</th><th class="px-3 py-2">userId</th><th class="px-3 py-2">วันที่</th><th class="px-3 py-2">รายละเอียด</th></tr></thead><tbody id="analyticsQualityTable" class="divide-y"></tbody></table></div>
+            </section>
+
+            <section id="analyticsTabReport" data-analytics-panel="report" class="hidden">
+                <div class="max-w-2xl mx-auto border rounded-xl p-6 bg-gradient-to-br from-green-50 to-white shadow-sm text-center">
+                    <h4 class="text-xl font-bold text-green-900">ระบบสร้างรายงานผู้บริหาร</h4>
+                    <p class="text-sm text-green-800 mt-2 mb-5">สร้างรายงานจากข้อมูลจริงตามตัวกรองปัจจุบัน รองรับโหมดไม่ระบุตัวตน กราฟ คุณภาพข้อมูล PDF และ CSV</p>
+                    <button type="button" onclick="openReportBuilder()" class="bg-green-600 hover:bg-green-700 text-white font-bold px-6 py-3 rounded-lg shadow">สร้างรายงาน</button>
+                </div>
+            </section>
         </div>
 
         <div id="viewLogin" class="hidden w-full max-w-md bg-white rounded-xl shadow-lg p-6 mt-4">
@@ -959,31 +1089,43 @@
         </div>
     </div>
 
-    <div id="modalExport" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
-        <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
-            <h3 class="text-xl font-bold mb-4 text-gray-800 flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" /></svg>
-                ส่งออกรายงาน (Excel / CSV)
-            </h3>
-            <p class="text-sm text-gray-600 mb-4">ระบบจะทำการดึงข้อมูลประวัติการประเมินสุขภาพตามช่วงวันที่กำหนด เพื่อนำไปใช้งานต่อในโปรแกรม Excel</p>
-            <form id="formExport" class="space-y-4">
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-bold text-gray-700 mb-1">ตั้งแต่วันที่</label>
-                        <input type="date" id="exportStartDate" class="w-full px-3 py-2 border rounded-lg focus:ring-green-500" required>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-bold text-gray-700 mb-1">ถึงวันที่</label>
-                        <input type="date" id="exportEndDate" class="w-full px-3 py-2 border rounded-lg focus:ring-green-500" required>
-                    </div>
+    <div id="modalExport" class="fixed inset-0 bg-black bg-opacity-60 z-[70] flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-3xl max-h-[95vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b pb-3 mb-4">
+                <div><h3 class="text-xl font-bold text-gray-800">สร้างรายงานผู้บริหาร</h3><p class="text-xs text-gray-500">ข้อมูลมาจาก Google Sheets จริงตามขอบเขตสิทธิ์ของผู้ใช้</p></div>
+                <button type="button" onclick="document.getElementById('modalExport').classList.add('hidden')" class="text-gray-500 hover:text-gray-800">ปิด</button>
+            </div>
+            <form id="formExport" class="space-y-5">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div><label class="block text-sm font-bold mb-1">ช่วงรายงาน</label><select id="reportPeriodType" onchange="handleReportPeriodChange()" class="w-full border rounded-lg px-3 py-2"><option value="dashboard">ตามตัวกรอง Dashboard</option><option value="day">รายวัน</option><option value="week">รายสัปดาห์</option><option value="month">รายเดือน</option><option value="custom">กำหนดช่วงวันที่</option></select></div>
+                    <div id="reportDateWrap" class="hidden"><label class="block text-sm font-bold mb-1">วันที่</label><input type="date" id="reportDate" class="w-full border rounded-lg px-3 py-2"></div>
+                    <div id="reportWeekWrap" class="hidden"><label class="block text-sm font-bold mb-1">สัปดาห์</label><input type="week" id="reportWeek" class="w-full border rounded-lg px-3 py-2"></div>
+                    <div id="reportMonthWrap" class="hidden"><label class="block text-sm font-bold mb-1">เดือน</label><input type="month" id="reportMonth" class="w-full border rounded-lg px-3 py-2"></div>
+                    <div id="reportStartWrap" class="hidden"><label class="block text-sm font-bold mb-1">ตั้งแต่วันที่</label><input type="date" id="exportStartDate" class="w-full border rounded-lg px-3 py-2"></div>
+                    <div id="reportEndWrap" class="hidden"><label class="block text-sm font-bold mb-1">ถึงวันที่</label><input type="date" id="exportEndDate" class="w-full border rounded-lg px-3 py-2"></div>
+                    <div><label class="block text-sm font-bold mb-1">หน่วยงาน</label><select id="reportOrg" class="w-full border rounded-lg px-3 py-2"><option value="ALL">รวมทุกหน่วยงาน</option><option value="สำนักงานสาธารณสุขจังหวัดนครนายก (สสจ.)">สสจ. นครนายก</option><option value="โรงพยาบาลนครนายก">โรงพยาบาลนครนายก</option><option value="โรงพยาบาลปากพลี">โรงพยาบาลปากพลี</option><option value="โรงพยาบาลบ้านนา">โรงพยาบาลบ้านนา</option><option value="โรงพยาบาลองครักษ์">โรงพยาบาลองครักษ์</option></select></div>
                 </div>
-                <div class="flex justify-end gap-2 mt-4 pt-4 border-t">
-                    <button type="button" onclick="document.getElementById('modalExport').classList.add('hidden')" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded transition font-medium">ยกเลิก</button>
-                    <button type="submit" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded shadow-sm transition font-medium flex items-center gap-1">
-                        ดาวน์โหลด
-                    </button>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="border rounded-lg p-4"><p class="font-bold text-sm mb-3">รูปแบบรายงาน</p><label class="flex gap-2 mb-2"><input type="radio" name="reportType" value="executive" checked> รายงานสรุปผู้บริหาร</label><label class="flex gap-2"><input type="radio" name="reportType" value="detailed"> รายงานฉบับละเอียด</label></div>
+                    <div class="border rounded-lg p-4"><p class="font-bold text-sm mb-3">การเปิดเผยข้อมูล</p><label class="flex gap-2 mb-2"><input type="checkbox" id="reportAnonymous" checked> ไม่ระบุตัวตน</label><label class="flex gap-2"><input type="checkbox" id="reportIncludeNames"> แสดงรายชื่อ (จะแสดงชื่อแบบปกปิดหากเปิดโหมดไม่ระบุตัวตน)</label></div>
+                </div>
+                <div class="flex flex-wrap gap-5 bg-gray-50 border rounded-lg p-4"><label class="flex gap-2"><input type="checkbox" id="reportIncludeCharts" checked> รวมกราฟ</label><label class="flex gap-2"><input type="checkbox" id="reportIncludeQuality" checked> รวมคุณภาพข้อมูล</label></div>
+                <div class="flex flex-wrap justify-end gap-2 pt-4 border-t">
+                    <button type="button" onclick="document.getElementById('modalExport').classList.add('hidden')" class="px-4 py-2 bg-gray-200 rounded">ยกเลิก</button>
+                    <button type="button" onclick="downloadExecutiveCsv()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded">ดาวน์โหลด CSV ข้อมูลดิบ</button>
+                    <button type="submit" class="px-5 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded shadow">ดูตัวอย่างรายงาน</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <div id="modalReportPreview" class="fixed inset-0 bg-black bg-opacity-70 z-[80] hidden overflow-y-auto p-3 md:p-6">
+        <div class="max-w-5xl mx-auto">
+            <div class="sticky top-0 z-10 bg-white border rounded-lg shadow p-3 mb-3 flex flex-wrap justify-between gap-2">
+                <h3 class="font-bold text-gray-800">ตัวอย่างรายงาน A4</h3>
+                <div class="flex flex-wrap gap-2"><button type="button" onclick="printExecutiveReport()" class="px-3 py-2 bg-gray-700 text-white rounded">สั่งพิมพ์ / Save as PDF</button><button type="button" onclick="downloadExecutivePdf()" class="px-3 py-2 bg-red-600 text-white rounded">ดาวน์โหลด PDF</button><button type="button" onclick="document.getElementById('modalReportPreview').classList.add('hidden')" class="px-3 py-2 bg-gray-200 rounded">ปิด</button></div>
+            </div>
+            <article id="executiveReportPreview" class="report-page shadow-2xl"></article>
         </div>
     </div>
 
@@ -1112,160 +1254,6 @@
             </div>
         </div>
     </div>
-    <div id="modalExport" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
-        <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
-            <h3 class="text-xl font-bold mb-4 text-gray-800 flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" /></svg>
-                ส่งออกรายงาน (Excel / CSV)
-            </h3>
-            <p class="text-sm text-gray-600 mb-4">ระบบจะทำการดึงข้อมูลประวัติการประเมินสุขภาพตามช่วงวันที่กำหนด เพื่อนำไปใช้งานต่อในโปรแกรม Excel</p>
-            <form id="formExport" class="space-y-4">
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-bold text-gray-700 mb-1">ตั้งแต่วันที่</label>
-                        <input type="date" id="exportStartDate" class="w-full px-3 py-2 border rounded-lg focus:ring-green-500" required>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-bold text-gray-700 mb-1">ถึงวันที่</label>
-                        <input type="date" id="exportEndDate" class="w-full px-3 py-2 border rounded-lg focus:ring-green-500" required>
-                    </div>
-                </div>
-                <div class="flex justify-end gap-2 mt-4 pt-4 border-t">
-                    <button type="button" onclick="document.getElementById('modalExport').classList.add('hidden')" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded transition font-medium">ยกเลิก</button>
-                    <button type="submit" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded shadow-sm transition font-medium flex items-center gap-1">
-                        ดาวน์โหลด
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div id="modalAddUser" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
-        <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <h3 class="text-xl font-bold mb-4">เพิ่มผู้ใช้งาน</h3>
-            <form id="formAddUser" class="space-y-3">
-                <div class="grid grid-cols-2 gap-3">
-                    <div><label class="block text-sm mb-1">ชื่อ</label><input type="text" id="addFirstName" class="w-full border px-3 py-2 rounded" required></div>
-                    <div><label class="block text-sm mb-1">นามสกุล</label><input type="text" id="addLastName" class="w-full border px-3 py-2 rounded" required></div>
-                </div>
-                <div><label class="block text-sm mb-1">เบอร์โทรศัพท์</label><input type="tel" id="addPhone" maxlength="10" class="w-full border px-3 py-2 rounded" required></div>
-                <div><label class="block text-sm mb-1 text-blue-700 font-bold" id="labelAddEmail">Email</label><input type="email" id="addEmail" class="w-full border px-3 py-2 rounded"></div>
-                <div>
-                    <label class="block text-sm mb-1">หน่วยงาน</label>
-                    <select id="addOrg" class="w-full border px-3 py-2 rounded" required>
-                        <option value="สำนักงานสาธารณสุขจังหวัดนครนายก (สสจ.)">สำนักงานสาธารณสุขจังหวัดนครนายก (สสจ.)</option>
-                        <option value="โรงพยาบาลนครนายก">โรงพยาบาลนครนายก</option>
-                        <option value="โรงพยาบาลปากพลี">โรงพยาบาลปากพลี</option>
-                        <option value="โรงพยาบาลบ้านนา">โรงพยาบาลบ้านนา</option>
-                        <option value="โรงพยาบาลองครักษ์">โรงพยาบาลองครักษ์</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm mb-1">Role (สิทธิ์เข้าถึง)</label>
-                    <select id="addRole" class="w-full border px-3 py-2 rounded bg-blue-50" required onchange="toggleAddDriverFields()">
-                        <option value="provincial_admin" id="optAddProvAdmin">Admin จังหวัด</option>
-                        <option value="provincial_audit" id="optAddProvAudit">Audit จังหวัด</option>
-                        <option value="exec_ppho" id="optAddExec">ผู้บริหาร สสจ.</option>
-                        <option value="super_admin" id="optAddSuper">Super Admin</option>
-                        <option value="hospital_director" id="optAddDir">ผอ.รพ.</option>
-                        <option value="hospital_admin" id="optAddAdmin">Admin รพ. / สสจ.</option>
-                        <option value="driver" id="optAddDriver">พนักงานขับรถประจำ</option>
-                        <option value="staff" id="optAddStaff">เจ้าหน้าที่ (ขับรถยามจำเป็น)</option>
-                    </select>
-                </div>
-                <div id="addDriverExtraFields" class="hidden space-y-3 border-t pt-3 mt-2 border-gray-200">
-                    <div><label class="block text-sm mb-1 text-blue-800 font-bold">ข้อมูลสุขภาพ (สำหรับผู้ขับขี่)</label></div>
-                    <div><label class="block text-sm mb-1">วัน/เดือน/ปีเกิด</label><input type="date" id="addDob" class="w-full px-3 py-2 border rounded"></div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div><label class="block text-sm mb-1">โรคประจำตัว</label><input type="text" id="addChronic" class="w-full border px-3 py-2 rounded" placeholder="-"></div>
-                        <div><label class="block text-sm mb-1">ยาที่ใช้ประจำ</label><input type="text" id="addMeds" class="w-full border px-3 py-2 rounded" placeholder="-"></div>
-                    </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-sm mb-1">การสูบบุหรี่</label>
-                            <select id="addSmoking" class="w-full border px-3 py-2 rounded">
-                                <option value="ไม่สูบ">ไม่สูบ</option>
-                                <option value="สูบเป็นครั้งคราว">สูบเป็นครั้งคราว</option>
-                                <option value="สูบเป็นประจำ">สูบเป็นประจำ</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-sm mb-1">การดื่มแอลกอฮอล์</label>
-                            <select id="addAlcohol" class="w-full border px-3 py-2 rounded">
-                                <option value="ไม่ดื่ม">ไม่ดื่ม</option>
-                                <option value="ดื่มสังสรรค์">ดื่มสังสรรค์บ้าง</option>
-                                <option value="ดื่มเป็นประจำ">ดื่มเป็นประจำ</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                <div class="flex justify-end gap-2 mt-4">
-                    <button type="button" onclick="document.getElementById('modalAddUser').classList.add('hidden')" class="px-4 py-2 bg-gray-200 rounded">ยกเลิก</button>
-                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded">บันทึกเพิ่มผู้ใช้</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div id="modalEditUser" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
-        <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
-            <h3 class="text-xl font-bold mb-4">แก้ไขข้อมูลผู้ใช้งาน</h3>
-             <form id="formEditUser" class="space-y-3">
-                <input type="hidden" id="editOldPhone">
-                <input type="hidden" id="editOldName">
-                <input type="hidden" id="editOldOrg">
-                <input type="hidden" id="editUserId">
-                
-                <div id="editSelfAlert" class="hidden bg-yellow-50 text-yellow-800 text-xs p-2 rounded border border-yellow-200 mb-2"><b>หมายเหตุ:</b> การแก้ไขชื่อ เบอร์โทร หรือหน่วยงาน จะต้องรอการอนุมัติ ส่วน Email จะมีผลทันที</div>
-                <div id="editOtherAlert" class="hidden bg-blue-50 text-blue-800 text-xs p-2 rounded border border-blue-200 mb-2"><b>จำกัดสิทธิ์:</b> คุณสามารถแก้ไขได้เฉพาะข้อมูล Email เท่านั้น</div>
-                
-                <div><label class="block text-sm mb-1">ชื่อ-สกุล</label><input type="text" id="editName" class="w-full border px-3 py-2 rounded font-medium" required></div>
-                <div><label class="block text-sm mb-1">เบอร์โทรศัพท์</label><input type="tel" id="editPhone" maxlength="10" class="w-full border px-3 py-2 rounded font-mono" required></div>
-                <div><label class="block text-sm mb-1 text-blue-700 font-bold">Email</label><input type="email" id="editEmail" class="w-full border px-3 py-2 rounded focus:ring-blue-500"></div>
-                <div>
-                    <label class="block text-sm mb-1">หน่วยงาน</label>
-                     <select id="editOrg" class="w-full border px-3 py-2 rounded" required>
-                        <option value="สำนักงานสาธารณสุขจังหวัดนครนายก (สสจ.)">สำนักงานสาธารณสุขจังหวัดนครนายก (สสจ.)</option>
-                        <option value="โรงพยาบาลนครนายก">โรงพยาบาลนครนายก</option>
-                        <option value="โรงพยาบาลปากพลี">โรงพยาบาลปากพลี</option>
-                        <option value="โรงพยาบาลบ้านนา">โรงพยาบาลบ้านนา</option>
-                        <option value="โรงพยาบาลองครักษ์">โรงพยาบาลองครักษ์</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm mb-1">Role</label>
-                    <select id="editRole" class="w-full border px-3 py-2 rounded bg-blue-50" required>
-                        <option value="provincial_admin" id="optEditProvAdmin">Admin จังหวัด</option>
-                        <option value="provincial_audit" id="optEditProvAudit">Audit จังหวัด</option>
-                        <option value="exec_ppho" id="optEditExec">ผู้บริหาร สสจ.</option>
-                        <option value="hospital_director" id="optEditDir">ผอ.รพ.</option>
-                        <option value="hospital_admin" id="optEditAdmin">Admin รพ. / สสจ.</option>
-                        <option value="driver" id="optEditDriver">พนักงานขับรถประจำ</option>
-                        <option value="staff" id="optEditStaff">เจ้าหน้าที่ (ขับรถจำเป็น)</option>
-                        <option value="super_admin" id="optEditSuper">Super Admin</option>
-                    </select>
-                </div>
-                <div class="flex justify-end gap-2 mt-4">
-                    <button type="button" onclick="document.getElementById('modalEditUser').classList.add('hidden')" class="px-4 py-2 bg-gray-200 rounded">ยกเลิก</button>
-                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded shadow-sm">บันทึกข้อมูล</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div id="modalViewProfile" class="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center hidden">
-        <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <div class="flex justify-between items-center border-b pb-3 mb-4">
-                <h3 class="text-xl font-bold text-gray-800">ข้อมูลส่วนบุคคล</h3>
-                <button type="button" onclick="document.getElementById('modalViewProfile').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">ปิด</button>
-            </div>
-            <div id="viewProfileContent" class="space-y-4"></div>
-            <div class="mt-6 pt-4 border-t flex justify-end">
-                <button onclick="document.getElementById('modalViewProfile').classList.add('hidden')" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-lg font-medium transition">ปิดหน้าต่าง</button>
-            </div>
-        </div>
-    </div>
-
     <script>
         const API_URL = "https://script.google.com/macros/s/AKfycbxnURSmrkk7KcMX9-ZLaX8FxG7L2shTkxaaC5QatqSohIXPvG7pFX7Ote3UKnV_Xhrr/exec"; 
         const STORAGE_KEYS = {
@@ -2209,11 +2197,8 @@
 
                 let elBt = document.getElementById('tg_botToken'); 
                 if (elBt) {
-                    if (tg.botToken) {
-                        elBt.value = tg.botToken;
-                    } else {
-                        elBt.value = '';
-                    }
+                    elBt.value = '';
+                    elBt.placeholder = tg.hasBotToken ? 'ตั้งค่าแล้ว — กรอกเฉพาะเมื่อต้องการเปลี่ยน' : 'กรอก Telegram Bot Token';
                 }
 
                 let elGl = document.getElementById('tg_globalChatId'); 
@@ -2323,7 +2308,14 @@
                         globalSettings.criticalRisks = payload.criticalRisks;
                         globalSettings.manualUrls = payload.manualUrls;
                         globalSettings.scoringCriteria = payload.scoringCriteria;
-                        globalSettings.telegramConfig = payload.telegramConfig;
+                        const safeTelegramConfig = Object.assign({}, payload.telegramConfig, { hasBotToken: !!payload.telegramConfig.botToken || !!globalSettings.telegramConfig?.hasBotToken });
+                        delete safeTelegramConfig.botToken;
+                        globalSettings.telegramConfig = safeTelegramConfig;
+                        const botTokenInput = document.getElementById('tg_botToken');
+                        if (botTokenInput) {
+                            botTokenInput.value = '';
+                            botTokenInput.placeholder = safeTelegramConfig.hasBotToken ? 'ตั้งค่าแล้ว — กรอกเฉพาะเมื่อต้องการเปลี่ยน' : 'กรอก Telegram Bot Token';
+                        }
                         renderDynamicHealthForm();
                         Swal.fire('สำเร็จ', 'บันทึกการตั้งค่าระบบเรียบร้อยแล้ว', 'success');
                     } else {
@@ -3789,17 +3781,7 @@
 
         // ================= ADMIN DASHBOARD & CHART =================
         function refreshAdminDashboard() { 
-            let dFilter = document.getElementById('adminDateFilter'); 
-            let pFilter = document.getElementById('adminPeriodFilter');
-            
-            let filterParam = 'today';
-            if (dFilter && dFilter.value) {
-                filterParam = dFilter.value;
-            } else if (pFilter && pFilter.value) {
-                filterParam = pFilter.value;
-            }
-            
-            loadAdminDashboard(filterParam);
+            loadAdminDashboard();
         }
         
         function renderDonutChart(stats) {
@@ -3956,28 +3938,13 @@
             tbody.innerHTML = html;
         }
         
-        function loadAdminDashboard(periodOverride = null) {
+        function loadAdminDashboard() {
             showLoader("กำลังดึงข้อมูลสรุป...");
-            
-            let elOrg = document.getElementById('adminOrgFilter'); 
-            let org = 'ALL';
-            if (elOrg) {
-                org = elOrg.value;
-            }
-            
-            let dFilter = document.getElementById('adminDateFilter'); 
-            let pFilter = document.getElementById('adminPeriodFilter');
-            
-            let filterPeriod = 'today';
-            if (periodOverride) {
-                filterPeriod = periodOverride;
-            } else if (dFilter && dFilter.value) {
-                filterPeriod = dFilter.value;
-            } else if (pFilter && pFilter.value) {
-                filterPeriod = pFilter.value;
-            }
+            const dashboardFilters = getAnalyticsFilters();
+            const filterPeriod = dashboardFilters.periodType === 'day' ? dashboardFilters.date : dashboardFilters.periodType;
+            loadHealthAnalytics(dashboardFilters);
 
-            api.run('getAdminDashboard', { filters: { org: org, period: filterPeriod } }).then(res => {
+            api.run('getAdminDashboard', { filters: dashboardFilters }).then(res => {
                 hideLoader();
                 if (res.ok) {
                     let dTitle = document.getElementById('dashTitle'); 
@@ -5501,6 +5468,478 @@
                 }
             }, 500); 
         }
+
+        // ================= ADVANCED ANALYTICS =================
+        let analyticsChartInstances = {};
+        let lastAnalytics = null;
+        let lastExecutiveReport = null;
+
+        function getBangkokTodayText() {
+            const parts = new Intl.DateTimeFormat('en-CA', {
+                timeZone: 'Asia/Bangkok', year: 'numeric', month: '2-digit', day: '2-digit'
+            }).formatToParts(new Date());
+            const values = {};
+            parts.forEach(part => values[part.type] = part.value);
+            return `${values.year}-${values.month}-${values.day}`;
+        }
+
+        function addDaysText(dateText, amount) {
+            const [year, month, day] = String(dateText).split('-').map(Number);
+            const date = new Date(Date.UTC(year, month - 1, day));
+            date.setUTCDate(date.getUTCDate() + Number(amount || 0));
+            return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
+        }
+
+        function startOfWeekText(dateText) {
+            const [year, month, day] = String(dateText).split('-').map(Number);
+            const date = new Date(Date.UTC(year, month - 1, day));
+            const weekday = date.getUTCDay() || 7;
+            return addDaysText(dateText, 1 - weekday);
+        }
+
+        function monthOffsetText(monthText, amount) {
+            const [year, month] = String(monthText).split('-').map(Number);
+            const date = new Date(Date.UTC(year, month - 1 + Number(amount || 0), 1));
+            return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+        }
+
+        function isoWeekRange(weekText) {
+            const match = String(weekText || '').match(/^(\d{4})-W(\d{2})$/);
+            if (!match) return null;
+            const year = Number(match[1]);
+            const week = Number(match[2]);
+            const jan4 = new Date(Date.UTC(year, 0, 4));
+            const jan4Day = jan4.getUTCDay() || 7;
+            const monday = new Date(jan4);
+            monday.setUTCDate(jan4.getUTCDate() - jan4Day + 1 + (week - 1) * 7);
+            const start = `${monday.getUTCFullYear()}-${String(monday.getUTCMonth() + 1).padStart(2, '0')}-${String(monday.getUTCDate()).padStart(2, '0')}`;
+            return { startDate: start, endDate: addDaysText(start, 6) };
+        }
+
+        function setFilterVisibility(id, visible) {
+            const element = document.getElementById(id);
+            if (element) element.classList.toggle('hidden', !visible);
+        }
+
+        function handleAnalyticsPeriodChange(shouldRefresh = false) {
+            const preset = document.getElementById('adminPeriodFilter')?.value || 'today';
+            ['adminDateFilter', 'adminWeekFilter', 'adminMonthFilter', 'adminYearFilter', 'adminStartDateFilter', 'adminEndDateFilter'].forEach(id => setFilterVisibility(id, false));
+            if (preset === 'date') setFilterVisibility('adminDateFilter', true);
+            if (preset === 'week') setFilterVisibility('adminWeekFilter', true);
+            if (preset === 'month') setFilterVisibility('adminMonthFilter', true);
+            if (preset === 'thisYear') setFilterVisibility('adminYearFilter', true);
+            if (preset === 'custom') {
+                setFilterVisibility('adminStartDateFilter', true);
+                setFilterVisibility('adminEndDateFilter', true);
+            }
+            const today = getBangkokTodayText();
+            const month = today.substring(0, 7);
+            const year = today.substring(0, 4);
+            if (document.getElementById('adminDateFilter') && !document.getElementById('adminDateFilter').value) document.getElementById('adminDateFilter').value = today;
+            if (document.getElementById('adminMonthFilter') && !document.getElementById('adminMonthFilter').value) document.getElementById('adminMonthFilter').value = month;
+            if (document.getElementById('adminYearFilter') && !document.getElementById('adminYearFilter').value) document.getElementById('adminYearFilter').value = year;
+            if (document.getElementById('adminStartDateFilter') && !document.getElementById('adminStartDateFilter').value) document.getElementById('adminStartDateFilter').value = addDaysText(today, -6);
+            if (document.getElementById('adminEndDateFilter') && !document.getElementById('adminEndDateFilter').value) document.getElementById('adminEndDateFilter').value = today;
+            if (shouldRefresh) refreshAdminDashboard();
+        }
+
+        function getAnalyticsFilters() {
+            const preset = document.getElementById('adminPeriodFilter')?.value || 'today';
+            const today = getBangkokTodayText();
+            let filters = { periodType: 'day', date: today };
+            if (preset === 'yesterday') filters.date = addDaysText(today, -1);
+            if (preset === 'date') filters.date = document.getElementById('adminDateFilter')?.value || today;
+            if (preset === 'thisWeek') filters = { periodType: 'week', date: today };
+            if (preset === 'lastWeek') {
+                const start = addDaysText(startOfWeekText(today), -7);
+                filters = { periodType: 'week', startDate: start, endDate: addDaysText(start, 6) };
+            }
+            if (preset === 'week') {
+                const range = isoWeekRange(document.getElementById('adminWeekFilter')?.value);
+                filters = range ? { periodType: 'week', ...range } : { periodType: 'week', date: today };
+            }
+            if (preset === 'thisMonth') filters = { periodType: 'month', month: today.substring(0, 7) };
+            if (preset === 'lastMonth') filters = { periodType: 'month', month: monthOffsetText(today.substring(0, 7), -1) };
+            if (preset === 'month') filters = { periodType: 'month', month: document.getElementById('adminMonthFilter')?.value || today.substring(0, 7) };
+            if (preset === 'thisYear') filters = { periodType: 'year', year: Number(document.getElementById('adminYearFilter')?.value || today.substring(0, 4)) };
+            if (preset === 'custom') filters = {
+                periodType: 'custom',
+                startDate: document.getElementById('adminStartDateFilter')?.value || today,
+                endDate: document.getElementById('adminEndDateFilter')?.value || today
+            };
+            if (preset === 'all') filters = { periodType: 'all' };
+            filters.org = document.getElementById('adminOrgFilter')?.value || 'ALL';
+            filters.role = document.getElementById('adminRoleFilter')?.value || 'ALL';
+            filters.band = document.getElementById('adminBandFilter')?.value || 'ALL';
+            return filters;
+        }
+
+        function switchAnalyticsTab(tabName) {
+            document.querySelectorAll('[data-analytics-panel]').forEach(panel => {
+                panel.classList.toggle('hidden', panel.dataset.analyticsPanel !== tabName);
+            });
+            document.querySelectorAll('[data-analytics-tab]').forEach(button => {
+                button.classList.toggle('active', button.dataset.analyticsTab === tabName);
+            });
+        }
+
+        function setAnalyticsText(id, value, suffix = '') {
+            const element = document.getElementById(id);
+            if (element) element.textContent = value === null || value === undefined ? '-' : `${value}${suffix}`;
+        }
+
+        function destroyAnalyticsChart(name) {
+            if (analyticsChartInstances[name]) {
+                analyticsChartInstances[name].destroy();
+                analyticsChartInstances[name] = null;
+            }
+        }
+
+        function createAnalyticsChart(name, canvasId, config) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            destroyAnalyticsChart(name);
+            analyticsChartInstances[name] = new Chart(canvas.getContext('2d'), config);
+        }
+
+        function renderAnalyticsCharts(analytics) {
+            const overview = analytics.overview || {};
+            createAnalyticsChart('band', 'analyticsBandChart', {
+                type: 'doughnut',
+                data: { labels: ['GREEN', 'AMBER', 'RED', 'UNKNOWN'], datasets: [{ data: [overview.greenCount || 0, overview.amberCount || 0, overview.redCount || 0, overview.unknownCount || 0], backgroundColor: ['#22c55e', '#f59e0b', '#ef4444', '#94a3b8'] }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+            });
+            const risks = (analytics.risks || []).filter(item => item.count > 0);
+            createAnalyticsChart('risk', 'analyticsRiskChart', {
+                type: 'bar',
+                data: { labels: risks.map(item => item.label), datasets: [{ label: 'จำนวนครั้ง', data: risks.map(item => item.count), backgroundColor: '#f97316' }] },
+                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } }
+            });
+            const trend = analytics.trend || [];
+            createAnalyticsChart('trend', 'analyticsTrendChart', {
+                type: 'bar',
+                data: { labels: trend.map(item => item.label), datasets: [
+                    { label: 'GREEN', data: trend.map(item => item.green), backgroundColor: '#22c55e' },
+                    { label: 'AMBER', data: trend.map(item => item.amber), backgroundColor: '#f59e0b' },
+                    { label: 'RED', data: trend.map(item => item.red), backgroundColor: '#ef4444' }
+                ] },
+                options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } } } }
+            });
+            createAnalyticsChart('sleep', 'analyticsSleepChart', {
+                type: 'line',
+                data: { labels: trend.map(item => item.label), datasets: [{ label: 'ชั่วโมงการนอนเฉลี่ย', data: trend.map(item => item.avgSleep), borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,.15)', tension: .25, fill: true }] },
+                options: { responsive: true, maintainAspectRatio: false, spanGaps: true, scales: { y: { suggestedMin: 0, suggestedMax: 10 } } }
+            });
+            createAnalyticsChart('bp', 'analyticsBloodPressureChart', {
+                type: 'line',
+                data: { labels: trend.map(item => item.label), datasets: [
+                    { label: 'Systolic เฉลี่ย', data: trend.map(item => item.avgSystolic), borderColor: '#dc2626', tension: .25 },
+                    { label: 'Diastolic เฉลี่ย', data: trend.map(item => item.avgDiastolic), borderColor: '#7c3aed', tension: .25 }
+                ] },
+                options: { responsive: true, maintainAspectRatio: false, spanGaps: true }
+            });
+            const orgs = analytics.organizations || [];
+            createAnalyticsChart('org', 'analyticsOrgChart', {
+                type: 'bar',
+                data: { labels: orgs.map(item => item.org), datasets: [
+                    { label: 'GREEN', data: orgs.map(item => item.greenCount), backgroundColor: '#22c55e' },
+                    { label: 'AMBER', data: orgs.map(item => item.amberCount), backgroundColor: '#f59e0b' },
+                    { label: 'RED', data: orgs.map(item => item.redCount), backgroundColor: '#ef4444' }
+                ] },
+                options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } } } }
+            });
+        }
+
+        function followUpLabel(level) {
+            return ({ URGENT: 'เร่งด่วน', HIGH: 'ควรติดตาม', MONITOR: 'เฝ้าระวัง', NORMAL: 'ปกติ', INSUFFICIENT_DATA: 'ข้อมูลยังน้อย' })[level] || level || '-';
+        }
+
+        function renderAnalyticsTables(analytics) {
+            const personBody = document.getElementById('analyticsPersonTable');
+            if (personBody) {
+                const rows = analytics.persons || [];
+                personBody.innerHTML = rows.length ? rows.map(person => `<tr class="hover:bg-gray-50"><td class="px-3 py-2 font-medium">${escapeHtml(person.displayName || person.maskedName)}</td><td class="px-3 py-2">${escapeHtml(person.org)}</td><td class="px-3 py-2 text-center">${person.assessmentCount}</td><td class="px-3 py-2 text-center">${person.greenCount}/${person.amberCount}/${person.redCount}</td><td class="px-3 py-2 text-center font-bold">${person.riskPercent}</td><td class="px-3 py-2 text-center">${person.avgSleep ?? '-'}</td><td class="px-3 py-2 text-center">${person.avgSystolic ?? '-'}/${person.avgDiastolic ?? '-'}</td><td class="px-3 py-2">${followUpLabel(person.followUpLevel)}</td><td class="px-3 py-2 text-xs">${escapeHtml(person.summaryText)}</td></tr>`).join('') : '<tr><td colspan="9" class="p-6 text-center text-gray-500">ไม่มีข้อมูลรายบุคคลในมุมมองนี้</td></tr>';
+            }
+            const orgBody = document.getElementById('analyticsOrgTable');
+            if (orgBody) {
+                const rows = analytics.organizations || [];
+                orgBody.innerHTML = rows.length ? rows.map(org => `<tr class="hover:bg-gray-50"><td class="px-3 py-2 font-medium">${escapeHtml(org.org)}</td><td class="px-3 py-2 text-center">${org.personnelCount}</td><td class="px-3 py-2 text-center">${org.assessmentCount}</td><td class="px-3 py-2 text-center text-green-700">${org.greenCount}</td><td class="px-3 py-2 text-center text-amber-700">${org.amberCount}</td><td class="px-3 py-2 text-center text-red-700">${org.redCount}</td><td class="px-3 py-2 text-center font-bold">${org.riskPercent}</td><td class="px-3 py-2 text-center">${org.avgSleep ?? '-'}</td></tr>`).join('') : '<tr><td colspan="8" class="p-6 text-center text-gray-500">ไม่มีข้อมูลรายหน่วยงานในมุมมองนี้</td></tr>';
+            }
+            const quality = analytics.dataQuality || { bySeverity: {}, issues: [] };
+            setAnalyticsText('qualityTotalIssues', quality.totalIssues || 0);
+            setAnalyticsText('qualityHighIssues', quality.bySeverity?.HIGH || 0);
+            setAnalyticsText('qualityMediumIssues', quality.bySeverity?.MEDIUM || 0);
+            setAnalyticsText('qualityAffectedRecords', quality.recordsWithIssues || 0);
+            const qualityBody = document.getElementById('analyticsQualityTable');
+            if (qualityBody) {
+                qualityBody.innerHTML = (quality.issues || []).length ? quality.issues.map(issue => `<tr class="hover:bg-gray-50"><td class="px-3 py-2 font-bold">${escapeHtml(issue.severity)}</td><td class="px-3 py-2">${escapeHtml(issue.label)}</td><td class="px-3 py-2 font-mono text-xs">${escapeHtml(issue.recordId || '-')}</td><td class="px-3 py-2 font-mono text-xs">${escapeHtml(issue.userId || '-')}</td><td class="px-3 py-2">${escapeHtml(issue.date || '-')}</td><td class="px-3 py-2 text-xs">${escapeHtml(issue.detail || '-')}</td></tr>`).join('') : '<tr><td colspan="6" class="p-6 text-center text-gray-500">ไม่พบรายละเอียดปัญหา หรือมุมมองนี้แสดงเฉพาะข้อมูลสรุป</td></tr>';
+            }
+        }
+
+        function renderHealthAnalytics(analytics) {
+            lastAnalytics = analytics;
+            const overview = analytics.overview || {};
+            setAnalyticsText('analyticsAssessmentCount', overview.assessmentCount || 0);
+            setAnalyticsText('analyticsPersonnelCount', overview.personnelCount || 0);
+            setAnalyticsText('analyticsGreenCount', overview.greenCount || 0);
+            setAnalyticsText('analyticsAmberCount', overview.amberCount || 0);
+            setAnalyticsText('analyticsRedCount', overview.redCount || 0);
+            setAnalyticsText('analyticsRiskCount', overview.riskCount || 0);
+            setAnalyticsText('analyticsFollowUpCount', overview.followUpPersonnelCount || 0);
+            setAnalyticsText('analyticsQualityCount', overview.dataQualityIssueCount || 0);
+            const dateLabel = document.getElementById('adminDateNow');
+            if (dateLabel) dateLabel.textContent = analytics.period?.periodLabel || '-';
+            renderAnalyticsCharts(analytics);
+            renderAnalyticsTables(analytics);
+        }
+
+        function loadHealthAnalytics(filters = null) {
+            const requestedFilters = filters || getAnalyticsFilters();
+            return api.run('getHealthAnalytics', { filters: requestedFilters }).then(res => {
+                if (res.ok && res.analytics) {
+                    renderHealthAnalytics(res.analytics);
+                } else {
+                    throw new Error(res.error || 'ไม่สามารถโหลด Analytics ได้');
+                }
+            }).catch(error => {
+                console.error('Analytics Error:', error.message);
+                setAnalyticsText('analyticsAssessmentCount', '-');
+            });
+        }
+
+        // ================= EXECUTIVE REPORT BUILDER =================
+        function canBuildExecutiveReport() {
+            return !!appUser && ['super_admin', 'exec_ppho', 'provincial_admin', 'provincial_audit', 'hospital_admin', 'hospital_director'].includes(appUser.role);
+        }
+
+        function openReportBuilder() {
+            if (!canBuildExecutiveReport()) {
+                Swal.fire('จำกัดสิทธิ์', 'กรุณาเข้าสู่ระบบด้วยสิทธิ์ผู้ดูแลหรือผู้บริหารเพื่อสร้างรายงาน', 'warning');
+                return;
+            }
+            const modal = document.getElementById('modalExport');
+            const reportOrg = document.getElementById('reportOrg');
+            if (reportOrg) {
+                if (appUser.role === 'hospital_admin' || appUser.role === 'hospital_director') {
+                    reportOrg.value = appUser.org;
+                    reportOrg.disabled = true;
+                } else {
+                    reportOrg.value = document.getElementById('adminOrgFilter')?.value || 'ALL';
+                    reportOrg.disabled = false;
+                }
+            }
+            handleReportPeriodChange();
+            if (modal) modal.classList.remove('hidden');
+        }
+
+        function handleReportPeriodChange() {
+            const type = document.getElementById('reportPeriodType')?.value || 'dashboard';
+            const map = {
+                reportDateWrap: type === 'day',
+                reportWeekWrap: type === 'week',
+                reportMonthWrap: type === 'month',
+                reportStartWrap: type === 'custom',
+                reportEndWrap: type === 'custom'
+            };
+            Object.keys(map).forEach(id => setFilterVisibility(id, map[id]));
+            const today = getBangkokTodayText();
+            if (document.getElementById('reportDate') && !document.getElementById('reportDate').value) document.getElementById('reportDate').value = today;
+            if (document.getElementById('reportMonth') && !document.getElementById('reportMonth').value) document.getElementById('reportMonth').value = today.substring(0, 7);
+            if (document.getElementById('exportStartDate') && !document.getElementById('exportStartDate').value) document.getElementById('exportStartDate').value = addDaysText(today, -6);
+            if (document.getElementById('exportEndDate') && !document.getElementById('exportEndDate').value) document.getElementById('exportEndDate').value = today;
+        }
+
+        function getReportFilters() {
+            const type = document.getElementById('reportPeriodType')?.value || 'dashboard';
+            let filters = getAnalyticsFilters();
+            if (type === 'day') filters = { periodType: 'day', date: document.getElementById('reportDate')?.value || getBangkokTodayText() };
+            if (type === 'week') {
+                const range = isoWeekRange(document.getElementById('reportWeek')?.value);
+                filters = range ? { periodType: 'week', ...range } : { periodType: 'week', date: getBangkokTodayText() };
+            }
+            if (type === 'month') filters = { periodType: 'month', month: document.getElementById('reportMonth')?.value || getBangkokTodayText().substring(0, 7) };
+            if (type === 'custom') filters = {
+                periodType: 'custom',
+                startDate: document.getElementById('exportStartDate')?.value,
+                endDate: document.getElementById('exportEndDate')?.value
+            };
+            filters.org = document.getElementById('reportOrg')?.value || 'ALL';
+            filters.role = document.getElementById('adminRoleFilter')?.value || 'ALL';
+            filters.band = document.getElementById('adminBandFilter')?.value || 'ALL';
+            return filters;
+        }
+
+        function getReportRequest() {
+            return {
+                filters: getReportFilters(),
+                anonymous: document.getElementById('reportAnonymous')?.checked !== false,
+                includeNames: document.getElementById('reportIncludeNames')?.checked === true,
+                reportType: document.querySelector('input[name="reportType"]:checked')?.value || 'executive',
+                includeCharts: document.getElementById('reportIncludeCharts')?.checked !== false,
+                includeDataQuality: document.getElementById('reportIncludeQuality')?.checked !== false
+            };
+        }
+
+        function reportValue(value, suffix = '') {
+            return value === null || value === undefined || value === '' ? '-' : `${value}${suffix}`;
+        }
+
+        function captureChartImage(canvasId) {
+            const canvas = document.getElementById(canvasId);
+            try {
+                return canvas ? canvas.toDataURL('image/png', 0.95) : '';
+            } catch (error) {
+                return '';
+            }
+        }
+
+        function renderExecutiveReportPreview(report) {
+            lastExecutiveReport = report;
+            const preview = document.getElementById('executiveReportPreview');
+            if (!preview) return;
+            const overview = report.overview || {};
+            const metrics = report.healthMetrics || {};
+            const bandRows = [
+                ['GREEN', overview.greenCount || 0, '#15803d'],
+                ['AMBER', overview.amberCount || 0, '#b45309'],
+                ['RED', overview.redCount || 0, '#b91c1c'],
+                ['UNKNOWN', overview.unknownCount || 0, '#475569']
+            ];
+            const healthRows = [
+                ['ชั่วโมงการนอน', metrics.sleepHours, 'ชั่วโมง'],
+                ['Systolic', metrics.systolic, 'mmHg'],
+                ['Diastolic', metrics.diastolic, 'mmHg'],
+                ['ชีพจร', metrics.pulse, 'ครั้ง/นาที'],
+                ['อุณหภูมิ', metrics.temperature, '°C'],
+                ['ความอ่อนล้า', metrics.fatigue, 'คะแนน']
+            ];
+            const riskRows = (report.risks || []).filter(item => item.count > 0);
+            const personRows = report.persons || [];
+            const followUpRows = report.followUpCases || [];
+            const quality = report.dataQuality;
+            const chartHtml = report.includeCharts ? `<div class="report-avoid-break mt-5"><h2 class="font-bold text-base mb-2">กราฟประกอบ</h2><div class="grid grid-cols-1 gap-3">${[
+                ['สัดส่วนผลประเมิน', captureChartImage('analyticsBandChart')],
+                ['แนวโน้มความเสี่ยง', captureChartImage('analyticsTrendChart')],
+                ['ปัจจัยเสี่ยง', captureChartImage('analyticsRiskChart')]
+            ].filter(item => item[1]).map(item => `<figure class="border rounded p-2"><figcaption class="text-xs font-bold mb-1">${item[0]}</figcaption><img src="${item[1]}" class="w-full max-h-72 object-contain"></figure>`).join('')}</div></div>` : '';
+
+            preview.innerHTML = `
+                <header class="border-b-4 border-blue-700 pb-4 mb-5">
+                    <h1 class="text-2xl font-bold text-blue-900">${escapeHtml(report.title)}</h1>
+                    <p class="text-sm mt-2"><b>หน่วยงาน:</b> ${escapeHtml(report.organizationName)} &nbsp; <b>ช่วงข้อมูล:</b> ${escapeHtml(report.period?.periodLabel || '-')}</p>
+                    <p class="text-xs text-gray-600 mt-1"><b>วันที่จัดทำ:</b> ${escapeHtml(formatThaiDate(report.generatedAt))} &nbsp; <b>โหมด:</b> ${report.anonymous ? 'ไม่ระบุตัวตน' : 'แสดงข้อมูลตามสิทธิ์'}</p>
+                </header>
+                <section class="report-avoid-break mb-5"><h2 class="font-bold text-base mb-2">1. ภาพรวมข้อมูล</h2><div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-center">${[
+                    ['การประเมิน', overview.assessmentCount || 0], ['บุคลากร', overview.personnelCount || 0], ['AMBER + RED', overview.riskCount || 0], ['ควรติดตาม', overview.followUpPersonnelCount || 0]
+                ].map(item => `<div class="border rounded p-2 bg-gray-50"><div class="text-xs">${item[0]}</div><div class="text-xl font-bold">${item[1]}</div></div>`).join('')}</div></section>
+                <section class="report-avoid-break mb-5"><h2 class="font-bold text-base mb-2">2. ตาราง GREEN, AMBER และ RED</h2><table><thead><tr><th>Band</th><th>จำนวน</th><th>ร้อยละจากการประเมิน</th></tr></thead><tbody>${bandRows.map(row => `<tr><td style="color:${row[2]};font-weight:bold">${row[0]}</td><td class="text-center">${row[1]}</td><td class="text-center">${overview.assessmentCount ? (row[1] * 100 / overview.assessmentCount).toFixed(1) : '0.0'}</td></tr>`).join('')}</tbody></table></section>
+                <section class="report-avoid-break mb-5"><h2 class="font-bold text-base mb-2">3. ตัวชี้วัดสุขภาพ</h2><table><thead><tr><th>ตัวชี้วัด</th><th>จำนวนค่าจริง</th><th>เฉลี่ย</th><th>ต่ำสุด</th><th>สูงสุด</th><th>หน่วย</th></tr></thead><tbody>${healthRows.map(row => `<tr><td>${row[0]}</td><td class="text-center">${reportValue(row[1]?.count)}</td><td class="text-center">${reportValue(row[1]?.average)}</td><td class="text-center">${reportValue(row[1]?.min)}</td><td class="text-center">${reportValue(row[1]?.max)}</td><td>${row[2]}</td></tr>`).join('')}</tbody></table></section>
+                <section class="report-avoid-break mb-5"><h2 class="font-bold text-base mb-2">4. ปัจจัยเสี่ยงที่พบ</h2>${riskRows.length ? `<table><thead><tr><th>ปัจจัย</th><th>จำนวนครั้ง</th><th>ร้อยละ</th></tr></thead><tbody>${riskRows.map(item => `<tr><td>${escapeHtml(item.label)}</td><td class="text-center">${item.count}</td><td class="text-center">${item.percent}</td></tr>`).join('')}</tbody></table>` : '<p class="text-sm text-gray-500">ไม่พบปัจจัยเสี่ยงในช่วงที่เลือก</p>'}</section>
+                ${chartHtml}
+                <section class="mt-5"><h2 class="font-bold text-base mb-2">5. ตารางสรุปรายบุคคล</h2>${personRows.length ? `<table><thead><tr><th>ชื่อ</th><th>หน่วยงาน</th><th>ประเมิน</th><th>G/A/R</th><th>เสี่ยง (%)</th><th>ติดตาม</th></tr></thead><tbody>${personRows.map(person => `<tr><td>${escapeHtml(person.displayName)}</td><td>${escapeHtml(person.org)}</td><td class="text-center">${person.assessmentCount}</td><td class="text-center">${person.greenCount}/${person.amberCount}/${person.redCount}</td><td class="text-center">${person.riskPercent}</td><td>${followUpLabel(person.followUpLevel)}</td></tr>`).join('')}</tbody></table>` : '<p class="text-sm text-gray-500">รายงานนี้ไม่แสดงข้อมูลรายบุคคล หรือไม่พบข้อมูล</p>'}</section>
+                <section class="mt-5"><h2 class="font-bold text-base mb-2">6. กรณีที่ควรติดตาม</h2>${followUpRows.length ? `<ul class="list-disc pl-5 text-sm space-y-1">${followUpRows.map(person => `<li>${escapeHtml(person.displayName)} — ${followUpLabel(person.followUpLevel)}; RED ${person.redCount} ครั้ง; ความเสี่ยง ${person.riskPercent}%</li>`).join('')}</ul>` : '<p class="text-sm text-gray-500">ไม่พบกรณีที่อยู่ในระดับติดตามสูงหรือเร่งด่วน</p>'}</section>
+                <section class="mt-5"><h2 class="font-bold text-base mb-2">7. แนวโน้มความเสี่ยง</h2><table><thead><tr><th>ช่วงเวลา</th><th>GREEN</th><th>AMBER</th><th>RED</th><th>เสี่ยง (%)</th></tr></thead><tbody>${(report.trend || []).map(item => `<tr><td>${escapeHtml(item.label)}</td><td class="text-center">${item.green}</td><td class="text-center">${item.amber}</td><td class="text-center">${item.red}</td><td class="text-center">${item.riskPercent}</td></tr>`).join('')}</tbody></table></section>
+                ${quality ? `<section class="mt-5"><h2 class="font-bold text-base mb-2">8. คุณภาพข้อมูล</h2><p class="text-sm">พบประเด็น ${quality.totalIssues} รายการ (สูง ${quality.bySeverity?.HIGH || 0}, กลาง ${quality.bySeverity?.MEDIUM || 0}, ต่ำ ${quality.bySeverity?.LOW || 0}) ระบบไม่ได้แก้ข้อมูลต้นฉบับอัตโนมัติ</p></section>` : ''}
+                <section class="report-avoid-break mt-5"><h2 class="font-bold text-base mb-2">9. ข้อเสนอแนะเชิงบริหาร</h2><ul class="list-disc pl-5 text-sm space-y-1">${(report.narrative?.recommendations || []).map(text => `<li>${escapeHtml(text)}</li>`).join('') || '<li>ติดตามข้อมูลตามรอบปกติและทบทวนความครบถ้วนของการประเมิน</li>'}</ul></section>
+                <section class="report-avoid-break mt-5 bg-blue-50 border border-blue-200 rounded p-4"><h2 class="font-bold text-base mb-2">10. บทสรุปสำหรับผู้บริหาร</h2><p class="text-sm leading-relaxed">${escapeHtml(report.narrative?.executiveSummary || 'ไม่มีข้อมูลเพียงพอสำหรับสรุป')}</p></section>
+                <footer class="mt-8 pt-4 border-t text-[9px] leading-relaxed text-gray-600">${escapeHtml(report.disclaimer)}</footer>
+            `;
+            document.getElementById('modalExport')?.classList.add('hidden');
+            document.getElementById('modalReportPreview')?.classList.remove('hidden');
+        }
+
+        function printExecutiveReport() {
+            const source = document.getElementById('executiveReportPreview');
+            const printArea = document.getElementById('printArea');
+            if (!source || !printArea) return;
+            printArea.innerHTML = source.innerHTML;
+            printArea.classList.remove('hidden');
+            window.print();
+            setTimeout(() => {
+                printArea.classList.add('hidden');
+                printArea.innerHTML = '';
+            }, 500);
+        }
+
+        function downloadExecutivePdf() {
+            const source = document.getElementById('executiveReportPreview');
+            if (!source || !lastExecutiveReport) return;
+            if (typeof html2pdf !== 'function') {
+                Swal.fire('ไม่พบไลบรารี PDF', 'กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ตสำหรับ html2pdf.js', 'error');
+                return;
+            }
+            showLoader('กำลังสร้างไฟล์ PDF ภาษาไทย...');
+            const fileName = `DHR_Executive_Report_${lastExecutiveReport.period?.startDateText || 'all'}_${lastExecutiveReport.period?.endDateText || 'all'}.pdf`;
+            html2pdf().set({
+                margin: [8, 8, 12, 8],
+                filename: fileName,
+                image: { type: 'jpeg', quality: 0.96 },
+                html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', '.report-avoid-break'] }
+            }).from(source).toPdf().get('pdf').then(pdf => {
+                const pages = pdf.internal.getNumberOfPages();
+                for (let page = 1; page <= pages; page++) {
+                    pdf.setPage(page);
+                    pdf.setFontSize(8);
+                    pdf.setTextColor(100);
+                    pdf.text(`${page} / ${pages}`, 105, 292, { align: 'center' });
+                }
+            }).save().then(() => hideLoader()).catch(error => {
+                hideLoader();
+                Swal.fire('สร้าง PDF ไม่สำเร็จ', error.message, 'error');
+            });
+        }
+
+        function downloadBlobFile(content, fileName, mimeType) {
+            const blob = new Blob([content], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = fileName;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
+        }
+
+        function downloadExecutiveCsv() {
+            if (!canBuildExecutiveReport()) {
+                Swal.fire('จำกัดสิทธิ์', 'ไม่มีสิทธิ์ดาวน์โหลดข้อมูล', 'warning');
+                return;
+            }
+            const request = getReportRequest();
+            showLoader('กำลังเตรียม CSV...');
+            api.run('exportExecutiveReport', request).then(res => {
+                hideLoader();
+                if (!res.ok) throw new Error(res.error || 'ส่งออก CSV ไม่สำเร็จ');
+                downloadBlobFile(res.csvData, res.fileName || 'driver-health-report.csv', 'text/csv;charset=utf-8');
+            }).catch(error => {
+                hideLoader();
+                Swal.fire('ส่งออกไม่สำเร็จ', error.message, 'error');
+            });
+        }
+
+        const executiveReportForm = document.getElementById('formExport');
+        if (executiveReportForm) {
+            executiveReportForm.onsubmit = function(event) {
+                event.preventDefault();
+                const request = getReportRequest();
+                showLoader('กำลังสร้างรายงานจากข้อมูลจริง...');
+                api.run('getExecutiveReport', request).then(res => {
+                    hideLoader();
+                    if (!res.ok || !res.report) throw new Error(res.error || 'สร้างรายงานไม่สำเร็จ');
+                    renderExecutiveReportPreview(res.report);
+                }).catch(error => {
+                    hideLoader();
+                    Swal.fire('สร้างรายงานไม่สำเร็จ', error.message, 'error');
+                });
+                return false;
+            };
+        }
+
+        handleAnalyticsPeriodChange(false);
+        handleReportPeriodChange();
     </script>
 </body>
 </html>
