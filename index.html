@@ -4414,7 +4414,7 @@
         function repairDatabaseConfirm() {
             Swal.fire({
                 title: 'ยืนยันการซ่อมแซมฐานข้อมูล?',
-                text: "ระบบจะทำการล้างหน้าตารางชั่วคราว สร้างหัวคอลัมน์มาตรฐานใหม่ และจัดเรียงข้อมูลเก่าให้ตรงช่องอย่างแม่นยำ (ข้อมูลจะไม่สูญหาย)",
+                text: "ระบบจะสำรองฐานข้อมูลใน Google Drive ก่อนเปลี่ยนโครงสร้าง จัดหัวคอลัมน์และย้ายค่าลับไปยัง Script Properties หากสำรองไม่สำเร็จ ระบบจะหยุดก่อนแก้ไขข้อมูล",
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#f97316',
@@ -4427,7 +4427,21 @@
                     api.run('repairDatabase').then(res => {
                         hideLoader();
                         if (res.ok) {
-                            Swal.fire('สำเร็จ', res.message, 'success');
+                            const migration = res.migration || {};
+                            const backupId = String(migration.backupFileId || '');
+                            const backupUrl = /^[A-Za-z0-9_-]+$/.test(backupId)
+                                ? 'https://drive.google.com/file/d/' + encodeURIComponent(backupId) + '/view'
+                                : '';
+                            Swal.fire({
+                                title: 'สำเร็จ',
+                                text: res.message + (migration.changed === false
+                                    ? ' (changed: false — ไม่มีการเปลี่ยนแปลงเพิ่มเติม)'
+                                    : ''),
+                                icon: 'success',
+                                footer: backupUrl
+                                    ? '<a href="' + backupUrl + '" target="_blank" rel="noopener noreferrer">เปิดไฟล์สำรองฐานข้อมูลใน Google Drive</a>'
+                                    : undefined
+                            });
                         } else {
                             Swal.fire('ข้อผิดพลาด', res.error, 'error');
                         }
