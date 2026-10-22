@@ -99,6 +99,13 @@
             overflow-wrap: break-word;
             line-height: 1.7;
         }
+        .pdf-export footer {
+            word-break: break-all;
+            overflow-wrap: break-word;
+            font-size: 10px;
+            line-height: 1.7;
+            padding-bottom: 16px;
+        }
         @media (max-width: 900px) {
             .report-page {
                 width: 100%;
@@ -5898,7 +5905,7 @@
             const personRows = report.persons || [];
             const followUpRows = report.followUpCases || [];
             const quality = report.dataQuality;
-            const chartHtml = report.includeCharts ? `<div class="mt-5"><h2 class="font-bold text-base mb-2">กราฟประกอบ</h2><div class="grid grid-cols-1 gap-3">${createExecutiveChartImages(report).map(item => `<figure class="report-avoid-break border rounded p-2"><figcaption class="text-xs font-bold mb-1">${item[0]}</figcaption><img src="${item[1]}" class="w-full max-h-72 object-contain"></figure>`).join('')}</div></div>` : '';
+            const chartHtml = report.includeCharts ? `<div class="mt-5"><div class="grid grid-cols-1 gap-3">${createExecutiveChartImages(report).map((item, index) => `<figure class="report-avoid-break border rounded p-2">${index === 0 ? '<h2 class="font-bold text-base mb-2">กราฟประกอบ</h2>' : ''}<figcaption class="text-xs font-bold mb-1">${item[0]}</figcaption><img src="${item[1]}" class="w-full max-h-72 object-contain"></figure>`).join('')}</div></div>` : '';
 
             preview.innerHTML = `
                 <header class="border-b-4 border-blue-700 pb-4 mb-5">
@@ -5919,7 +5926,7 @@
                 ${quality ? `<section class="mt-5"><h2 class="font-bold text-base mb-2">8. คุณภาพข้อมูล</h2><p class="text-sm">พบประเด็น ${quality.totalIssues} รายการ (สูง ${quality.bySeverity?.HIGH || 0}, กลาง ${quality.bySeverity?.MEDIUM || 0}, ต่ำ ${quality.bySeverity?.LOW || 0}) ระบบไม่ได้แก้ข้อมูลต้นฉบับอัตโนมัติ</p></section>` : ''}
                 <section class="report-avoid-break mt-5"><h2 class="font-bold text-base mb-2">9. ข้อเสนอแนะเชิงบริหาร</h2><ul class="list-disc pl-5 text-sm space-y-1">${(report.narrative?.recommendations || []).map(text => `<li>${escapeHtml(text)}</li>`).join('') || '<li>ติดตามข้อมูลตามรอบปกติและทบทวนความครบถ้วนของการประเมิน</li>'}</ul></section>
                 <section class="report-avoid-break mt-5 bg-blue-50 border border-blue-200 rounded p-4"><h2 class="font-bold text-base mb-2">10. บทสรุปสำหรับผู้บริหาร</h2><p class="text-sm leading-relaxed">${escapeHtml(report.narrative?.executiveSummary || 'ไม่มีข้อมูลเพียงพอสำหรับสรุป')}</p></section>
-                <footer class="mt-8 pt-4 border-t text-[9px] leading-relaxed text-gray-600">${escapeHtml(report.disclaimer)}</footer>
+                <footer class="report-avoid-break mt-8 pt-4 border-t text-[9px] leading-relaxed text-gray-600">${escapeHtml(report.disclaimer)}</footer>
             `;
             document.getElementById('modalExport')?.classList.add('hidden');
             document.getElementById('modalReportPreview')?.classList.remove('hidden');
@@ -5950,7 +5957,11 @@
             const exportSource = source.cloneNode(true);
             exportSource.removeAttribute('id');
             exportSource.classList.add('pdf-export');
-            Object.assign(exportSource.style, {width: '194mm', minHeight: '0', margin: '0', padding: '0', boxShadow: 'none'});
+            Object.assign(exportSource.style, {width: '194mm', minHeight: '0', margin: '0', padding: '0 0 8mm', boxShadow: 'none'});
+            exportSource.querySelectorAll('section').forEach(section => {
+                const table = section.querySelector('table');
+                if (table && table.querySelectorAll('tr').length <= 12) section.classList.add('report-avoid-break');
+            });
             const fileName = `DHR_Executive_Report_${lastExecutiveReport.period?.startDateText || 'all'}_${lastExecutiveReport.period?.endDateText || 'all'}.pdf`;
             return html2pdf().set({
                 margin: [8, 8, 12, 8],
