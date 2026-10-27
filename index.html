@@ -164,6 +164,11 @@
     <main id="mainContentArea" class="flex-grow max-w-6xl mx-auto w-full p-4 flex flex-col items-center justify-start">
         
         <div id="viewAdmin" class="w-full bg-white rounded-xl shadow-lg p-6 mt-4 flex-grow">
+            <div role="tablist" aria-label="กลุ่มบุคลากร" class="flex flex-wrap gap-2 mb-5 border-b pb-3">
+                <button role="tab" aria-selected="true" data-personnel-tab="driver" onclick="switchPersonnelTab('driver')" class="rounded-lg px-4 py-2 bg-blue-700 text-white font-bold">พนักงานขับรถประจำ</button>
+                <button role="tab" aria-selected="false" data-personnel-tab="ALL" onclick="switchPersonnelTab('ALL')" class="rounded-lg px-4 py-2 bg-gray-100 text-gray-700 font-bold">ภาพรวมทั้งหมด</button>
+                <button role="tab" aria-selected="false" data-personnel-tab="staff" onclick="switchPersonnelTab('staff')" class="rounded-lg px-4 py-2 bg-gray-100 text-gray-700 font-bold">เจ้าหน้าที่ขับรถ</button>
+            </div>
             <div id="dashboardHeader" class="flex flex-col md:flex-row justify-between items-start md:items-center border-b pb-4 mb-6 gap-4">
                 <div>
                     <h3 class="text-2xl font-bold text-gray-800" id="dashTitle">ภาพรวมความพร้อมประจำวัน</h3>
@@ -214,16 +219,16 @@
                             <option value="โรงพยาบาลบ้านนา">รพ. บ้านนา</option>
                             <option value="โรงพยาบาลองครักษ์">รพ. องครักษ์</option>
                         </select>
-                        <select id="adminRoleFilter" class="border rounded-lg px-2 py-1.5 text-sm bg-gray-50 focus:ring-blue-500" title="กรองประเภทบุคลากร">
+                        <select id="adminRoleFilter" class="hidden" aria-hidden="true" tabindex="-1" title="กรองประเภทบุคลากร">
                             <option value="ALL">ทุกประเภท</option>
-                            <option value="driver">พนักงานขับรถ</option>
+                            <option value="driver" selected>พนักงานขับรถ</option>
                             <option value="staff">เจ้าหน้าที่</option>
                         </select>
                         <select id="adminBandFilter" class="border rounded-lg px-2 py-1.5 text-sm bg-gray-50 focus:ring-blue-500" title="กรองระดับความเสี่ยง">
-                            <option value="ALL">ทุก Band</option>
-                            <option value="GREEN">GREEN</option>
-                            <option value="AMBER">AMBER</option>
-                            <option value="RED">RED</option>
+                            <option value="ALL">ทุกสถานะ</option>
+                            <option value="GREEN">พร้อมปฏิบัติงาน</option>
+                            <option value="AMBER">ต้องเฝ้าระวัง</option>
+                            <option value="RED">งดปฏิบัติงานขับรถ</option>
                         </select>
                         <button onclick="refreshAdminDashboard()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg transition border border-blue-700 font-bold" title="ใช้ตัวกรอง">แสดงผล</button>
                     </div>
@@ -247,15 +252,15 @@
                 <div class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-3 mb-6">
                     <div class="bg-sky-50 border border-sky-200 rounded-lg p-3"><p class="text-xs text-sky-800">จำนวนการประเมิน</p><p id="analyticsAssessmentCount" class="text-2xl font-bold text-sky-700">-</p></div>
                     <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-3"><p class="text-xs text-indigo-800">จำนวนบุคลากร</p><p id="analyticsPersonnelCount" class="text-2xl font-bold text-indigo-700">-</p></div>
-                    <div class="bg-green-50 border border-green-200 rounded-lg p-3"><p class="text-xs text-green-800">GREEN</p><p id="analyticsGreenCount" class="text-2xl font-bold text-green-700">-</p></div>
-                    <div class="bg-amber-50 border border-amber-200 rounded-lg p-3"><p class="text-xs text-amber-800">AMBER</p><p id="analyticsAmberCount" class="text-2xl font-bold text-amber-700">-</p></div>
-                    <div class="bg-red-50 border border-red-200 rounded-lg p-3"><p class="text-xs text-red-800">RED</p><p id="analyticsRedCount" class="text-2xl font-bold text-red-700">-</p></div>
-                    <div class="bg-orange-50 border border-orange-200 rounded-lg p-3"><p class="text-xs text-orange-800">AMBER + RED</p><p id="analyticsRiskCount" class="text-2xl font-bold text-orange-700">-</p></div>
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-3"><p class="text-xs text-green-800">พร้อมปฏิบัติงาน</p><p id="analyticsGreenCount" class="text-2xl font-bold text-green-700">-</p></div>
+                    <div class="bg-amber-50 border border-amber-200 rounded-lg p-3"><p class="text-xs text-amber-800">ต้องเฝ้าระวัง</p><p id="analyticsAmberCount" class="text-2xl font-bold text-amber-700">-</p></div>
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-3"><p class="text-xs text-red-800">งดปฏิบัติงานขับรถ</p><p id="analyticsRedCount" class="text-2xl font-bold text-red-700">-</p></div>
+                    <div class="bg-orange-50 border border-orange-200 rounded-lg p-3"><p class="text-xs text-orange-800">ต้องเฝ้าระวัง / งดปฏิบัติงานขับรถ</p><p id="analyticsRiskCount" class="text-2xl font-bold text-orange-700">-</p></div>
                     <div class="bg-fuchsia-50 border border-fuchsia-200 rounded-lg p-3"><p class="text-xs text-fuchsia-800">ควรติดตาม</p><p id="analyticsFollowUpCount" class="text-2xl font-bold text-fuchsia-700">-</p></div>
                     <div class="bg-slate-100 border border-slate-300 rounded-lg p-3"><p class="text-xs text-slate-700">ปัญหาคุณภาพข้อมูล</p><p id="analyticsQualityCount" class="text-2xl font-bold text-slate-700">-</p></div>
                 </div>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                    <div class="border rounded-lg p-4 bg-white"><h4 class="font-bold mb-3">สัดส่วน GREEN / AMBER / RED</h4><div class="h-72"><canvas id="analyticsBandChart"></canvas></div></div>
+                    <div class="border rounded-lg p-4 bg-white"><h4 class="font-bold mb-3">สัดส่วน พร้อมปฏิบัติงาน / ต้องเฝ้าระวัง / งดปฏิบัติงานขับรถ</h4><div class="h-72"><canvas id="analyticsBandChart"></canvas></div></div>
                     <div class="border rounded-lg p-4 bg-white"><h4 class="font-bold mb-3">ปัจจัยเสี่ยงที่พบ</h4><div class="h-72"><canvas id="analyticsRiskChart"></canvas></div></div>
                 </div>
                 <h4 class="font-bold text-gray-700 mb-3">สถานะล่าสุดและรายการเดิมของระบบ</h4>
@@ -270,15 +275,15 @@
                     <h2 class="text-3xl font-bold text-indigo-600 mt-2" id="statTotalStaff">-</h2>
                 </div>
                 <div class="bg-green-50 border border-green-200 rounded-lg p-4 text-center flex flex-col justify-center shadow-sm">
-                    <p class="text-green-800 font-medium text-[11px] md:text-xs">พร้อม (GREEN)</p>
+                    <p class="text-green-800 font-medium text-[11px] md:text-xs">พร้อมปฏิบัติงาน</p>
                     <h2 class="text-3xl font-bold text-green-600 mt-2" id="statGreen">-</h2>
                 </div>
                 <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center flex flex-col justify-center shadow-sm">
-                    <p class="text-yellow-800 font-medium text-[11px] md:text-xs">เฝ้าระวัง (AMBER)</p>
+                    <p class="text-yellow-800 font-medium text-[11px] md:text-xs">ต้องเฝ้าระวัง</p>
                     <h2 class="text-3xl font-bold text-yellow-600 mt-2" id="statAmber">-</h2>
                 </div>
                 <div class="bg-red-50 border border-red-200 rounded-lg p-4 text-center flex flex-col justify-center shadow-sm">
-                    <p class="text-red-800 font-medium text-[11px] md:text-xs">งดปฏิบัติงาน (RED)</p>
+                    <p class="text-red-800 font-medium text-[11px] md:text-xs">งดปฏิบัติงานขับรถ</p>
                     <h2 class="text-3xl font-bold text-red-600 mt-2" id="statRed">-</h2>
                 </div>
                 <div class="bg-gray-100 border border-gray-200 rounded-lg p-4 text-center flex flex-col justify-center shadow-sm">
@@ -396,7 +401,7 @@
             </section>
 
             <section id="analyticsTabTrend" data-analytics-panel="trend" class="hidden space-y-6">
-                <div class="border rounded-lg p-4 bg-white"><h4 class="font-bold mb-3">แนวโน้ม GREEN / AMBER / RED</h4><div class="h-80"><canvas id="analyticsTrendChart"></canvas></div></div>
+                <div class="border rounded-lg p-4 bg-white"><h4 class="font-bold mb-3">แนวโน้ม พร้อมปฏิบัติงาน / ต้องเฝ้าระวัง / งดปฏิบัติงานขับรถ</h4><div class="h-80"><canvas id="analyticsTrendChart"></canvas></div></div>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div class="border rounded-lg p-4 bg-white"><h4 class="font-bold mb-3">ชั่วโมงการนอนเฉลี่ย</h4><div class="h-72"><canvas id="analyticsSleepChart"></canvas></div></div>
                     <div class="border rounded-lg p-4 bg-white"><h4 class="font-bold mb-3">ความดันเฉลี่ย</h4><div class="h-72"><canvas id="analyticsBloodPressureChart"></canvas></div></div>
@@ -406,7 +411,7 @@
             <section id="analyticsTabPerson" data-analytics-panel="person" class="hidden">
                 <div class="overflow-x-auto border rounded-lg shadow-sm">
                     <table class="w-full text-sm text-left min-w-[1100px]">
-                        <thead class="bg-indigo-700 text-white"><tr><th class="px-3 py-2">ชื่อ</th><th class="px-3 py-2">หน่วยงาน</th><th class="px-3 py-2 text-center">ประเมิน</th><th class="px-3 py-2 text-center">G/A/R</th><th class="px-3 py-2 text-center">เสี่ยง (%)</th><th class="px-3 py-2 text-center">นอนเฉลี่ย</th><th class="px-3 py-2 text-center">ความดันเฉลี่ย</th><th class="px-3 py-2">ระดับติดตาม</th><th class="px-3 py-2">สรุป</th></tr></thead>
+                        <thead class="bg-indigo-700 text-white"><tr><th class="px-3 py-2">ชื่อ</th><th class="px-3 py-2">หน่วยงาน</th><th class="px-3 py-2 text-center">ประเมิน</th><th class="px-3 py-2 text-center">พร้อม / เฝ้าระวัง / งดขับ</th><th class="px-3 py-2 text-center">เสี่ยง (%)</th><th class="px-3 py-2 text-center">นอนเฉลี่ย</th><th class="px-3 py-2 text-center">ความดันเฉลี่ย</th><th class="px-3 py-2">ระดับติดตาม</th><th class="px-3 py-2">สรุป</th></tr></thead>
                         <tbody id="analyticsPersonTable" class="divide-y"></tbody>
                     </table>
                 </div>
@@ -414,7 +419,7 @@
 
             <section id="analyticsTabOrg" data-analytics-panel="org" class="hidden space-y-6">
                 <div class="border rounded-lg p-4 bg-white"><h4 class="font-bold mb-3">เปรียบเทียบผลตามหน่วยงาน</h4><div class="h-80"><canvas id="analyticsOrgChart"></canvas></div></div>
-                <div class="overflow-x-auto border rounded-lg shadow-sm"><table class="w-full text-sm text-left min-w-[850px]"><thead class="bg-blue-700 text-white"><tr><th class="px-3 py-2">หน่วยงาน</th><th class="px-3 py-2 text-center">บุคลากร</th><th class="px-3 py-2 text-center">การประเมิน</th><th class="px-3 py-2 text-center">GREEN</th><th class="px-3 py-2 text-center">AMBER</th><th class="px-3 py-2 text-center">RED</th><th class="px-3 py-2 text-center">เสี่ยง (%)</th><th class="px-3 py-2 text-center">นอนเฉลี่ย</th></tr></thead><tbody id="analyticsOrgTable" class="divide-y"></tbody></table></div>
+                <div class="overflow-x-auto border rounded-lg shadow-sm"><table class="w-full text-sm text-left min-w-[850px]"><thead class="bg-blue-700 text-white"><tr><th class="px-3 py-2">หน่วยงาน</th><th class="px-3 py-2 text-center">บุคลากร</th><th class="px-3 py-2 text-center">การประเมิน</th><th class="px-3 py-2 text-center">พร้อมปฏิบัติงาน</th><th class="px-3 py-2 text-center">ต้องเฝ้าระวัง</th><th class="px-3 py-2 text-center">งดปฏิบัติงานขับรถ</th><th class="px-3 py-2 text-center">เสี่ยง (%)</th><th class="px-3 py-2 text-center">นอนเฉลี่ย</th></tr></thead><tbody id="analyticsOrgTable" class="divide-y"></tbody></table></div>
             </section>
 
             <section id="analyticsTabQuality" data-analytics-panel="quality" class="hidden space-y-5">
@@ -931,7 +936,7 @@
                         <textarea id="set_timeSlots" rows="2" class="w-full border rounded-lg px-3 py-2 focus:ring-blue-500" required></textarea>
                     </div>
                     <div>
-                        <label class="block text-sm font-bold text-gray-700 mb-1">หัวข้อความเสี่ยงร้ายแรง (RED)</label>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">หัวข้อความเสี่ยงร้ายแรง (งดปฏิบัติงานขับรถ)</label>
                         <p class="text-xs text-gray-500 mb-2">คั่นด้วยเครื่องหมายจุลภาค (,)</p>
                         <textarea id="set_criticalRisks" rows="3" class="w-full border rounded-lg px-3 py-2 focus:ring-blue-500" required></textarea>
                     </div>
@@ -940,16 +945,16 @@
                 <div class="bg-yellow-50 p-5 rounded-lg border border-yellow-200 shadow-sm">
                     <h4 class="font-bold text-yellow-800 mb-4 border-b border-yellow-300 pb-2">ตั้งค่าเกณฑ์ประเมินสุขภาพ (Scoring Criteria)</h4>
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">อุณหภูมิ มีไข้สูง (RED) >=</label><input type="number" step="0.1" id="sc_tempHigh" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
-                        <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">อุณหภูมิ มีไข้ต่ำ (AMBER) >=</label><input type="number" step="0.1" id="sc_tempLow" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
-                        <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">ความดัน Sys (RED) >=</label><input type="number" id="sc_sysRed" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
-                        <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">ความดัน Dia (RED) >=</label><input type="number" id="sc_diaRed" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
-                        <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">ความดัน Sys (AMBER) >=</label><input type="number" id="sc_sysAmber" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
-                        <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">ความดัน Dia (AMBER) >=</label><input type="number" id="sc_diaAmber" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
+                        <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">อุณหภูมิ มีไข้สูง (งดปฏิบัติงานขับรถ) >=</label><input type="number" step="0.1" id="sc_tempHigh" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
+                        <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">อุณหภูมิ มีไข้ต่ำ (ต้องเฝ้าระวัง) >=</label><input type="number" step="0.1" id="sc_tempLow" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
+                        <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">ความดัน Sys (งดปฏิบัติงานขับรถ) >=</label><input type="number" id="sc_sysRed" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
+                        <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">ความดัน Dia (งดปฏิบัติงานขับรถ) >=</label><input type="number" id="sc_diaRed" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
+                        <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">ความดัน Sys (ต้องเฝ้าระวัง) >=</label><input type="number" id="sc_sysAmber" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
+                        <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">ความดัน Dia (ต้องเฝ้าระวัง) >=</label><input type="number" id="sc_diaAmber" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
                         <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">ชีพจรต่ำสุด (Min) <</label><input type="number" id="sc_pulseMin" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
                         <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">ชีพจรสูงสุด (Max) ></label><input type="number" id="sc_pulseMax" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
-                        <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">ระดับอ่อนล้า (RED) >=</label><input type="number" id="sc_fatigueRed" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
-                        <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">ระดับอ่อนล้า (AMBER) >=</label><input type="number" id="sc_fatigueAmber" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
+                        <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">ระดับอ่อนล้า (งดปฏิบัติงานขับรถ) >=</label><input type="number" id="sc_fatigueRed" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
+                        <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">ระดับอ่อนล้า (ต้องเฝ้าระวัง) >=</label><input type="number" id="sc_fatigueAmber" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
                         <div class="bg-white p-3 rounded border"><label class="block text-xs font-bold text-gray-700 mb-1">ชั่วโมงการนอนน้อยกว่า <</label><input type="number" step="0.5" id="sc_sleepMin" class="w-full border rounded px-2 py-1 text-sm focus:ring-yellow-500"></div>
                     </div>
                 </div>
@@ -1995,9 +2000,10 @@
         }
 
         function bandLabel(band) {
-            if (band === 'RED') return 'งดขับ';
-            if (band === 'AMBER') return 'เฝ้าระวัง';
-            return 'พร้อม';
+            if (band === 'RED') return 'งดปฏิบัติงานขับรถ';
+            if (band === 'AMBER') return 'ต้องเฝ้าระวัง';
+            if (band === 'GREEN') return 'พร้อมปฏิบัติงาน';
+            return 'ไม่ทราบผล';
         }
 
         function bandBadgeClass(band) {
@@ -3144,7 +3150,7 @@
                             title: 'บันทึกผลเรียบร้อย', 
                             icon: iconType, 
                             html: `
-                                <p class="mb-2">สถานะที่ได้คือ: <b>${res.band}</b></p>
+                                <p class="mb-2">สถานะที่ได้คือ: <b>${bandLabel(res.band)}</b></p>
                                 <p class="text-sm text-gray-500 mb-4">เหตุผล: ${reasonsText}</p>
                                 ${buttonsHtml}
                             `, 
@@ -3199,14 +3205,14 @@
                 return;
             }
             
-            let bandText = 'พร้อมปฏิบัติงาน (GREEN)';
+            let bandText = 'พร้อมปฏิบัติงาน';
             let bandColor = '#16a34a';
             
             if (data.band === 'RED') {
-                bandText = 'งดปฏิบัติงาน (RED)';
+                bandText = 'งดปฏิบัติงานขับรถ';
                 bandColor = '#dc2626';
             } else if (data.band === 'AMBER') {
-                bandText = 'เฝ้าระวัง (AMBER)';
+                bandText = 'ต้องเฝ้าระวัง';
                 bandColor = '#d97706';
             }
             
@@ -3430,7 +3436,7 @@
                                             <p class="text-xs text-gray-500">BP: ${i.sys}/${i.dia} | HR: ${i.pulse} | นอน ${i.sleepHours}ชม.</p>
                                             ${evidenceBtnHtml}
                                         </div>
-                                        <span class="px-2 py-1 text-xs font-bold rounded shadow-sm ${bandClass}">${i.band}</span>
+                                        <span class="px-2 py-1 text-xs font-bold rounded shadow-sm ${bandClass}">${bandLabel(i.band)}</span>
                                     </div>
                                     ${btnAddon}
                                 </div>
@@ -3849,7 +3855,7 @@
             dashChartInstance = new Chart(ctx, { 
                 type: 'doughnut', 
                 data: { 
-                    labels: ['พร้อม (GREEN)', 'เฝ้าระวัง (AMBER)', 'งดขับ (RED)', 'ยังไม่ประเมิน'], 
+                    labels: ['พร้อมปฏิบัติงาน', 'ต้องเฝ้าระวัง', 'งดปฏิบัติงานขับรถ', 'ยังไม่ประเมิน'], 
                     datasets: [{ 
                         data: dataValues, 
                         backgroundColor: bgColors, 
@@ -3976,13 +3982,40 @@
             tbody.innerHTML = html;
         }
         
+        let dashboardLoadSequence = 0;
+        function switchPersonnelTab(role) {
+            if (!['driver', 'ALL', 'staff'].includes(role)) return;
+            document.getElementById('adminRoleFilter').value = role;
+            document.querySelectorAll('[data-personnel-tab]').forEach(button => {
+                const active = button.dataset.personnelTab === role;
+                button.setAttribute('aria-selected', String(active));
+                button.className = 'rounded-lg px-4 py-2 font-bold ' + (active ? 'bg-blue-700 text-white' : 'bg-gray-100 text-gray-700');
+            });
+            loadAdminDashboard();
+        }
+        function applyPersonnelVisibility(role) {
+            ['adminActionListDriver', 'adminActionListStaff'].forEach(id => {
+                const section = document.getElementById(id)?.closest('table')?.parentElement?.parentElement;
+                if (section) section.classList.toggle('hidden', role === (id.endsWith('Driver') ? 'staff' : 'driver'));
+            });
+            if (role === 'staff') {
+                document.getElementById('divGreenListDriver')?.classList.add('hidden');
+                document.getElementById('divNoDataList')?.classList.add('hidden');
+            }
+            if (role === 'driver') document.getElementById('divGreenListStaff')?.classList.add('hidden');
+            document.getElementById('statTotalDriver')?.parentElement?.classList.toggle('hidden', role === 'staff');
+            document.getElementById('statTotalStaff')?.parentElement?.classList.toggle('hidden', role === 'driver');
+            document.getElementById('statNoData')?.parentElement?.classList.toggle('hidden', role === 'staff');
+        }
         function loadAdminDashboard() {
+            const sequence = ++dashboardLoadSequence;
             showLoader("กำลังดึงข้อมูลสรุป...");
             const dashboardFilters = getAnalyticsFilters();
             const filterPeriod = dashboardFilters.periodType === 'day' ? dashboardFilters.date : dashboardFilters.periodType;
             loadHealthAnalytics(dashboardFilters);
 
             api.run('getAdminDashboard', { filters: dashboardFilters }).then(res => {
+                if (sequence !== dashboardLoadSequence) return;
                 hideLoader();
                 if (res.ok) {
                     let dTitle = document.getElementById('dashTitle'); 
@@ -4088,7 +4121,7 @@
                                 </td>
                                 <td class="px-4 py-3 font-mono text-sm">${i.phone}</td>
                                 <td class="px-4 py-3">
-                                    <span class="px-2 py-1 rounded text-xs font-bold ${bandClass}">${i.band}</span>
+                                    <span class="px-2 py-1 rounded text-xs font-bold ${bandClass}">${bandLabel(i.band)}</span>
                                 </td>
                                 <td class="px-4 py-3 text-xs text-red-600">${reasonsTxt}</td>
                             </tr>
@@ -4168,6 +4201,7 @@
                             `; 
                         }, 4);
                     }
+                    applyPersonnelVisibility(dashboardFilters.role);
                 } else { 
                     Swal.fire('ข้อผิดพลาด', res.error, 'error'); 
                 }
@@ -4349,7 +4383,7 @@
                             <td class="px-4 py-3 text-xs">${targetText}</td>
                             <td class="px-4 py-3 text-xs text-gray-500">${l.org}</td>
                             <td class="px-4 py-3">
-                                <span class="text-[10px] px-2 py-1 rounded bg-gray-100 font-bold border border-gray-200">${l.status}</span>
+                                <span class="text-[10px] px-2 py-1 rounded bg-gray-100 font-bold border border-gray-200">${['GREEN', 'AMBER', 'RED'].includes(l.status) ? bandLabel(l.status) : l.status}</span>
                             </td>
                         </tr>
                     `;
@@ -5457,7 +5491,7 @@
                                     <p class="font-medium text-gray-800">${i.date} (${i.timeSlot})</p>
                                     <p class="text-gray-500">BP: ${i.sys}/${i.dia} | HR: ${i.pulse} | นอน ${i.sleepHours}ชม.</p>
                                 </div>
-                                <span class="px-2 py-1 font-bold rounded shadow-sm ${bandClass}">${i.band}</span>
+                                <span class="px-2 py-1 font-bold rounded shadow-sm ${bandClass}">${bandLabel(i.band)}</span>
                             </div>
                         `; 
                     });
@@ -5654,7 +5688,7 @@
             };
             if (preset === 'all') filters = { periodType: 'all' };
             filters.org = document.getElementById('adminOrgFilter')?.value || 'ALL';
-            filters.role = document.getElementById('adminRoleFilter')?.value || 'ALL';
+            filters.role = document.getElementById('adminRoleFilter')?.value || 'driver';
             filters.band = document.getElementById('adminBandFilter')?.value || 'ALL';
             return filters;
         }
@@ -5691,7 +5725,7 @@
             const overview = analytics.overview || {};
             createAnalyticsChart('band', 'analyticsBandChart', {
                 type: 'doughnut',
-                data: { labels: ['GREEN', 'AMBER', 'RED', 'UNKNOWN'], datasets: [{ data: [overview.greenCount || 0, overview.amberCount || 0, overview.redCount || 0, overview.unknownCount || 0], backgroundColor: ['#22c55e', '#f59e0b', '#ef4444', '#94a3b8'] }] },
+                data: { labels: ['พร้อมปฏิบัติงาน', 'ต้องเฝ้าระวัง', 'งดปฏิบัติงานขับรถ', 'ไม่ทราบผล'], datasets: [{ data: [overview.greenCount || 0, overview.amberCount || 0, overview.redCount || 0, overview.unknownCount || 0], backgroundColor: ['#22c55e', '#f59e0b', '#ef4444', '#94a3b8'] }] },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
             });
             const risks = (analytics.risks || []).filter(item => item.count > 0);
@@ -5704,9 +5738,9 @@
             createAnalyticsChart('trend', 'analyticsTrendChart', {
                 type: 'bar',
                 data: { labels: trend.map(item => item.label), datasets: [
-                    { label: 'GREEN', data: trend.map(item => item.green), backgroundColor: '#22c55e' },
-                    { label: 'AMBER', data: trend.map(item => item.amber), backgroundColor: '#f59e0b' },
-                    { label: 'RED', data: trend.map(item => item.red), backgroundColor: '#ef4444' }
+                    { label: 'พร้อมปฏิบัติงาน', data: trend.map(item => item.green), backgroundColor: '#22c55e' },
+                    { label: 'ต้องเฝ้าระวัง', data: trend.map(item => item.amber), backgroundColor: '#f59e0b' },
+                    { label: 'งดปฏิบัติงานขับรถ', data: trend.map(item => item.red), backgroundColor: '#ef4444' }
                 ] },
                 options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } } } }
             });
@@ -5727,9 +5761,9 @@
             createAnalyticsChart('org', 'analyticsOrgChart', {
                 type: 'bar',
                 data: { labels: orgs.map(item => item.org), datasets: [
-                    { label: 'GREEN', data: orgs.map(item => item.greenCount), backgroundColor: '#22c55e' },
-                    { label: 'AMBER', data: orgs.map(item => item.amberCount), backgroundColor: '#f59e0b' },
-                    { label: 'RED', data: orgs.map(item => item.redCount), backgroundColor: '#ef4444' }
+                    { label: 'พร้อมปฏิบัติงาน', data: orgs.map(item => item.greenCount), backgroundColor: '#22c55e' },
+                    { label: 'ต้องเฝ้าระวัง', data: orgs.map(item => item.amberCount), backgroundColor: '#f59e0b' },
+                    { label: 'งดปฏิบัติงานขับรถ', data: orgs.map(item => item.redCount), backgroundColor: '#ef4444' }
                 ] },
                 options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } } } }
             });
@@ -5780,7 +5814,9 @@
 
         function loadHealthAnalytics(filters = null) {
             const requestedFilters = filters || getAnalyticsFilters();
+            const requestedKey = JSON.stringify(requestedFilters);
             return api.run('getHealthAnalytics', { filters: requestedFilters }).then(res => {
+                if (requestedKey !== JSON.stringify(getAnalyticsFilters())) return;
                 if (res.ok && res.analytics) {
                     renderHealthAnalytics(res.analytics);
                 } else {
@@ -5884,13 +5920,13 @@
             const risks = report.risks || [];
             const trend = report.trend || [];
             const definitions = [
-                ['สัดส่วนผลประเมิน', 'doughnut', ['GREEN', 'AMBER', 'RED'], [
+                ['สัดส่วนผลประเมิน', 'doughnut', ['พร้อมปฏิบัติงาน', 'ต้องเฝ้าระวัง', 'งดปฏิบัติงานขับรถ'], [
                     {data: [overview.greenCount || 0, overview.amberCount || 0, overview.redCount || 0], backgroundColor: ['#22c55e', '#eab308', '#ef4444']}
                 ]],
                 ['แนวโน้มความเสี่ยง', 'bar', trend.map(item => item.label), [
-                    {label: 'GREEN', data: trend.map(item => item.green), backgroundColor: '#22c55e'},
-                    {label: 'AMBER', data: trend.map(item => item.amber), backgroundColor: '#eab308'},
-                    {label: 'RED', data: trend.map(item => item.red), backgroundColor: '#ef4444'}
+                    {label: 'พร้อมปฏิบัติงาน', data: trend.map(item => item.green), backgroundColor: '#22c55e'},
+                    {label: 'ต้องเฝ้าระวัง', data: trend.map(item => item.amber), backgroundColor: '#eab308'},
+                    {label: 'งดปฏิบัติงานขับรถ', data: trend.map(item => item.red), backgroundColor: '#ef4444'}
                 ]],
                 ['ปัจจัยเสี่ยง', 'bar', risks.map(item => item.label), [
                     {label: 'จำนวนครั้ง', data: risks.map(item => item.count), backgroundColor: '#2563eb'}
@@ -5924,9 +5960,9 @@
             const overview = report.overview || {};
             const metrics = report.healthMetrics || {};
             const bandRows = [
-                ['GREEN', overview.greenCount || 0, '#15803d'],
-                ['AMBER', overview.amberCount || 0, '#b45309'],
-                ['RED', overview.redCount || 0, '#b91c1c'],
+                ['พร้อมปฏิบัติงาน', overview.greenCount || 0, '#15803d'],
+                ['ต้องเฝ้าระวัง', overview.amberCount || 0, '#b45309'],
+                ['งดปฏิบัติงานขับรถ', overview.redCount || 0, '#b91c1c'],
                 ['UNKNOWN', overview.unknownCount || 0, '#475569']
             ];
             const healthRows = [
@@ -5950,15 +5986,15 @@
                     <p class="text-xs text-gray-600 mt-1"><b>วันที่จัดทำ:</b> ${escapeHtml(formatThaiDate(report.generatedAt))} &nbsp; <b>โหมด:</b> ${report.anonymous ? 'ไม่ระบุตัวตน' : 'แสดงข้อมูลตามสิทธิ์'}</p>
                 </header>
                 <section class="report-avoid-break mb-5"><h2 class="font-bold text-base mb-2">1. ภาพรวมข้อมูล</h2><div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-center">${[
-                    ['การประเมิน', overview.assessmentCount || 0], ['บุคลากร', overview.personnelCount || 0], ['AMBER + RED', overview.riskCount || 0], ['ควรติดตาม', overview.followUpPersonnelCount || 0]
+                    ['การประเมิน', overview.assessmentCount || 0], ['บุคลากร', overview.personnelCount || 0], ['ต้องเฝ้าระวัง / งดปฏิบัติงานขับรถ', overview.riskCount || 0], ['ควรติดตาม', overview.followUpPersonnelCount || 0]
                 ].map(item => `<div class="border rounded p-2 bg-gray-50"><div class="text-xs">${item[0]}</div><div class="text-xl font-bold">${item[1]}</div></div>`).join('')}</div></section>
-                <section class="report-avoid-break mb-5"><h2 class="font-bold text-base mb-2">2. ตาราง GREEN, AMBER และ RED</h2><table><thead><tr><th>Band</th><th>จำนวน</th><th>ร้อยละจากการประเมิน</th></tr></thead><tbody>${bandRows.map(row => `<tr><td style="color:${row[2]};font-weight:bold">${row[0]}</td><td class="text-center">${row[1]}</td><td class="text-center">${overview.assessmentCount ? (row[1] * 100 / overview.assessmentCount).toFixed(1) : '0.0'}</td></tr>`).join('')}</tbody></table></section>
+                <section class="report-avoid-break mb-5"><h2 class="font-bold text-base mb-2">2. ตารางสรุปผลประเมินความพร้อม</h2><table><thead><tr><th>ผลประเมิน</th><th>จำนวน</th><th>ร้อยละจากการประเมิน</th></tr></thead><tbody>${bandRows.map(row => `<tr><td style="color:${row[2]};font-weight:bold">${row[0]}</td><td class="text-center">${row[1]}</td><td class="text-center">${overview.assessmentCount ? (row[1] * 100 / overview.assessmentCount).toFixed(1) : '0.0'}</td></tr>`).join('')}</tbody></table></section>
                 <section class="report-avoid-break mb-5"><h2 class="font-bold text-base mb-2">3. ตัวชี้วัดสุขภาพ</h2><table><thead><tr><th>ตัวชี้วัด</th><th>ค่าที่ใช้</th><th>ค่าผิดช่วง/รูปแบบ</th><th>ไม่มีค่า</th><th>เฉลี่ย</th><th>ต่ำสุด</th><th>สูงสุด</th><th>หน่วย</th></tr></thead><tbody>${healthRows.map(row => `<tr><td>${row[0]}</td><td class="text-center">${reportValue(row[1]?.count)}</td><td class="text-center">${reportValue(row[1]?.excludedCount || 0)}</td><td class="text-center">${reportValue(row[1]?.missingCount || 0)}</td><td class="text-center">${reportValue(row[1]?.average)}</td><td class="text-center">${reportValue(row[1]?.min)}</td><td class="text-center">${reportValue(row[1]?.max)}</td><td>${row[2]}</td></tr>`).join('')}</tbody></table><p class="text-xs text-gray-600 mt-2">สถิติไม่รวมค่าว่าง ค่าที่ไม่ใช่ตัวเลข และค่าที่อยู่นอกช่วงตรวจคุณภาพข้อมูล: การนอน 0–24 ชั่วโมง อุณหภูมิ 30–45 °C และชีพจร 30–220 ครั้ง/นาที ข้อมูลต้นฉบับไม่ได้ถูกแก้ไข และจำนวนการประเมิน/ผลสีคงเดิม</p></section>
                 <section class="report-avoid-break mb-5"><h2 class="font-bold text-base mb-2">4. ปัจจัยเสี่ยงที่พบ</h2>${riskRows.length ? `<table><thead><tr><th>ปัจจัย</th><th>จำนวนครั้ง</th><th>ร้อยละ</th></tr></thead><tbody>${riskRows.map(item => `<tr><td>${escapeHtml(item.label)}</td><td class="text-center">${item.count}</td><td class="text-center">${item.percent}</td></tr>`).join('')}</tbody></table>` : '<p class="text-sm text-gray-500">ไม่พบปัจจัยเสี่ยงในช่วงที่เลือก</p>'}</section>
                 ${chartHtml}
-                <section class="mt-5"><h2 class="font-bold text-base mb-2">5. ตารางสรุปรายบุคคล</h2>${personRows.length ? `<table><thead><tr><th>ชื่อ</th><th>หน่วยงาน</th><th>ประเมิน</th><th>G/A/R</th><th>เสี่ยง (%)</th><th>ติดตาม</th></tr></thead><tbody>${personRows.map(person => `<tr><td>${escapeHtml(person.displayName)}</td><td>${escapeHtml(person.org)}</td><td class="text-center">${person.assessmentCount}</td><td class="text-center">${person.greenCount}/${person.amberCount}/${person.redCount}</td><td class="text-center">${person.riskPercent}</td><td>${followUpLabel(person.followUpLevel)}</td></tr>`).join('')}</tbody></table>` : '<p class="text-sm text-gray-500">รายงานนี้ไม่แสดงข้อมูลรายบุคคล หรือไม่พบข้อมูล</p>'}</section>
-                <section class="mt-5"><h2 class="font-bold text-base mb-2">6. กรณีที่ควรติดตาม</h2>${followUpRows.length ? `<ul class="list-disc pl-5 text-sm space-y-1">${followUpRows.map(person => `<li>${escapeHtml(person.displayName)} — ${followUpLabel(person.followUpLevel)}; RED ${person.redCount} ครั้ง; ความเสี่ยง ${person.riskPercent}%</li>`).join('')}</ul>` : '<p class="text-sm text-gray-500">ไม่พบกรณีที่อยู่ในระดับติดตามสูงหรือเร่งด่วน</p>'}</section>
-                <section class="mt-5"><h2 class="font-bold text-base mb-2">7. แนวโน้มความเสี่ยง</h2><table><thead><tr><th>ช่วงเวลา</th><th>GREEN</th><th>AMBER</th><th>RED</th><th>เสี่ยง (%)</th></tr></thead><tbody>${(report.trend || []).map(item => `<tr><td>${escapeHtml(item.label)}</td><td class="text-center">${item.green}</td><td class="text-center">${item.amber}</td><td class="text-center">${item.red}</td><td class="text-center">${item.riskPercent}</td></tr>`).join('')}</tbody></table></section>
+                <section class="mt-5"><h2 class="font-bold text-base mb-2">5. ตารางสรุปรายบุคคล</h2>${personRows.length ? `<table><thead><tr><th>ชื่อ</th><th>หน่วยงาน</th><th>ประเมิน</th><th>พร้อม / เฝ้าระวัง / งดขับ</th><th>เสี่ยง (%)</th><th>ติดตาม</th></tr></thead><tbody>${personRows.map(person => `<tr><td>${escapeHtml(person.displayName)}</td><td>${escapeHtml(person.org)}</td><td class="text-center">${person.assessmentCount}</td><td class="text-center">${person.greenCount}/${person.amberCount}/${person.redCount}</td><td class="text-center">${person.riskPercent}</td><td>${followUpLabel(person.followUpLevel)}</td></tr>`).join('')}</tbody></table>` : '<p class="text-sm text-gray-500">รายงานนี้ไม่แสดงข้อมูลรายบุคคล หรือไม่พบข้อมูล</p>'}</section>
+                <section class="mt-5"><h2 class="font-bold text-base mb-2">6. กรณีที่ควรติดตาม</h2>${followUpRows.length ? `<ul class="list-disc pl-5 text-sm space-y-1">${followUpRows.map(person => `<li>${escapeHtml(person.displayName)} — ${followUpLabel(person.followUpLevel)} ; งดปฏิบัติงานขับรถ ${person.redCount} ครั้ง; ความเสี่ยง ${person.riskPercent}%</li>`).join('')}</ul>` : '<p class="text-sm text-gray-500">ไม่พบกรณีที่อยู่ในระดับติดตามสูงหรือเร่งด่วน</p>'}</section>
+                <section class="mt-5"><h2 class="font-bold text-base mb-2">7. แนวโน้มความเสี่ยง</h2><table><thead><tr><th>ช่วงเวลา</th><th>พร้อมปฏิบัติงาน</th><th>ต้องเฝ้าระวัง</th><th>งดปฏิบัติงานขับรถ</th><th>เสี่ยง (%)</th></tr></thead><tbody>${(report.trend || []).map(item => `<tr><td>${escapeHtml(item.label)}</td><td class="text-center">${item.green}</td><td class="text-center">${item.amber}</td><td class="text-center">${item.red}</td><td class="text-center">${item.riskPercent}</td></tr>`).join('')}</tbody></table></section>
                 ${quality ? `<section class="mt-5"><h2 class="font-bold text-base mb-2">8. คุณภาพข้อมูล</h2><p class="text-sm">พบประเด็น ${quality.totalIssues} รายการ (สูง ${quality.bySeverity?.HIGH || 0}, กลาง ${quality.bySeverity?.MEDIUM || 0}, ต่ำ ${quality.bySeverity?.LOW || 0}) ระบบไม่ได้แก้ข้อมูลต้นฉบับอัตโนมัติ</p></section>` : ''}
                 <section class="report-avoid-break mt-5"><h2 class="font-bold text-base mb-2">9. ข้อเสนอแนะเชิงบริหาร</h2><ul class="list-disc pl-5 text-sm space-y-1">${(report.narrative?.recommendations || []).map(text => `<li>${escapeHtml(text)}</li>`).join('') || '<li>ติดตามข้อมูลตามรอบปกติและทบทวนความครบถ้วนของการประเมิน</li>'}</ul></section>
                 <section class="report-avoid-break mt-5 bg-blue-50 border border-blue-200 rounded p-4"><h2 class="font-bold text-base mb-2">10. บทสรุปสำหรับผู้บริหาร</h2><p class="text-sm leading-relaxed">${escapeHtml(report.narrative?.executiveSummary || 'ไม่มีข้อมูลเพียงพอสำหรับสรุป')}</p></section>
