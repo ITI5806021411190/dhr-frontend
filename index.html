@@ -278,10 +278,23 @@
                 </div>
             </div>
 
-            <div class="mb-8">
-                <div class="w-full max-w-xl mx-auto bg-gray-50 border border-gray-200 rounded-lg p-4 flex flex-col items-center justify-center min-h-[300px]">
-                    <canvas id="dashChart"></canvas>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                    <h4 class="font-bold mb-2">สัดส่วนความพร้อมล่าสุด (คน)</h4>
+                    <div class="relative h-80"><canvas id="dashChart" role="img" aria-label="กราฟสัดส่วนความพร้อมล่าสุดรายคน"></canvas></div>
                 </div>
+                <div class="bg-white border border-gray-200 rounded-lg p-4">
+                    <h4 class="font-bold mb-2">สถานะล่าสุดแยกหน่วยงาน (คน)</h4>
+                    <p class="text-xs text-gray-500 mb-2">ยังไม่ประเมิน นับเฉพาะพนักงานขับรถประจำ</p>
+                    <div class="relative h-80"><canvas id="latestOrgChart" role="img" aria-label="กราฟแท่งสถานะล่าสุดแยกหน่วยงาน"></canvas></div>
+                    <p id="latestOrgChartSummary" class="text-xs text-gray-600 mt-2" aria-live="polite"></p>
+                </div>
+            </div>
+            <div class="border border-orange-200 rounded-lg p-4 mb-8 bg-orange-50">
+                <h4 class="font-bold mb-2">5 สาเหตุหลักที่ต้องเฝ้าระวังหรืองดขับ (คน)</h4>
+                <p class="text-xs text-gray-600 mb-3">นับจากผลล่าสุดของผู้ที่ต้องเฝ้าระวังหรืองดขับในช่วงที่เลือกเท่านั้น — หนึ่งคนอาจมีหลายสาเหตุ</p>
+                <div id="latestRiskChartArea" class="relative h-64"><canvas id="latestRiskChart" role="img" aria-label="กราฟห้าสาเหตุหลักจากผลล่าสุดรายคน"></canvas></div>
+                <p id="latestRiskChartSummary" class="text-sm text-gray-700 mt-2" aria-live="polite"></p>
             </div>
 
             <div class="grid grid-cols-1 gap-8 mb-8">
@@ -3875,6 +3888,32 @@
             });
         }
         
+        let latestOrgChartInstance = null;
+        let latestRiskChartInstance = null;
+        function renderLatestOverviewCharts(orgStats, risks, role) {
+            const orgs = Object.keys(orgStats || {}).sort();
+            const font = {family: "'Noto Sans Thai', sans-serif"};
+            if (latestOrgChartInstance) latestOrgChartInstance.destroy();
+            if (latestRiskChartInstance) latestRiskChartInstance.destroy();
+            const statuses = [['พร้อมปฏิบัติงาน','green','#22c55e'],['ต้องเฝ้าระวัง','amber','#eab308'],['งดปฏิบัติงานขับรถ','red','#ef4444']];
+            if (role !== 'staff') statuses.push(['ยังไม่ประเมิน (พขร.)','noData','#9ca3af']);
+            latestOrgChartInstance = new Chart(document.getElementById('latestOrgChart').getContext('2d'), {
+                type: 'bar',
+                data: {labels: orgs, datasets: statuses.map(([label,key,color]) => ({label,data:orgs.map(org => orgStats[org][key] || 0),backgroundColor:color}))},
+                options: {indexAxis:'y',responsive:true,maintainAspectRatio:false,animation:false,
+                    scales:{x:{stacked:true,beginAtZero:true,ticks:{precision:0},title:{display:true,text:'จำนวนคน'}},y:{stacked:true,ticks:{font}}},
+                    plugins:{legend:{position:'bottom',labels:{font}}}}
+            });
+            document.getElementById('latestOrgChartSummary').textContent = orgs.length ? orgs.map(org => `${org}: ${statuses.map(([label,key]) => `${label} ${orgStats[org][key] || 0} คน`).join(', ')}`).join(' | ') : 'ไม่พบหน่วยงานในกลุ่มที่เลือก';
+            const rows = (risks || []).filter(item => item.count > 0).slice(0,5);
+            document.getElementById('latestRiskChartArea').classList.toggle('hidden', rows.length === 0);
+            document.getElementById('latestRiskChartSummary').textContent = rows.length ? rows.map(item => `${item.label} ${item.count} คน`).join(' • ') : 'ไม่พบสาเหตุที่ต้องเฝ้าระวังหรืองดขับจากผลล่าสุดในกลุ่มและช่วงเวลาที่เลือก';
+            latestRiskChartInstance = rows.length ? new Chart(document.getElementById('latestRiskChart').getContext('2d'), {
+                type:'bar',data:{labels:rows.map(item => item.label),datasets:[{label:'จำนวนคน',data:rows.map(item => item.count),backgroundColor:'#f97316'}]},
+                options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false}},
+                    scales:{x:{beginAtZero:true,ticks:{precision:0},title:{display:true,text:'จำนวนคน'}},y:{ticks:{font}}}}
+            }) : null;
+        }
         function renderBarChart(orgStats) {
             let el = document.getElementById('orgBarChart'); 
             if (!el) {
@@ -4051,6 +4090,7 @@
                     if (eNoData) eNoData.innerText = res.stats.statNoData;
                     
                     renderDonutChart(res.stats); 
+                    renderLatestOverviewCharts(res.orgStats || {}, res.latestRiskSummary || [], dashboardFilters.role);
                     
                     if (res.orgStats) {
                         renderBarChart(res.orgStats);
