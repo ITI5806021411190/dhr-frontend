@@ -14,6 +14,9 @@
     
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        .audit-log-new { background-color: #fffbeb; }
+        .audit-log-new:hover { background-color: #fef3c7; }
+        .audit-log-new > td:first-child { border-left: 4px solid #f59e0b; }
         body { 
             font-family: 'Noto Sans Thai', sans-serif; 
             background-color: #f3f4f6; 
@@ -870,8 +873,12 @@
                     <h3 class="text-2xl font-bold text-gray-800">ประวัติการใช้งานระบบ (Audit Log)</h3>
                     <p class="text-sm text-gray-500">บันทึกการดำเนินการที่สำคัญในระบบ (อ่านอย่างเดียว)</p>
                 </div>
-                <button onclick="loadAuditLogs()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg border text-sm transition">รีเฟรช</button>
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="markAuditLogsRead()" class="bg-amber-50 hover:bg-amber-100 text-amber-900 px-3 py-2 rounded-lg border text-sm">ทำเครื่องหมายว่าอ่านแล้ว</button>
+                    <button onclick="loadAuditLogs()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg border text-sm transition">รีเฟรช</button>
+                </div>
             </div>
+            <p id="auditNewSummary" class="text-sm text-amber-800 mb-3" aria-live="polite">พื้นเหลืองและป้าย “ใหม่” หมายถึงรายการตั้งแต่การเปิดดูครั้งก่อนในเบราว์เซอร์นี้</p>
             <div class="flex flex-col md:flex-row gap-2 mb-4">
                 <input type="text" id="filterLogSearch" placeholder="ค้นหาผู้ดำเนินการ, เป้าหมาย..." class="border rounded-lg px-3 py-2 text-sm w-full md:w-1/3 focus:ring-blue-500" oninput="applyLogFilter()">
                 <select id="filterLogAction" class="border rounded-lg px-3 py-2 text-sm w-full md:w-1/4 focus:ring-blue-500" onchange="applyLogFilter()">
@@ -1665,10 +1672,6 @@
                 if (b) {
                     b.classList.add('text-white', 'underline'); 
                 }
-                if (appUser) { 
-                    localStorage.setItem('localAuditCount_' + appUser.phone, localStorage.getItem('backendAuditCount') || '0'); 
-                    updateAuditBadge(0); 
-                } 
             }
             if (viewId === 'viewSettings') { 
                 let b = document.getElementById('btnNavSetting'); 
@@ -4206,13 +4209,44 @@
             };
         }
         
+        let newAuditLogIds = new Set();
+        function auditReadKey() {
+            return 'dhrAuditReadV1_' + JSON.stringify([appUser.userId || appUser.phone, appUser.role, appUser.org || '']);
+        }
+        function classifyNewAuditLogs(logs, previous) {
+            if (!previous || !Number.isFinite(previous.time) || !Array.isArray(previous.ids)) return new Set(logs.map(l => String(l.id)));
+            const seen = new Set(previous.ids);
+            return new Set(logs.filter(l => {
+                const time = Date.parse(l.createdAt);
+                return time > previous.time || (time === previous.time && !seen.has(String(l.id)));
+            }).map(l => String(l.id)));
+        }
+        function saveAuditReadCheckpoint(logs) {
+            const time = Math.max(0, ...logs.map(l => Date.parse(l.createdAt)).filter(Number.isFinite));
+            const ids = logs.filter(l => Date.parse(l.createdAt) === time).map(l => String(l.id));
+            try { localStorage.setItem(auditReadKey(), JSON.stringify({time, ids})); } catch (error) { /* Storage may be blocked. */ }
+        }
+        function markAuditLogsRead() {
+            if (!appUser) return;
+            saveAuditReadCheckpoint(cachedLogs);
+            newAuditLogIds.clear();
+            applyLogFilter();
+        }
         function loadAuditLogs() {
+            const ownerKey = auditReadKey();
             showLoader("กำลังดึงข้อมูลประวัติการใช้งาน...");
             api.run('getAuditLogsList').then(res => { 
                 hideLoader(); 
+                if (!appUser || auditReadKey() !== ownerKey) return;
                 if (res.ok) { 
-                    cachedLogs = res.logs; 
+                    cachedLogs = res.logs;
+                    let previous = null;
+                    try { previous = JSON.parse(localStorage.getItem(ownerKey)); } catch (error) { /* First visit. */ }
+                    newAuditLogIds = classifyNewAuditLogs(cachedLogs, previous);
                     applyLogFilter(); 
+                    saveAuditReadCheckpoint(cachedLogs);
+                    try { localStorage.setItem('localAuditCount_' + appUser.phone, localStorage.getItem('backendAuditCount') || '0'); } catch (error) { /* Optional badge state. */ }
+                    updateAuditBadge(0);
                 } 
             }).catch(err => { 
                 hideLoader(); 
@@ -4249,6 +4283,8 @@
         }
         
         function renderLogTable(dataArray) {
+            const summary = document.getElementById('auditNewSummary');
+            if (summary) summary.textContent = `รายการใหม่ ${dataArray.filter(l => newAuditLogIds.has(String(l.id))).length} รายการในผลลัพธ์นี้ — พื้นเหลืองและป้าย “ใหม่” (จำสถานะแยกบัญชีในเบราว์เซอร์นี้)`;
             const tbody = document.getElementById('auditLogList'); 
             if (!tbody) {
                 return;
@@ -4299,9 +4335,9 @@
                     }
 
                     html += `
-                        <tr class="border-b hover:bg-gray-50 bg-white">
+                        <tr class="border-b ${newAuditLogIds.has(String(l.id)) ? 'audit-log-new' : 'hover:bg-gray-50 bg-white'}">
                             <td class="px-4 py-3 text-center text-gray-500 font-bold">${index + 1}</td>
-                            <td class="px-4 py-3 text-[11px] whitespace-nowrap text-gray-500">${dateStr}</td>
+                            <td class="px-4 py-3 text-[11px] whitespace-nowrap text-gray-500">${dateStr}${newAuditLogIds.has(String(l.id)) ? '<br><span class="inline-block rounded bg-amber-200 text-amber-900 px-2 py-0.5 font-bold">ใหม่</span>' : ''}</td>
                             <td class="px-4 py-3 font-medium text-gray-800 text-sm">
                                 ${l.actorName}<br>
                                 <span class="text-[10px] text-gray-400 font-mono">${l.actorPhone}</span>
