@@ -3381,7 +3381,9 @@
             }
         }
 
-        function loadDriverHistory() {
+        function loadDriverHistory(page = 1) {
+            const requestId = (loadDriverHistory.requestId || 0) + 1;
+            loadDriverHistory.requestId = requestId;
             let histEl = document.getElementById('driverHistory'); 
             if (histEl) {
                 histEl.innerHTML = '<p class="text-sm text-gray-400">กำลังโหลดประวัติ...</p>';
@@ -3392,7 +3394,8 @@
                 btnAna.classList.add('hidden');
             }
             
-            api.run('getDriverHistory').then(res => {
+            api.run('getDriverHistory', { page: page }).then(res => {
+                if (requestId !== loadDriverHistory.requestId) return;
                 if (res.ok && res.history.length > 0) { 
                     cachedHistory = res.history; 
                     
@@ -3445,14 +3448,29 @@
                                 </div>
                             `;
                         });
+                        const currentPage = Number(res.page) || 1;
+                        const totalPages = Number(res.totalPages) || 1;
+                        const total = Number(res.total) || res.history.length;
+                        const start = (currentPage - 1) * 10 + 1;
+                        const end = start + res.history.length - 1;
+                        htmlStr += `<nav aria-label="แบ่งหน้าประวัติการประเมิน" class="flex flex-wrap items-center justify-between gap-2 pt-3">
+                            <span class="text-xs text-gray-500" aria-live="polite">รายการ ${start}–${end} จาก ${total} · หน้า ${currentPage}/${totalPages}</span>
+                            <div class="flex gap-2">
+                                <button type="button" onclick="loadDriverHistory(${currentPage - 1})" ${currentPage <= 1 ? 'disabled' : ''} class="px-3 py-2 rounded border text-sm disabled:opacity-40 disabled:cursor-not-allowed">ก่อนหน้า</button>
+                                <button type="button" onclick="loadDriverHistory(${currentPage + 1})" ${currentPage >= totalPages ? 'disabled' : ''} class="px-3 py-2 rounded border text-sm disabled:opacity-40 disabled:cursor-not-allowed">ถัดไป</button>
+                            </div>
+                        </nav>`;
                         histEl.innerHTML = htmlStr;
                     }
                 } else { 
                     if (histEl) {
-                        histEl.innerHTML = '<p class="text-sm text-gray-400">ยังไม่มีประวัติการประเมิน</p>'; 
+                        cachedHistory = [];
+                        histEl.innerHTML = '<p class="text-sm text-gray-400">ยังไม่มีประวัติการประเมิน</p>';
                     }
                 }
             }).catch(err => {
+                if (requestId !== loadDriverHistory.requestId) return;
+                if (histEl) histEl.innerHTML = '<p class="text-sm text-red-600">โหลดประวัติไม่สำเร็จ กรุณากดปุ่มรีเฟรชประวัติอีกครั้ง</p>';
                 console.error(err);
             });
         }
