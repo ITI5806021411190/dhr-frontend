@@ -3407,11 +3407,11 @@
                         let htmlStr = '';
                         res.history.forEach((i, index) => {
                             let btnAddon = '';
-                            if (i.band === 'RED' || i.band === 'AMBER') {
+                            {
                                 btnAddon = `
                                     <div class="mt-2 pt-2 border-t border-gray-200 flex gap-2 justify-end">
                                         <button onclick="printHistoryItem(${index})" class="text-[10px] bg-blue-100 hover:bg-blue-200 text-blue-700 px-2 py-1 rounded shadow-sm border border-blue-200 transition">🖨️ พิมพ์</button>
-                                        <button onclick="adviseHistoryItem(${index})" class="text-[10px] bg-yellow-100 hover:bg-yellow-200 text-yellow-700 px-2 py-1 rounded shadow-sm border border-yellow-200 transition">💡 คำแนะนำ</button>
+                                        ${(i.band === 'RED' || i.band === 'AMBER') ? `<button onclick="adviseHistoryItem(${index})" class="text-[10px] bg-yellow-100 hover:bg-yellow-200 text-yellow-700 px-2 py-1 rounded shadow-sm border border-yellow-200 transition">💡 คำแนะนำ</button>` : ''}
                                     </div>
                                 `;
                             }
