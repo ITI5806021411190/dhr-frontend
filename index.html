@@ -1712,14 +1712,16 @@
         }
 
         function openManual() {
-            if (!appUser || !globalSettings.manualUrls) {
+            if (!appUser) {
                 return;
             }
             let userRoleKey = appUser.role === 'provincial_audit' ? 'provincial_admin' : appUser.role;
             if (userRoleKey === 'staff') {
                 userRoleKey = 'driver'; 
             }
-            const url = globalSettings.manualUrls[userRoleKey];
+            const url = appUser.role === 'driver'
+                ? '/manuals/DHR_Driver_Manual_Full.pdf'
+                : (globalSettings.manualUrls || {})[userRoleKey];
             if (url && url.trim() !== "") {
                 window.open(url, '_blank'); 
             } else {
