@@ -467,11 +467,12 @@
                 </div>
                 <label class="flex items-start gap-2 text-sm text-gray-700 cursor-pointer bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
                     <input type="checkbox" id="rememberLogin" class="mt-0.5 w-4 h-4 text-blue-600 rounded focus:ring-blue-500">
-                    <span class="font-medium leading-5">จำข้อมูลเพื่อเข้าสู่ระบบครั้งถัดไปอัตโนมัติ</span>
+                    <span class="font-medium leading-5">จำเบอร์โทรศัพท์เท่านั้น (ไม่บันทึก PIN)</span>
                 </label>
                 <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg transition shadow-md">เข้าสู่ระบบ</button>
             </form>
             <div class="mt-6 text-center border-t pt-4">
+                <button id="btnForgotPin" type="button" class="hidden text-blue-700 font-bold hover:underline mb-3">ลืม PIN / ตั้ง PIN ใหม่</button>
                 <p class="text-sm text-gray-500">ผู้ขับขี่ใหม่? <button type="button" onclick="switchView('viewRegister')" class="text-blue-600 font-medium hover:underline">ลงทะเบียนที่นี่</button></p>
             </div>
         </div>
@@ -1740,8 +1741,10 @@
                     return null;
                 }
                 const saved = JSON.parse(raw);
-                if (saved && saved.phone && saved.pin) {
-                    return saved;
+                if (saved && saved.phone) {
+                    localStorage.setItem(STORAGE_KEYS.savedLogin, JSON.stringify({phone:saved.phone}));
+                    localStorage.removeItem(STORAGE_KEYS.autoLogin);
+                    return {phone:saved.phone};
                 }
             } catch (err) {
                 localStorage.removeItem(STORAGE_KEYS.savedLogin);
@@ -1750,7 +1753,7 @@
         }
 
         function isAutoLoginEnabled() {
-            return localStorage.getItem(STORAGE_KEYS.autoLogin) === 'true' && !!getSavedLogin();
+            return false; // No readable PIN storage or PIN-based auto-login.
         }
 
         function clearSavedLogin() {
@@ -1761,8 +1764,8 @@
 
         function saveLoginPreference(phone, pin, enabled) {
             if (enabled) {
-                localStorage.setItem(STORAGE_KEYS.savedLogin, JSON.stringify({ phone: phone, pin: pin }));
-                localStorage.setItem(STORAGE_KEYS.autoLogin, 'true');
+                localStorage.setItem(STORAGE_KEYS.savedLogin, JSON.stringify({ phone: phone }));
+                localStorage.removeItem(STORAGE_KEYS.autoLogin);
             } else {
                 localStorage.removeItem(STORAGE_KEYS.savedLogin);
                 localStorage.removeItem(STORAGE_KEYS.autoLogin);
@@ -1779,17 +1782,17 @@
             const pinEl = document.getElementById('inputPin');
 
             if (rememberEl) {
-                rememberEl.checked = enabled;
+                rememberEl.checked = !!saved;
             }
             if (autoEl) {
                 autoEl.checked = enabled;
             }
-            if (saved && enabled) {
+            if (saved) {
                 if (phoneEl) {
                     phoneEl.value = saved.phone;
                 }
                 if (pinEl) {
-                    pinEl.value = saved.pin;
+                    pinEl.value = '';
                 }
             }
         }
@@ -1878,16 +1881,7 @@
         }
 
         function attemptSavedAutoLogin() {
-            if (!isAutoLoginEnabled()) {
-                return false;
-            }
-            const saved = getSavedLogin();
-            if (!saved) {
-                return false;
-            }
-            localStorage.removeItem(STORAGE_KEYS.session);
-            loginWithCredentials(saved.phone, saved.pin, { remember: true, auto: true });
-            return true;
+            return false; // Staging: only remember the phone number, never the PIN.
         }
 
         window.onload = function() {
@@ -4846,7 +4840,7 @@
 
                     let pinBtn = '';
                     if (canViewPin) {
-                        pinBtn = `<br><button onclick="togglePin(this, '${u.pin}')" class="text-[11px] text-indigo-500 mt-1 hover:underline transition">ดู PIN</button>`;
+                        pinBtn = `<br><span class="text-[11px] text-gray-500">ไม่แสดง PIN — ให้เจ้าของบัญชีกู้คืนเอง</span>`;
                     }
                         
                     let statusClass = '';
@@ -6139,5 +6133,6 @@
         handleAnalyticsPeriodChange(false);
         handleReportPeriodChange();
     </script>
+<script type="module" src="/pin-recovery.js"></script>
 </body>
 </html>
