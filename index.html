@@ -1604,7 +1604,7 @@
 
         function getCurrentTimeSlotLabel() {
             const timeStr = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
-            return `เวลาปัจจุบัน (${timeStr} น.)`;
+            return `${timeStr} น.`;
         }
 
         function isCurrentTimeSlotValue(value) {
