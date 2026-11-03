@@ -200,6 +200,7 @@
                     <div class="grid gap-3 w-full min-w-0 mt-2 border-t pt-3" id="analyticsFilterPanel">
                         <select id="adminPeriodFilter" class="border rounded-lg px-2 py-1.5 text-sm bg-gray-50 focus:ring-blue-500" onchange="handleAnalyticsPeriodChange()">
                             <option value="today">วันนี้</option>
+                            <option value="recent30">ย้อนหลัง 30 วัน</option>
                             <option value="yesterday">เมื่อวาน</option>
                             <option value="date">เลือกวันที่</option>
                             <option value="thisWeek">สัปดาห์นี้</option>
@@ -251,6 +252,8 @@
                 <button type="button" class="analytics-tab-button border rounded-full px-4 py-2 text-sm font-bold whitespace-nowrap" data-analytics-tab="trend" onclick="switchAnalyticsTab('trend')">แนวโน้ม</button>
                 <button type="button" class="analytics-tab-button border rounded-full px-4 py-2 text-sm font-bold whitespace-nowrap" data-analytics-tab="person" onclick="switchAnalyticsTab('person')">รายบุคคล</button>
                 <button type="button" class="analytics-tab-button border rounded-full px-4 py-2 text-sm font-bold whitespace-nowrap" data-analytics-tab="org" onclick="switchAnalyticsTab('org')">รายหน่วยงาน</button>
+                <button type="button" class="rounded-full border px-4 py-2 text-sm text-blue-700" onclick="showDashboardFilterHelp()">วิธีเลือกตัวกรอง</button>
+                <button type="button" class="rounded-full border px-4 py-2 text-sm text-blue-700" onclick="useRecentDashboardData()">ดูย้อนหลัง 30 วัน</button>
                 <button type="button" class="analytics-tab-button border rounded-full px-4 py-2 text-sm font-bold whitespace-nowrap" data-analytics-tab="quality" onclick="switchAnalyticsTab('quality')">คุณภาพข้อมูล</button>
                 <button type="button" class="analytics-tab-button border rounded-full px-4 py-2 text-sm font-bold whitespace-nowrap" data-analytics-tab="report" onclick="switchAnalyticsTab('report')">รายงาน</button>
             </div>
@@ -5771,6 +5774,7 @@
             const today = getBangkokTodayText();
             let filters = { periodType: 'day', date: today };
             if (preset === 'yesterday') filters.date = addDaysText(today, -1);
+            if (preset === 'recent30') filters = { periodType: 'custom', startDate: addDaysText(today, -29), endDate: today };
             if (preset === 'date') filters.date = document.getElementById('adminDateFilter')?.value || today;
             if (preset === 'thisWeek') filters = { periodType: 'week', date: today };
             if (preset === 'lastWeek') {
@@ -5797,7 +5801,25 @@
             return filters;
         }
 
+        function showDashboardFilterHelp() {
+            Swal.fire({
+                title: 'วิธีเลือกตัวกรองแดชบอร์ด',
+                text: 'เลือกกลุ่มบุคลากร ช่วงเวลา หน่วยงาน และสถานะ แล้วกดแสดงผล หรือกดดูย้อนหลัง 30 วันเพื่อเลือกช่วงและทุกสถานะให้อัตโนมัติ โดยคงกลุ่มและหน่วยงานเดิม รายบุคคลและรายหน่วยงานต้องเข้าสู่ระบบด้วยบัญชีที่มีสิทธิ์ดูรายละเอียด',
+                confirmButtonText: 'เข้าใจแล้ว'
+            });
+        }
+
+        function useRecentDashboardData() {
+            document.getElementById('adminPeriodFilter').value = 'recent30';
+            document.getElementById('adminBandFilter').value = 'ALL';
+            handleAnalyticsPeriodChange(true);
+        }
+
         function switchAnalyticsTab(tabName) {
+            if (['person','org'].includes(tabName) && lastAnalytics?.access?.detailLevel === 'SUMMARY_ONLY') {
+                Swal.fire('ต้องเข้าสู่ระบบเพื่อดูรายละเอียด', 'มุมมองสาธารณะแสดงเฉพาะข้อมูลสรุป การเปลี่ยนตัวกรองจะไม่เปิดข้อมูลในแท็บนี้', 'info');
+                return;
+            }
             document.querySelectorAll('[data-analytics-panel]').forEach(panel => {
                 panel.classList.toggle('hidden', panel.dataset.analyticsPanel !== tabName);
             });
