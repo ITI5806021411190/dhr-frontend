@@ -5556,6 +5556,34 @@
             let vp = document.getElementById('viewProfileContent'); 
             if (vp) {
                 vp.innerHTML = html;
+                if (u.userId && ['driver','staff'].includes(u.role) && appUser &&
+                    (['super_admin','provincial_admin'].includes(appUser.role) ||
+                     (appUser.role === 'hospital_admin' && appUser.org && appUser.org === u.org))) {
+                    const reveal = document.createElement('button');
+                    reveal.type = 'button';
+                    reveal.className = 'mt-3 px-3 py-2 rounded border text-sm';
+                    reveal.textContent = 'ดู PIN เดิม';
+                    reveal.onclick = async () => {
+                        const confirmation = await Swal.fire({
+                            title: 'ยืนยันการดู PIN เดิม',
+                            text: 'ใช้เพื่อช่วยเจ้าของบัญชีเท่านั้น ระบบจะบันทึกการเปิดดู',
+                            showCancelButton: true, confirmButtonText: 'ดู PIN', cancelButtonText: 'ยกเลิก'
+                        });
+                        if (!confirmation.isConfirmed) return;
+                        try {
+                            const result = await api.run('revealLegacyDriverPin', {targetUserId: String(u.userId)});
+                            if (!result.ok) throw new Error('ไม่มีสิทธิ์หรือไม่สามารถดู PIN ได้');
+                            await Swal.fire({
+                                title: 'PIN เดิม',
+                                text: result.available ? result.pin : 'ไม่สามารถดู PIN เดิมได้ ให้เจ้าของบัญชีใช้เมนูลืม PIN',
+                                timer: 15000, confirmButtonText: 'ปิด'
+                            });
+                        } catch (error) {
+                            Swal.fire('ไม่สามารถดู PIN ได้', 'กรุณาตรวจสอบสิทธิ์หรือเข้าสู่ระบบใหม่', 'error');
+                        }
+                    };
+                    vp.appendChild(reveal);
+                }
             }
             
             let md = document.getElementById('modalViewProfile'); 
