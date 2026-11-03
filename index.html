@@ -3036,6 +3036,10 @@
         let healthFormEl = document.getElementById('healthForm');
         if (healthFormEl) {
             healthFormEl.onsubmit = function(e) {
+                if (healthFormEl.dataset.saving === 'true') {
+                    e.preventDefault();
+                    return false;
+                }
                 e.preventDefault();
                 let targetUserId = appUser.userId; 
                 let tName = appUser.displayName; 
@@ -3083,10 +3087,19 @@
                     evidenceMimeType: document.getElementById('inputEvidenceMimeType').value
                 };
                 
+                const timeChoice = document.getElementById('inputTimeSlot')?.value || '';
+                const retryKey = JSON.stringify([appUser.userId, {...payload, timeSlot: timeChoice}]);
+                if (healthFormEl._pendingAssessment?.key !== retryKey) {
+                    healthFormEl._pendingAssessment = {key: retryKey, id: crypto.randomUUID(), timeSlot: payload.timeSlot};
+                }
+                payload.requestId = healthFormEl._pendingAssessment.id;
+                payload.timeSlot = healthFormEl._pendingAssessment.timeSlot;
+                healthFormEl.dataset.saving = 'true';
                 showLoader("กำลังอัปโหลดหลักฐาน และประมวลผลข้อมูล (อาจใช้เวลาสักครู่)...");
                 api.run('submitHealthCheck', payload).then(res => {
                     hideLoader();
                     if (res.ok) { 
+                        delete healthFormEl._pendingAssessment;
                         document.getElementById('healthForm').reset(); 
                         let iDate = document.getElementById('inputDate');
                         if (iDate) {
@@ -3152,7 +3165,7 @@
                         `;
 
                         Swal.fire({ 
-                            title: 'บันทึกผลเรียบร้อย', 
+                            title: res.alreadySaved ? 'รายการนี้บันทึกแล้ว' : 'บันทึกผลเรียบร้อย',
                             icon: iconType, 
                             html: `
                                 <p class="mb-2">สถานะที่ได้คือ: <b>${bandLabel(res.band)}</b></p>
@@ -3167,7 +3180,9 @@
                     }
                 }).catch(err => { 
                     hideLoader(); 
-                    Swal.fire('เกิดข้อผิดพลาด', err.message, 'error'); 
+                    Swal.fire('ยังยืนยันผลบันทึกไม่ได้', 'หากข้อมูลยังเหมือนเดิม กดบันทึกอีกครั้งเพื่อตรวจผลของคำขอเดิม', 'error');
+                }).finally(() => {
+                    delete healthFormEl.dataset.saving;
                 });
                 return false;
             };
@@ -3188,6 +3203,7 @@
             let pData = { 
                 date: item.rawDate, 
                 timeSlot: item.timeSlot, 
+                isHistory: true,
                 sleepHours: item.sleepHours, 
                 fatigue: item.fatigue, 
                 temperature: item.temp, 
@@ -3234,7 +3250,7 @@
                         <tr><td style="padding: 8px 0; width: 30%;"><b>ชื่อ-สกุล:</b></td><td>${data.targetName}</td></tr>
                         <tr><td style="padding: 8px 0;"><b>หน่วยงาน:</b></td><td>${data.targetOrg}</td></tr>
                         <tr><td style="padding: 8px 0;"><b>วันที่ประเมิน:</b></td><td>${dateTh}</td></tr>
-                        <tr><td style="padding: 8px 0;"><b>ช่วงเวลา:</b></td><td>${data.timeSlot}</td></tr>
+                        <tr><td style="padding: 8px 0;"><b>${data.isHistory ? 'เวลาบันทึก' : 'ช่วงเวลา'}:</b></td><td>${data.timeSlot}</td></tr>
                     </table>
                     
                     <h3 style="margin-top: 20px; background-color: #f3f4f6; padding: 10px;">ข้อมูลสุขภาพเบื้องต้น</h3>
@@ -3440,7 +3456,7 @@
                                 <div class="p-3 border rounded-lg flex flex-col bg-gray-50">
                                     <div class="flex justify-between items-start">
                                         <div>
-                                            <p class="text-sm font-medium text-gray-800">${i.date} <span class="text-xs text-gray-500">(${i.timeSlot})</span></p>
+                                            <p class="text-sm font-medium text-gray-800">${i.date} <span class="text-xs text-gray-500">(เวลาบันทึก ${escapeHtml(i.timeSlot || 'ไม่ระบุ')})</span></p>
                                             <p class="text-xs text-gray-500">BP: ${i.sys}/${i.dia} | HR: ${i.pulse} | นอน ${i.sleepHours}ชม.</p>
                                             ${evidenceBtnHtml}
                                         </div>
