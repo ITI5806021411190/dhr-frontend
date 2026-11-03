@@ -123,7 +123,7 @@
     <div id="printArea" class="hidden print-only"></div>
 
     <nav id="topNavBar" class="bg-blue-600 text-white shadow-md w-full sticky top-0 z-50">
-        <div class="max-w-6xl mx-auto px-4 py-3 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 md:gap-0">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex flex-col gap-3">
             <div class="flex items-center gap-2 cursor-pointer w-full md:w-auto overflow-hidden" onclick="goToHome()">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -134,7 +134,7 @@
                 </div>
             </div>
             
-            <div class="flex items-center gap-3 overflow-x-auto no-scrollbar w-full md:w-auto pb-1 md:pb-0" id="navActionButtons">
+            <div class="flex flex-wrap items-center gap-x-4 gap-y-2 w-full" id="navActionButtons">
                 <button id="btnNavDash" class="hidden text-sm font-medium hover:text-blue-200 transition flex-shrink-0">แดชบอร์ด</button>
                 <button id="btnNavUsers" class="hidden text-sm font-medium hover:text-blue-200 transition relative flex-shrink-0">
                     จัดการผู้ใช้ <span id="badgeUsers" class="hidden absolute -top-2 -right-3 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">0</span>
@@ -146,7 +146,7 @@
                     ประวัติ Log <span id="badgeAudit" class="hidden absolute -top-2 -right-3 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">0</span>
                 </button>
                 <button id="btnNavSetting" class="hidden text-sm font-medium hover:text-blue-200 transition flex-shrink-0">ตั้งค่าระบบ</button>
-                <span id="navUserName" class="hidden text-sm font-medium text-blue-100 md:border-l border-blue-400 md:pl-3 whitespace-nowrap flex-shrink-0"></span>
+                <span id="navUserName" class="hidden text-sm font-medium text-blue-100 max-w-full break-words"></span>
                 <button id="btnNavManual" onclick="openManual()" class="hidden text-sm bg-indigo-500 hover:bg-indigo-600 px-3 py-1 rounded transition shadow flex items-center gap-1 ml-2 flex-shrink-0">คู่มือ</button>
                 <button id="btnNavProfile" onclick="openPersonalSettings()" class="hidden text-sm bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded transition shadow flex items-center gap-1 ml-1 flex-shrink-0 border border-indigo-400">ตั้งค่าส่วนตัว</button>
                 <button id="btnLogout" class="hidden text-sm bg-blue-700 hover:bg-blue-800 px-3 py-1 rounded transition shadow flex-shrink-0">ออกจากระบบ</button>
@@ -4875,8 +4875,8 @@
                     }
 
                     let pinBtn = '';
-                    if (canViewPin) {
-                        pinBtn = `<br><span class="text-[11px] text-gray-500">ไม่แสดง PIN — ให้เจ้าของบัญชีกู้คืนเอง</span>`;
+                    if (canRevealLegacyPin(u)) {
+                        pinBtn = `<br><button type="button" data-legacy-pin-user="${escapeHtml(String(u.userId))}" onclick="revealLegacyPin(this.dataset.legacyPinUser)" class="mt-1 rounded border border-indigo-200 px-2 py-1 text-xs font-semibold text-indigo-700 hover:bg-indigo-50">ดู PIN เดิม</button>`;
                     }
                         
                     let statusClass = '';
@@ -5420,6 +5420,32 @@
             });
         }
 
+        function canRevealLegacyPin(u) {
+            return !!(u.userId && ['driver','staff'].includes(u.role) && appUser &&
+                (['super_admin','provincial_admin'].includes(appUser.role) ||
+                 (appUser.role === 'hospital_admin' && appUser.org && appUser.org === u.org)));
+        }
+
+        async function revealLegacyPin(userId) {
+            const confirmation = await Swal.fire({
+                title: 'ยืนยันการดู PIN เดิม',
+                text: 'ใช้เพื่อช่วยเจ้าของบัญชีเท่านั้น ระบบจะบันทึกการเปิดดู',
+                showCancelButton: true, confirmButtonText: 'ดู PIN', cancelButtonText: 'ยกเลิก'
+            });
+            if (!confirmation.isConfirmed) return;
+            try {
+                const result = await api.run('revealLegacyDriverPin', {targetUserId: String(userId)});
+                if (!result.ok) throw new Error('PIN_REVEAL_FAILED');
+                await Swal.fire({
+                    title: result.available ? 'PIN เดิม' : 'ไม่สามารถแสดง PIN เดิม',
+                    text: result.available ? result.pin : 'บัญชีนี้ไม่มี PIN แบบเดิมที่แสดงได้ ให้เจ้าของบัญชีใช้เมนูลืม PIN',
+                    timer: result.available ? 15000 : undefined, confirmButtonText: 'ปิด'
+                });
+            } catch (error) {
+                Swal.fire('เปิดดู PIN ไม่สำเร็จ', 'กรุณาตรวจสอบสิทธิ์หรือเข้าสู่ระบบใหม่', 'error');
+            }
+        }
+
         function renderProfileModal(u, p, h) {
             const roleThText = getRoleTh(u.role, u.org);
             let html = `
@@ -5572,32 +5598,12 @@
             let vp = document.getElementById('viewProfileContent'); 
             if (vp) {
                 vp.innerHTML = html;
-                if (u.userId && ['driver','staff'].includes(u.role) && appUser &&
-                    (['super_admin','provincial_admin'].includes(appUser.role) ||
-                     (appUser.role === 'hospital_admin' && appUser.org && appUser.org === u.org))) {
+                if (canRevealLegacyPin(u)) {
                     const reveal = document.createElement('button');
                     reveal.type = 'button';
                     reveal.className = 'mt-3 px-3 py-2 rounded border text-sm';
                     reveal.textContent = 'ดู PIN เดิม';
-                    reveal.onclick = async () => {
-                        const confirmation = await Swal.fire({
-                            title: 'ยืนยันการดู PIN เดิม',
-                            text: 'ใช้เพื่อช่วยเจ้าของบัญชีเท่านั้น ระบบจะบันทึกการเปิดดู',
-                            showCancelButton: true, confirmButtonText: 'ดู PIN', cancelButtonText: 'ยกเลิก'
-                        });
-                        if (!confirmation.isConfirmed) return;
-                        try {
-                            const result = await api.run('revealLegacyDriverPin', {targetUserId: String(u.userId)});
-                            if (!result.ok) throw new Error('ไม่มีสิทธิ์หรือไม่สามารถดู PIN ได้');
-                            await Swal.fire({
-                                title: 'PIN เดิม',
-                                text: result.available ? result.pin : 'ไม่สามารถดู PIN เดิมได้ ให้เจ้าของบัญชีใช้เมนูลืม PIN',
-                                timer: 15000, confirmButtonText: 'ปิด'
-                            });
-                        } catch (error) {
-                            Swal.fire('ไม่สามารถดู PIN ได้', 'กรุณาตรวจสอบสิทธิ์หรือเข้าสู่ระบบใหม่', 'error');
-                        }
-                    };
+                    reveal.onclick = () => revealLegacyPin(u.userId);
                     vp.appendChild(reveal);
                 }
             }
