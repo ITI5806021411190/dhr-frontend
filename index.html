@@ -102,6 +102,13 @@
             overflow-wrap: break-word;
             line-height: 1.7;
         }
+        #analyticsFilterPanel {
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
+        }
+        #analyticsFilterPanel > :is(select, input, button) {
+            width: 100%;
+            min-width: 0;
+        }
         .pdf-export footer {
             word-break: break-all;
             overflow-wrap: break-word;
@@ -169,13 +176,13 @@
                 <button role="tab" aria-selected="false" data-personnel-tab="ALL" onclick="switchPersonnelTab('ALL')" class="rounded-lg px-4 py-2 bg-gray-100 text-gray-700 font-bold">ภาพรวมทั้งหมด</button>
                 <button role="tab" aria-selected="false" data-personnel-tab="staff" onclick="switchPersonnelTab('staff')" class="rounded-lg px-4 py-2 bg-gray-100 text-gray-700 font-bold">เจ้าหน้าที่ขับรถ</button>
             </div>
-            <div id="dashboardHeader" class="flex flex-col md:flex-row justify-between items-start md:items-center border-b pb-4 mb-6 gap-4">
+            <div id="dashboardHeader" class="flex flex-col items-start border-b pb-4 mb-6 gap-4">
                 <div>
                     <h3 class="text-2xl font-bold text-gray-800" id="dashTitle">ภาพรวมความพร้อมประจำวัน</h3>
                     <p class="text-sm text-gray-500 mt-1">ข้อมูลวันที่: <span id="adminDateNow" class="font-medium text-gray-700"></span></p>
                 </div>
                 
-                <div class="flex flex-wrap items-center gap-2 w-full md:w-auto" id="dashboardControls">
+                <div class="flex flex-wrap items-center gap-2 w-full min-w-0" id="dashboardControls">
                     
                     <button onclick="downloadDashboardImage()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-lg text-sm transition shadow-sm mr-2 flex items-center gap-1 font-bold">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
@@ -190,7 +197,7 @@
                         สร้างรายงาน
                     </button>
                     
-                    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 mt-2 md:mt-0 w-full border-t md:border-t-0 pt-3 md:pt-0" id="analyticsFilterPanel">
+                    <div class="grid gap-3 w-full min-w-0 mt-2 border-t pt-3" id="analyticsFilterPanel">
                         <select id="adminPeriodFilter" class="border rounded-lg px-2 py-1.5 text-sm bg-gray-50 focus:ring-blue-500" onchange="handleAnalyticsPeriodChange()">
                             <option value="today">วันนี้</option>
                             <option value="yesterday">เมื่อวาน</option>
@@ -211,7 +218,7 @@
                         <input type="number" id="adminYearFilter" min="2020" max="2200" class="hidden border rounded-lg px-2 py-1.5 text-sm bg-gray-50 focus:ring-blue-500" aria-label="เลือกปี">
                         <input type="date" id="adminStartDateFilter" class="hidden border rounded-lg px-2 py-1.5 text-sm bg-gray-50 focus:ring-blue-500" aria-label="วันที่เริ่มต้น">
                         <input type="date" id="adminEndDateFilter" class="hidden border rounded-lg px-2 py-1.5 text-sm bg-gray-50 focus:ring-blue-500" aria-label="วันที่สิ้นสุด">
-                        <select id="adminOrgFilter" class="border rounded-lg px-2 py-1.5 text-sm bg-gray-50 focus:ring-blue-500 w-32 truncate" title="เลือกหน่วยงาน">
+                        <select id="adminOrgFilter" class="border rounded-lg px-2 py-1.5 text-sm bg-gray-50 focus:ring-blue-500 truncate" title="เลือกหน่วยงาน">
                             <option value="ALL">ทุกหน่วยงาน</option>
                             <option value="สำนักงานสาธารณสุขจังหวัดนครนายก (สสจ.)">สสจ. นครนายก</option>
                             <option value="โรงพยาบาลนครนายก">รพ. นครนายก</option>
