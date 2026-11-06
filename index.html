@@ -1403,7 +1403,13 @@
             'PASSENGER_HISTORY_VIEW': 'ผู้โดยสารเปิดดูประวัติ',
             'DELETE_USER': 'ลบผู้ใช้งาน',
             'EXPORT_REPORT': 'ส่งออกรายงาน',
-            'REPAIR_DATABASE': 'ซ่อมแซมฐานข้อมูล'
+            'REPAIR_DATABASE': 'ซ่อมแซมฐานข้อมูล',
+            'MIGRATE_DATABASE_SCHEMA': 'ปรับปรุงโครงสร้างฐานข้อมูล',
+            'SUBMIT_EDIT_REQUEST': 'ส่งคำขอแก้ไขข้อมูลส่วนตัว',
+            'RESET_PIN': 'กู้คืนและตั้ง PIN ใหม่',
+            'VIEW_LEGACY_PIN': 'เปิดดู PIN เดิม',
+            'GET_EXECUTIVE_REPORT': 'เปิดดูรายงานผู้บริหาร',
+            'EXPORT_EXECUTIVE_REPORT': 'ส่งออกรายงานผู้บริหาร'
         };
 
         const ROLE_TH_MAP = { 
@@ -4347,6 +4353,7 @@
                 if (!appUser || auditReadKey() !== ownerKey) return;
                 if (res.ok) { 
                     cachedLogs = res.logs;
+                    refreshAuditActionOptions();
                     let previous = null;
                     try { previous = JSON.parse(localStorage.getItem(ownerKey)); } catch (error) { /* First visit. */ }
                     newAuditLogIds = classifyNewAuditLogs(cachedLogs, previous);
@@ -4361,6 +4368,18 @@
             });
         }
         
+        function refreshAuditActionOptions() {
+            const select = document.getElementById('filterLogAction');
+            if (!select) return;
+            const previous = select.value;
+            const actions = new Set([...Object.keys(ACTION_TH), ...cachedLogs.map(log => String(log.action || '')).filter(Boolean)]);
+            select.replaceChildren(new Option('ทุกการกระทำ', 'ALL'));
+            [...actions].sort((a, b) => (ACTION_TH[a] || a).localeCompare(ACTION_TH[b] || b, 'th')).forEach(action => {
+                select.add(new Option(ACTION_TH[action] || action, action));
+            });
+            select.value = actions.has(previous) ? previous : 'ALL';
+        }
+
         function applyLogFilter() {
             let elS = document.getElementById('filterLogSearch'); 
             let elA = document.getElementById('filterLogAction'); 
@@ -4369,12 +4388,12 @@
                 return;
             }
 
-            const search = elS.value.toLowerCase(); 
+            const search = elS.value.trim().toLowerCase();
             const action = elA.value;
             
             let filtered = cachedLogs.filter(l => { 
                 let matchSearch = false;
-                if (l.actorName.toLowerCase().includes(search) || l.targetName.toLowerCase().includes(search) || l.actorPhone.includes(search)) {
+                if ([l.actorName, l.targetName, l.actorPhone, l.targetPhone, l.org, l.action, ACTION_TH[l.action], l.status].some(value => String(value || '').toLowerCase().includes(search))) {
                     matchSearch = true;
                 }
                 
